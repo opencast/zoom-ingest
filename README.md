@@ -1,4 +1,5 @@
-#Opencast-Zoom-Ingester
+Opencast-Zoom-Ingester
+============================
 
 **Requirements**
 
