@@ -1,4 +1,5 @@
 from zoomus import ZoomClient
+import json
 
 class Zoom:
 
@@ -7,8 +8,8 @@ class Zoom:
         api_secret = config['JWT']['Secret']  
         self.zoom_client = ZoomClient(api_key, api_secret)
 
+    def validate_payload(self, payload):
 
-    def validate_payload(payload):
         required_payload_fields = [
             "object"
         ]
@@ -73,7 +74,7 @@ class Zoom:
             raise BadWebhookData("Unrecognized payload format. {}".format(e))
 
 
-    def parse_recording_files(payload):
+    def parse_recording_files(self, payload):
         recording_files = []
         for file in payload["object"]["recording_files"]:
             if file["file_type"].lower() == "mp4":
@@ -86,3 +87,9 @@ class Zoom:
                     "recording_type": file["recording_type"]
                 })
         return recording_files
+
+    def get_recording_creator(self, payload):
+        #user_list_response = self.zoom_client.user.get(id=payload["object"]["host_id"])
+        #user_list = json.loads(user_list_response.content.decode("utf-8"))
+        #return user_list['email']
+        return "test@example.org"

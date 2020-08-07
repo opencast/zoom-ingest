@@ -8,11 +8,10 @@ import sys
 import configparser
 
 from rabbit import Rabbit
+from zoom import Zoom
 
 import logging
-import logging.handlers
-
-LOGGING_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+import logger
 
 class Opencast:
 
@@ -21,11 +20,11 @@ class Opencast:
         self.logger.setLevel(logging.DEBUG)
         try:
             self.url = config["Opencast"]["Url"]
-            self.logger.debug(f"Opencast url is ${self.url}")
+            self.logger.debug(f"Opencast url is {self.url}")
             self.user = config["Opencast"]["User"]
-            self.logger.debug(f"Opencast user is ${self.user}")
+            self.logger.debug(f"Opencast user is {self.user}")
             self.password = config["Opencast"]["Password"]
-            self.logger.debug(f"Opencast password is ${self.password}")
+            self.logger.debug(f"Opencast password is {self.password}")
         except KeyError as err:
             #TODO: Better handling here
             sys.exit("Key {0} was not found".format(err))
@@ -40,7 +39,7 @@ class Opencast:
         os.remove(id+'.mp4')
 
 
-    def parse_queue(self, body)
+    def parse_queue(self, body):
         data = json.loads(body.decode("utf-8"))
         if "recording_files" not in data:
             self.logger.error("No recording found")
@@ -49,15 +48,15 @@ class Opencast:
         id = ''
         for key in files[0].keys():
             if key == "download_url":
-                self.logger.debug(f"Download url found: ${dl_url}")
+                self.logger.debug(f"Download url found: {dl_url}")
                 dl_url = files[0][key]
             elif key == "recording_id":
                 id = files[0][key]
-                self.logger.debug(f"Recording id found: ${id}")
+                self.logger.debug(f"Recording id found: {id}")
 
-        self.logger.debug(f"Downloading from ${dl_url}/?access_token=${data['token']}")
+        self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {id}.mp4")
         try:
-            wget.download(dl_url+'/?access_token='+data["token"],id+'.mp4')
+            wget.download(dl_url+'/?access_token='+data["token"], id+'.mp4')
 
 
         except Exception as e:
@@ -105,7 +104,6 @@ class Opencast:
 
     def create_series(self, creator, title):
 
-        print("creating series")
         metadata = [{"label": "Opencast Series DublinCore",
                      "flavor": "dublincore/series",
                      "fields": [{"id": "title",
@@ -125,18 +123,13 @@ class Opencast:
 
         response = requests.post(url+'/api/series',data=data,auth=HTTPDigestAuth(user, password),headers={'X-Requested-Auth': 'Digest'})
 
-        self.logger.debug(f"Creating series ${title} get a ${response.status_code} response")
+        self.logger.debug(f"Creating series {title} get a {response.status_code} response")
 
         #What if response is something other than success?
         return json.loads(response.content.decode("utf-8"))["identifier"]
 
 
 if __name__ == '__main__':
-
-    out = logging.StreamHandler(sys.stderr)
-    #10 MB default rollover size
-    logfile = logging.handlers.RotatingFileHandler("uploader.log", encoding="UTF-8", maxBytes=10000000)
-    logging.basicConfig(level=logging.ERROR, handlers=[out, logfile], format='%(asctime)s: | %(name)s | %(levelname)s | %(message)s', datefmt=LOGGING_FORMAT)
 
     logger = logging.getLogger("main")
     logger.setLevel(logging.DEBUG)
@@ -149,5 +142,6 @@ if __name__ == '__main__':
         sys.exit("No settings found")
 
 
-    r = Rabbit(config)
+    z = Zoom(config)
+    r = Rabbit(config, z)
     o = Opencast(config, r)

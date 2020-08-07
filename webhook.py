@@ -16,8 +16,11 @@ PORT_NUMBER = 8080
 
 MIN_DURATION = 0
 
-zoom = None
-rabbit = None
+import logging
+import logger
+
+z = None
+r = None
 
 
 class BadWebhookData(Exception):
@@ -29,21 +32,37 @@ class NoMp4Files(Exception):
 
 
 class MyHandler(BaseHTTPRequestHandler):
+
+    logger = logging.getLogger("handler")
+    logger.setLevel(logging.DEBUG)
+
+    def log_debug(self, format, *args):
+        self.logger.debug(format%args)
+
+    def log_message(self, format, *args):
+        self.logger.info(format%args)
+
+    def log_error(self, format, *args):
+        self.logger.error(format%args)
+
     def do_HEAD(s):
+        s.log_message("HEAD")
         s.send_response(200)
         s.send_header("Content-type", "text/html")
         s.end_headers()
 
     def do_GET(s):
-
+        s.log_message("GET")
         s.send_response(200)
         s.send_header("Content-type", "text/html")
         s.end_headers()
 
     def do_POST(s):
         """Respond to Webhook"""
+        s.log_message("POST")
         content_length = int(s.headers['Content-Length'])
         if content_length < 5:
+            s.log_error("Content too short")
             s.send_response(400)
             s.end_headers()
             response = BytesIO()
@@ -53,7 +72,7 @@ class MyHandler(BaseHTTPRequestHandler):
 
         body = json.loads(s.rfile.read(content_length).decode("utf-8"))
         if "payload" not in body:
-            print("payload missing")
+            s.log_error("Payload is missing")
             s.send_response(400)
             s.end_headers()
             response = BytesIO()
@@ -63,9 +82,9 @@ class MyHandler(BaseHTTPRequestHandler):
 
         payload = body["payload"]
         try:
-            zoom.validate_payload(payload)
+            z.validate_payload(payload)
         except BadWebhookData as e:
-            print("bad data")
+            s.log_error("Payload failed validation")
             s.send_response(400)
             s.end_headers()
             response = BytesIO()
@@ -73,7 +92,7 @@ class MyHandler(BaseHTTPRequestHandler):
             s.wfile.write(response.getvalue())
             return
         except NoMp4Files as e:
-            print("no mp4")
+            s.log_error("No mp4 files found!")
             s.send_response(400)
             s.end_headers()
             response = BytesIO()
@@ -82,7 +101,7 @@ class MyHandler(BaseHTTPRequestHandler):
             return
 
         if payload["object"]["duration"] < MIN_DURATION:
-            print("Recording is too short")
+            s.log_error("Recording is too short")
             s.send_response(400)
             s.end_headers()
             response = BytesIO()
@@ -91,10 +110,10 @@ class MyHandler(BaseHTTPRequestHandler):
             return
 
         token = body["download_token"]
-       # token= ''
-        rabbit_msg = s.construct_rabbit_msg(payload,token)
+        s.log_debug(f"Token is {token}")
+        
+        r.send_rabbit_msg(payload, token)
 
-        s.send_rabbit_msg(rabbit_msg)
         s.send_response(200)
         s.end_headers()
         response = BytesIO()
@@ -107,6 +126,10 @@ class MyHandler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
 
+    logger = logging.getLogger("main")
+    logger.setLevel(logging.DEBUG)
+    logger.debug("Main init")
+
     try:
         config = configparser.ConfigParser()
         config.read('settings.ini')
@@ -115,24 +138,26 @@ if __name__ == '__main__':
 
     try:
         PORT_NUMBER = int(config["Webhook"]["Port"])
+        logger.debug(f"Webhook port is {PORT_NUMBER}")
         HOST_NAME = config["Webhook"]["Url"]
+        logger.debug(f"Hostname is {HOST_NAME}")
         MIN_DURATION = int(config["Webhook"]["Min_Duration"])
-
+        logger.debug(f"Minimum duration is is {MIN_DURATION}")
     except KeyError as err:
         sys.exit("Key {0} was not found".format(err))
     except ValueError as err:
         sys.exit("Invalid value, integer expected : {0}".format(err))
 
-    rabbit = Rabbit(config)
-    zoom = Zoom(config)
+    z = Zoom(config)
+    r = Rabbit(config, z)
 
     server_class = HTTPServer
     httpd = server_class((HOST_NAME, PORT_NUMBER), MyHandler)
-    print(time.asctime(), "Server Starts - %s:%s" % (HOST_NAME, PORT_NUMBER))
+    logger.info(f"Server startup complete on {HOST_NAME}:{PORT_NUMBER}")
     try:
         httpd.serve_forever()
 
     except KeyboardInterrupt:
         pass
     httpd.server_close()
-    print(time.asctime(), "Server Stops - %s:%s" % (HOST_NAME, PORT_NUMBER))
+    logger.info("Server shutdown complete")

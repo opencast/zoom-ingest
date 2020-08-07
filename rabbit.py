@@ -1,13 +1,16 @@
 import pika
 import configparser
 import zoom
+import time
+import json
 
 class Rabbit():
 
-    def __init__(self, config):
+    def __init__(self, config, zoom):
         self.rabbit_url = config["Rabbit"]["host"]
         self.rabbit_user = config["Rabbit"]["user"]
         self.rabbit_pass = config["Rabbit"]["password"]
+        self.zoom = zoom
 
     def send_rabbit_msg(self, payload, token):
         msg = self._construct_rabbit_msg(payload, token)
@@ -16,10 +19,8 @@ class Rabbit():
     def _construct_rabbit_msg(self, payload, token):
         now = time.asctime()
 
-        user_list_response = zoom_client.user.get(id=payload["object"]["host_id"])
-        user_list = json.loads(user_list_response.content.decode("utf-8"))
-
-        recording_files = zoom.parse_recording_files(payload)
+        creator = self.zoom.get_recording_creator(payload)
+        recording_files = self.zoom.parse_recording_files(payload)
 
         rabbit_msg = {
             "uuid": payload["object"]["uuid"],
@@ -31,7 +32,7 @@ class Rabbit():
             "recording_files": recording_files,
             "token": token,
             "received_time": now,
-            "creator": user_list["location"]
+            "creator": creator
         }
 
         return rabbit_msg
