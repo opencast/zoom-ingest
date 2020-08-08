@@ -56,6 +56,7 @@ class Opencast:
 
         self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {id}.mp4")
         try:
+            #TODO: Verify that this download succeeds (ie, with a checksum) rather than checking file existence
             wget.download(dl_url+'/?access_token='+data["token"], id+'.mp4')
 
 
