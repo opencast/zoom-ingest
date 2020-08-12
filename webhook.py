@@ -1,5 +1,3 @@
-import time
-
 from http.server import HTTPServer
 from http.server import BaseHTTPRequestHandler
 

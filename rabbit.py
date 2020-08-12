@@ -1,6 +1,4 @@
 import pika
-import configparser
-import zoom
 import time
 import json
 
