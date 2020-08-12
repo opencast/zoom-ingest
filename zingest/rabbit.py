@@ -8,6 +8,7 @@ class Rabbit():
         self.rabbit_url = config["Rabbit"]["host"]
         self.rabbit_user = config["Rabbit"]["user"]
         self.rabbit_pass = config["Rabbit"]["password"]
+        #TODO: Check that this is really a Zoom object
         self.zoom = zoom
 
     def send_rabbit_msg(self, payload, token):
@@ -35,7 +36,7 @@ class Rabbit():
 
         return rabbit_msg
 
-    def _send_rabbit_msg(self,msg):
+    def _send_rabbit_msg(self, msg):
         credentials = pika.PlainCredentials(self.rabbit_user, self.rabbit_pass)
         connection = pika.BlockingConnection(pika.ConnectionParameters(self.rabbit_url, credentials=credentials))
         channel = connection.channel()
