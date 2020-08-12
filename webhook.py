@@ -6,8 +6,8 @@ from io import BytesIO
 import configparser
 import sys
 
-from rabbit import Rabbit
-from zoom import Zoom
+from zingest.rabbit import Rabbit
+from zingest.zoom import Zoom
 
 HOST_NAME = ''
 PORT_NUMBER = 8080
@@ -15,7 +15,7 @@ PORT_NUMBER = 8080
 MIN_DURATION = 0
 
 import logging
-import logger
+import zingest.logger
 
 z = None
 r = None
