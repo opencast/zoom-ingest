@@ -21,14 +21,6 @@ z = None
 r = None
 
 
-class BadWebhookData(Exception):
-    pass
-
-
-class NoMp4Files(Exception):
-    pass
-
-
 class MyHandler(BaseHTTPRequestHandler):
 
     logger = logging.getLogger("handler")

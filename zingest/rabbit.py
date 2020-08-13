@@ -1,15 +1,21 @@
 import pika
 import time
 import json
+import zingest.logger
+import logging
 
 class Rabbit():
 
     def __init__(self, config, zoom):
+        self.logger = logging.getLogger("rabbit")
+
         self.rabbit_url = config["Rabbit"]["host"]
         self.rabbit_user = config["Rabbit"]["user"]
         self.rabbit_pass = config["Rabbit"]["password"]
         #TODO: Check that this is really a Zoom object
         self.zoom = zoom
+        self.logger.info("Setup complete")
+        self.logger.debug(f"Init with {self.rabbit_user}:{self.rabbit_pass} attached to {self.rabbit_url}")
 
     def send_rabbit_msg(self, payload, token):
         msg = self._construct_rabbit_msg(payload, token)

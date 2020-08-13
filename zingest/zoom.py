@@ -1,12 +1,28 @@
 from zoomus import ZoomClient
 import json
+import zingest.logger
+import logging
+
+
+class BadWebhookData(Exception):
+    pass
+
+
+class NoMp4Files(Exception):
+    pass
+
 
 class Zoom:
 
     def __init__(self, config):
-        api_key = config['JWT']['Key']
-        api_secret = config['JWT']['Secret']  
-        self.zoom_client = ZoomClient(api_key, api_secret)
+        self.logger = logging.getLogger("zoom")
+
+        self.api_key = config['JWT']['Key']
+        self.api_secret = config['JWT']['Secret']  
+        self.zoom_client = ZoomClient(self.api_key, self.api_secret)
+        self.logger.info("Setup complete")
+        self.logger.debug(f"Init with {self.api_key}:{self.api_secret}")
+
 
     def validate_payload(self, payload):
 
@@ -28,7 +44,8 @@ class Zoom:
             "recording_end",
             "download_url",
             "file_type",
-            "recording_type"
+            "recording_type",
+            "status"
         ]
 
         try:
@@ -46,6 +63,7 @@ class Zoom:
                             .format(field, obj.keys()))
 
             files = obj["recording_files"]
+            self.logger.debug(f"Found {len(files)} potential files")
 
             # make sure there's some mp4 files in here somewhere
             mp4_files = any(x["file_type"].lower() == "mp4" for x in files)
@@ -61,11 +79,11 @@ class Zoom:
                     if field not in file.keys():
                         raise BadWebhookData(
                             "Missing required file field '{}'".format(field))
-                if "status" in file and file["status"].lower() != "completed":
+                if file["status"].lower() != "completed":
                     raise BadWebhookData(
                         "File with incomplete status {}".format(file["status"])
                     )
-
+            self.logger.debug("Event {obj['uuid']} passed validation!")
         except NoMp4Files:
             # let these bubble up as we handle them differently depending
             # on who the caller is

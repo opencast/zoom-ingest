@@ -52,10 +52,23 @@ class TestRabbit(unittest.TestCase):
         self.assertEqual(self.config["Rabbit"]["user"], rabbit.rabbit_user)
         self.assertEqual(self.config["Rabbit"]["password"], rabbit.rabbit_pass)
 
+    def ae(self, a, b, key):
+        self.assertEqual(a[key], b[key])
+
+    def assert_rabbitmsg(self, msg):
+        src = webhook_event["payload"]["object"]
+        self.ae(src, msg, "uuid")
+        self.ae(src, msg, "topic")
+        self.ae(src, msg, "start_time")
+        self.ae(src, msg, "duration")
+        self.ae(src, msg, "host_id")
+        self.assertEqual(src["id"], msg["zoom_series_id"])
+        #TODO: recording_files, token, creator
+
     @patch("zingest.rabbit.Rabbit._send_rabbit_msg")
     def test_messageConstruction(self, _send_rabbit_msg):
         rabbit = Rabbit(self.config, self.zoom)
-        _send_rabbit_msg.side_effect = lambda x: None
+        _send_rabbit_msg.side_effect = self.assert_rabbitmsg
         rabbit.send_rabbit_msg(payload=webhook_event["payload"], token="token")
 
 

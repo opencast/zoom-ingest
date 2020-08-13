@@ -17,16 +17,13 @@ class Opencast:
     def __init__(self, config, rabbit):
         self.logger = logging.getLogger("opencast")
         self.logger.setLevel(logging.DEBUG)
-        try:
-            self.url = config["Opencast"]["Url"]
-            self.logger.debug(f"Opencast url is {self.url}")
-            self.user = config["Opencast"]["User"]
-            self.logger.debug(f"Opencast user is {self.user}")
-            self.password = config["Opencast"]["Password"]
-            self.logger.debug(f"Opencast password is {self.password}")
-        except KeyError as err:
-            #TODO: Better handling here
-            sys.exit("Key {0} was not found".format(err))
+
+        self.url = config["Opencast"]["Url"]
+        self.logger.debug(f"Opencast url is {self.url}")
+        self.user = config["Opencast"]["User"]
+        self.logger.debug(f"Opencast user is {self.user}")
+        self.password = config["Opencast"]["Password"]
+        self.logger.debug(f"Opencast password is {self.password}")
         self.logger.info("Setup complete, consuming rabbits")
         rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
