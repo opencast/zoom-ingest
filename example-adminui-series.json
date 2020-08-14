@@ -1,0 +1,24 @@
+{
+  "total":2,
+  "offset":0,
+  "count":2,
+  "limit":0,
+  "results": [
+    {
+      "createdBy":"Opencast Project Administrator",
+      "organizers":[],
+      "id":"5b313e42-4aeb-4d42-bfa7-7e5c3ddfeb64",
+      "contributors":[],
+      "creation_date":"2020-08-14T00:04:00Z",
+      "title":"Blender Foundation Productions"
+    },
+    {
+      "createdBy":"Opencast Project Administrator",
+      "organizers":[],
+      "id":"dd504e77-7d92-4ac7-b342-706f96e9a787",
+      "contributors":[],
+      "creation_date":"2020-08-14T22:26:46Z",
+      "title":"Test Series"
+    }
+  ]
+}
