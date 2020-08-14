@@ -63,13 +63,23 @@ class TestRabbit(unittest.TestCase):
         self.ae(src, msg, "duration")
         self.ae(src, msg, "host_id")
         self.assertEqual(src["id"], msg["zoom_series_id"])
-        #TODO: recording_files, token, creator
+        self.assertEqual(webhook_event["download_token"], msg["token"])
+        self.fail("TODO: recording_files, creator")
 
-    @patch("zingest.rabbit.Rabbit._send_rabbit_msg")
-    def test_messageConstruction(self, _send_rabbit_msg):
-        rabbit = Rabbit(self.config, self.zoom)
-        _send_rabbit_msg.side_effect = self.assert_rabbitmsg
-        rabbit.send_rabbit_msg(payload=webhook_event["payload"], token="token")
+    def test_messageConstruction(self):
+        self.rabbit = Rabbit(self.config, self.zoom)
+        msg = self.rabbit._construct_rabbit_msg(webhook_event['payload'], webhook_event['download_token'])
+        self.assert_rabbitmsg(msg)
+
+    def test_sendingMessages(self):
+        self.rabbit = Rabbit(self.config, self.zoom)
+        self.rabbit._send_rabbit_msg = MagicMock(return_value=None)
+        self.mock = self.rabbit._send_rabbit_msg
+        self.rabbit.send_rabbit_msg(payload=webhook_event["payload"], token=webhook_event["download_token"])
+
+        self.rabbit._send_rabbit_msg.assert_called_once()
+        self.sent = self.rabbit._send_rabbit_msg.call_args[0][0]
+        self.assert_rabbitmsg(self.sent)
 
 
 if __name__ == '__main__':
