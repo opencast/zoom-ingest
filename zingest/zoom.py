@@ -106,8 +106,25 @@ class Zoom:
                 })
         return recording_files
 
+
     def get_recording_creator(self, payload):
+        #RATELIMIT: 30/80 req/s
         #user_list_response = self.zoom_client.user.get(id=payload["object"]["host_id"])
         #user_list = json.loads(user_list_response.content.decode("utf-8"))
         #return user_list['email']
         return "test@example.org"
+
+
+    def get_user_recordings(self, user_id):
+        #This defaults to 300 records / page -> appears to be 300 *meetings* per call.  We'll deal with paging later
+        #RATELIMIT: 20/60 req/s
+        #FIXME: Needs a from and to date (YYYY-MM-DD)
+        recordings_response = self.zoom_client.users.recordings.list(userId=user_id)
+        recordings = json.loads(recordings_response)
+        return recordings
+
+    def get_recording(self, recording_id):
+        #RATELIMIT: 30/80 req/s
+        recording_response = self.zoom_client.meetings.recordings.get(meetingId=recording_id)
+        recording = json.loads(recording_response)
+        return recording
