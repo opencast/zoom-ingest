@@ -16,6 +16,7 @@ class Zoom:
 
     def __init__(self, config):
         self.logger = logging.getLogger("zoom")
+        self.logger.setLevel(logging.DEBUG)
 
         self.api_key = config['JWT']['Key']
         self.api_secret = config['JWT']['Secret']  
@@ -51,16 +52,12 @@ class Zoom:
         try:
             for field in required_payload_fields:
                 if field not in payload.keys():
-                    raise BadWebhookData(
-                        "Missing required payload field '{}'. Keys found: {}"
-                            .format(field, payload.keys()))
+                    raise BadWebhookData(f"Missing required payload field '{field}'. Keys found: {payload.keys()}")
 
             obj = payload["object"]
             for field in required_object_fields:
                 if field not in obj.keys():
-                    raise BadWebhookData(
-                        "Missing required object field '{}'. Keys found: {}"
-                            .format(field, obj.keys()))
+                    raise BadWebhookData(f"Missing required object field '{field}'. Keys found: {payload.keys()}")
 
             files = obj["recording_files"]
             self.logger.debug(f"Found {len(files)} potential files")
@@ -77,13 +74,10 @@ class Zoom:
                     continue
                 for field in required_file_fields:
                     if field not in file.keys():
-                        raise BadWebhookData(
-                            "Missing required file field '{}'".format(field))
+                        raise BadWebhookData(f"Missing required file field '{field}'")
                 if file["status"].lower() != "completed":
-                    raise BadWebhookData(
-                        "File with incomplete status {}".format(file["status"])
-                    )
-            self.logger.debug("Event {obj['uuid']} passed validation!")
+                    raise BadWebhookData(f"File with incomplete status {file['status']}")
+            self.logger.debug(f"Event {obj['uuid']} passed validation!")
         except NoMp4Files:
             # let these bubble up as we handle them differently depending
             # on who the caller is
