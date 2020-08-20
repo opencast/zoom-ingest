@@ -25,10 +25,10 @@ class Opencast:
         self.password = config["Opencast"]["Password"]
         self.logger.debug(f"Opencast password is {self.password}")
         self.logger.info("Setup complete, consuming rabbits")
-        if rabbit:
+        if rabbit and type(rabbit) == zingest.rabbit.Rabbit:
             rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
         else:
-            raise TypeError("Rabbit is missing!")
+            raise TypeError("Rabbit is missing or the wrong type!")
 
 
     def rabbit_callback(self, method, properties, body):

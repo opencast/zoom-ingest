@@ -14,7 +14,8 @@ class Rabbit():
         self.rabbit_url = config["Rabbit"]["host"]
         self.rabbit_user = config["Rabbit"]["user"]
         self.rabbit_pass = config["Rabbit"]["password"]
-        #TODO: Check that this is really a Zoom object
+        if not zoom or type(zoom) != zingest.zoom.Zoom:
+            raise TypeError("Zoom is missing or the wrong type!")
         self.zoom = zoom
         self.logger.info("Setup complete")
         self.logger.debug(f"Init with {self.rabbit_user}:{self.rabbit_pass} attached to {self.rabbit_url}")

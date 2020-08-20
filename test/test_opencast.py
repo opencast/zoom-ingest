@@ -49,12 +49,16 @@ class TestOpencast(unittest.TestCase):
         with self.assertRaises(KeyError):
             Opencast(self.config, None)
 
-    def test_badRabbit(self):
+    def test_NoRabbit(self):
         with self.assertRaises(TypeError):
             Opencast(self.config, None)
 
+    def test_badRabbit(self):
+        with self.assertRaises(TypeError):
+            Opencast(self.config, "")
+
     def test_goodConfig(self):
-        self.rabbit = Rabbit(self.config, None)
+        self.rabbit = Rabbit(self.config, self.zoom)
         self.rabbit.start_consuming_rabbitmsg = MagicMock(return_value=None)
         self.opencast = Opencast(self.config, self.rabbit)
 

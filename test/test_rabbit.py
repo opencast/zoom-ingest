@@ -42,9 +42,14 @@ class TestRabbit(unittest.TestCase):
         with self.assertRaises(KeyError):
           Rabbit(self.config, self.zoom)
 
-    @unittest.skip("This isn't actually checked yet")
+    def test_noZoom(self):
+        with self.assertRaises(TypeError):
+          Rabbit(self.config, None)
+
     def test_badZoom(self):
-        Rabbit(self.config, None)
+        with self.assertRaises(TypeError):
+          Rabbit(self.config, "")
+
 
     def test_goodConfig(self):
         rabbit = Rabbit(self.config, self.zoom)
