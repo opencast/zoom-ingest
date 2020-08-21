@@ -58,38 +58,36 @@ class TestOpencast(unittest.TestCase):
             Opencast(self.config, "")
 
     def test_goodConfig(self):
-        self.rabbit = Rabbit(self.config, self.zoom)
-        self.rabbit.start_consuming_rabbitmsg = MagicMock(return_value=None)
-        self.opencast = Opencast(self.config, self.rabbit)
+        opencast = Opencast(self.config, self.rabbit)
 
-        self.assertEqual(self.config["Opencast"]["Url"], self.opencast.url)
-        self.assertEqual(self.config["Opencast"]["User"], self.opencast.user)
-        self.assertEqual(self.config["Opencast"]["Password"], self.opencast.password)
-        self.rabbit.start_consuming_rabbitmsg.assert_called_once_with(self.opencast.rabbit_callback)
+        self.assertEqual(self.config["Opencast"]["Url"], opencast.url)
+        self.assertEqual(self.config["Opencast"]["User"], opencast.user)
+        self.assertEqual(self.config["Opencast"]["Password"], opencast.password)
+        self.rabbit.start_consuming_rabbitmsg.assert_called_once_with(opencast.rabbit_callback)
 
     def test_calback(self):
         self.opencast = Opencast(self.config, self.rabbit)
-        self.fail("This test needs writing")
+        self.fail("This test should parse the queue and then do the ingest")
 
     def test_parseQueue(self):
         rabbit_msg = self.rabbit._construct_rabbit_msg(webhook_event['payload'], webhook_event['download_token'])
 
-        self.opencast = Opencast(self.config, self.rabbit)
-        self.opencast._do_download = MagicMock(return_value=None)
-        self.opencast.parse_queue(json.dumps(rabbit_msg))
+        opencast = Opencast(self.config, self.rabbit)
+        opencast._do_download = MagicMock(return_value=None)
+        opencast.parse_queue(json.dumps(rabbit_msg))
 
         url = webhook_event['payload']['object']['recording_files'][0]['download_url'] + '/?access_token=' + webhook_event['download_token']
         id = webhook_event['payload']['object']['recording_files'][0]['id']
-        self.fetch = self.opencast._do_download.call_args[0]
-        self.assertEqual(url, self.fetch[0])
-        self.assertEqual(id + ".mp4", self.fetch[1])
+        fetch = opencast._do_download.call_args[0]
+        self.assertEqual(url, fetch[0])
+        self.assertEqual(id + ".mp4", fetch[1])
 
     def test_ocUpload(self):
-        self.opencast = Opencast(self.conf, self.rabbit)
-        self.opencast._do_get = MagicMock(return_value=series_json)
+        opencast = Opencast(self.conf, self.rabbit)
+        opencast._do_get = MagicMock(return_value=series_json)
 
         #TODO: Break this test into two, since we might be creating the series, or we might not be
-        self.opencast.oc_upload(creator, title, rec_id)
+        opencast.oc_upload(creator, title, rec_id)
 
 if __name__ == '__main__':
     unittest.main()

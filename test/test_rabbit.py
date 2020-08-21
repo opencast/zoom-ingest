@@ -72,19 +72,19 @@ class TestRabbit(unittest.TestCase):
         self.fail("TODO: recording_files, creator")
 
     def test_messageConstruction(self):
-        self.rabbit = Rabbit(self.config, self.zoom)
-        msg = self.rabbit._construct_rabbit_msg(webhook_event['payload'], webhook_event['download_token'])
+        rabbit = Rabbit(self.config, self.zoom)
+        msg = rabbit._construct_rabbit_msg(webhook_event['payload'], webhook_event['download_token'])
         self.assert_rabbitmsg(msg)
 
     def test_sendingMessages(self):
-        self.rabbit = Rabbit(self.config, self.zoom)
-        self.rabbit._send_rabbit_msg = MagicMock(return_value=None)
-        self.mock = self.rabbit._send_rabbit_msg
-        self.rabbit.send_rabbit_msg(payload=webhook_event["payload"], token=webhook_event["download_token"])
+        rabbit = Rabbit(self.config, self.zoom)
+        rabbit._send_rabbit_msg = MagicMock(return_value=None)
+        mock = rabbit._send_rabbit_msg
+        rabbit.send_rabbit_msg(payload=webhook_event["payload"], token=webhook_event["download_token"])
 
-        self.rabbit._send_rabbit_msg.assert_called_once()
-        self.sent = self.rabbit._send_rabbit_msg.call_args[0][0]
-        self.assert_rabbitmsg(self.sent)
+        rabbit._send_rabbit_msg.assert_called_once()
+        sent = rabbit._send_rabbit_msg.call_args[0][0]
+        self.assert_rabbitmsg(sent)
 
 
 if __name__ == '__main__':

@@ -33,19 +33,19 @@ class TestZoom(unittest.TestCase):
           Zoom(self.config)
 
     def test_goodConfig(self):
-        self.zoom = Zoom(self.config)
-        self.assertEqual(self.config["JWT"]["Key"], self.zoom.api_key)
-        self.assertEqual(self.config["JWT"]["Secret"], self.zoom.api_secret)
+        zoom = Zoom(self.config)
+        self.assertEqual(self.config["JWT"]["Key"], zoom.api_key)
+        self.assertEqual(self.config["JWT"]["Secret"], zoom.api_secret)
 
     def validate_bad_data(self, payload):
-        self.zoom = Zoom(self.config)
+        zoom = Zoom(self.config)
         with self.assertRaises(BadWebhookData):
-            self.zoom.validate_payload(payload)
+            zoom.validate_payload(payload)
 
     def validate_no_mp4(self, payload):
-        self.zoom = Zoom(self.config)
+        zoom = Zoom(self.config)
         with self.assertRaises(NoMp4Files):
-            self.zoom.validate_payload(payload)
+            zoom.validate_payload(payload)
 
     def test_validate_mising_object(self):
         del self.event['object']
@@ -121,32 +121,32 @@ class TestZoom(unittest.TestCase):
         self.validate_bad_data(self.event)
 
     def test_valid_data(self):
-        self.zoom = Zoom(self.config)
-        self.zoom.validate_payload(self.event)
+        zoom = Zoom(self.config)
+        zoom.validate_payload(self.event)
 
     def test_parse_recordings(self):
-        self.zoom = Zoom(self.config)
-        self.recordings = self.zoom.parse_recording_files(self.event)
-        self.assertEqual(1, len(self.recordings))
+        zoom = Zoom(self.config)
+        recordings = zoom.parse_recording_files(self.event)
+        self.assertEqual(1, len(recordings))
 
-        self.recording = self.recordings[0]
-        self.assertEqual(self.recording["recording_id"], self.event["object"]["recording_files"][0]["id"])
-        self.assertEqual(self.recording["recording_start"], self.event["object"]["recording_files"][0]["recording_start"])
-        self.assertEqual(self.recording["recording_end"], self.event["object"]["recording_files"][0]["recording_end"])
-        self.assertEqual(self.recording["download_url"], self.event["object"]["recording_files"][0]["download_url"])
-        self.assertEqual(self.recording["file_type"], self.event["object"]["recording_files"][0]["file_type"])
-        self.assertEqual(self.recording["recording_type"], self.event["object"]["recording_files"][0]["recording_type"])
+        recording = recordings[0]
+        self.assertEqual(recording["recording_id"], self.event["object"]["recording_files"][0]["id"])
+        self.assertEqual(recording["recording_start"], self.event["object"]["recording_files"][0]["recording_start"])
+        self.assertEqual(recording["recording_end"], self.event["object"]["recording_files"][0]["recording_end"])
+        self.assertEqual(recording["download_url"], self.event["object"]["recording_files"][0]["download_url"])
+        self.assertEqual(recording["file_type"], self.event["object"]["recording_files"][0]["file_type"])
+        self.assertEqual(recording["recording_type"], self.event["object"]["recording_files"][0]["recording_type"])
 
     def test_parse_recordings(self):
-        self.zoom = Zoom(self.config)
+        zoom = Zoom(self.config)
         del self.event['object']['recording_files'][0]
-        self.recordings = self.zoom.parse_recording_files(self.event)
-        self.assertEqual(0, len(self.recordings))
+        recordings = zoom.parse_recording_files(self.event)
+        self.assertEqual(0, len(recordings))
 
     @unittest.skip("FIXME: This is hardcoded in the zoom lib!")
     def test_parse_recordings(self):
-        self.zoom = Zoom(self.config)
-        self.creator = self.zoom.get_recording_creator(self.event)
+        zoom = Zoom(self.config)
+        creator = zoom.get_recording_creator(self.event)
         self.fail("This test is testing something that's hardcoded!")
 
 
