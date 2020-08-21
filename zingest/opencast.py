@@ -31,8 +31,28 @@ class Opencast:
             raise TypeError("Rabbit is missing or the wrong type!")
 
 
+    def _do_download(self, url, output):
+        try:
+            #TODO: Verify that this download succeeds (ie, with a checksum) rather than checking file existence
+            wget.download(url, output)
+        except Exception as e:
+            self.logger.error("Could not download file {}".format(e))
+            raise e
+
+
+    def _do_get(self, url):
+        return requests.get(url, auth=HTTPDigestAuth(self.user, self.password),
+                                headers={'X-Requestedresponse = -Auth': 'Digest'})
+
+
+    def _do_post(self, url, data, files=None):
+        return requests.post(url, data=data, files=files,
+                      auth=HTTPDigestAuth(self.user, self.password), headers={'X-Requested-Auth': 'Digest'})
+
+
     def rabbit_callback(self, method, properties, body):
         #TODO: Record ${body} somewhere (DB?) so that if we get abuptly killed we don't lose state!
+        #TODO: Handle Exceptions (parse_queue raises, as does _do_download)
         data, id = self.parse_queue(body)
         self.oc_upload(data["creator"], data["topic"], id)
         os.remove(id+'.mp4')
@@ -43,6 +63,7 @@ class Opencast:
         data = json.loads(body)#.decode("utf-8"))
         if "recording_files" not in data:
             self.logger.error("No recording found")
+            raise NoMp4Files("No recording found")
         files = data["recording_files"]
         
         dl_url = ''
@@ -56,19 +77,9 @@ class Opencast:
                 self.logger.debug(f"Recording id found: {id}")
 
         self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {id}.mp4")
-        self._do_download(dl_url+'/?access_token='+data["token"], id+'.mp4')
+        self._do_download(f"{dl_url}/?access_token={data['token']}", f"{id}.mp4")
         self.logger.debug(f"Id is ${id}")
         return data, id
-
-
-    def _do_download(self, url, output):
-        try:
-            #TODO: Verify that this download succeeds (ie, with a checksum) rather than checking file existence
-            wget.download(url, output)
-        except Exception as e:
-            self.logger.error("Could not download file {}".format(e))
-            raise e
-    
 
 
     def oc_upload(self, creator, title, rec_id):
@@ -102,15 +113,6 @@ class Opencast:
             #TODO: What if this fails?
             self._do_post(url, data=data, files=body, auth=auth)
  
-    def _do_get(self, url):
-        return requests.get(url, auth=HTTPDigestAuth(self.user, self.password),
-                                headers={'X-Requestedresponse = -Auth': 'Digest'})
-
-    def _do_post(self, url, data, files=None):
-        return requests.post(url, data=data, files=files,
-                      auth=HTTPDigestAuth(self.user, self.password), headers={'X-Requested-Auth': 'Digest'})
-
-
 
     def create_series(self, creator, title):
 
