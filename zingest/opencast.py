@@ -2,6 +2,7 @@ import json
 import requests
 import wget
 import os
+import os.path
 from requests.auth import HTTPDigestAuth
 import sys
 import configparser
@@ -13,6 +14,8 @@ import logging
 import zingest.logger
 
 class Opencast:
+
+    IN_PROGRESS_ROOT = "in-progress"
 
     def __init__(self, config, rabbit):
         self.logger = logging.getLogger("opencast")
@@ -52,10 +55,18 @@ class Opencast:
 
     def rabbit_callback(self, method, properties, body):
         #TODO: Record ${body} somewhere (DB?) so that if we get abuptly killed we don't lose state!
-        #TODO: Handle Exceptions (parse_queue raises, as does _do_download)
-        data, id = self.parse_queue(body)
+        #TODO: Handle Exceptions (fetch_file raises, as does _do_download)
+        j = json.loads(body)
+        uuid = j['uuid']
+        if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
+            os.mkdir(f'{self.IN_PROGRESS_ROOT}')
+        with open(f'{self.IN_PROGRESS_ROOT}/{uuid}.recording', 'w') as dump:
+            dump.write(json.dumps(j))
+            dump.close()
+        data, id = self.fetch_file(body)
         self.oc_upload(data["creator"], data["topic"], id)
-        os.remove(id+'.mp4')
+        os.remove(f'{self.IN_PROGRESS_ROOT}/{id}.mp4')
+        os.remove(f'{self.IN_PROGRESS_ROOT}/{uuid}.recording')
 
 
     def fetch_file(self, body):
