@@ -63,8 +63,8 @@ class Rabbit():
         self.logger.debug(f"Connecting to {self.rabbit_url} as {self.rabbit_user}")
         credentials = pika.PlainCredentials(self.rabbit_user, self.rabbit_pass)
         connection = pika.BlockingConnection(pika.ConnectionParameters(self.rabbit_url, credentials=credentials))
-        channel = connection.channel()
-        rcv_queue = channel.queue_declare(queue="zoomhook")
+        rcv_channel = connection.channel()
+        rcv_queue = rcv_channel.queue_declare(queue="zoomhook")
         while True:
             msg_count = rcv_queue.method.message_count
             while msg_count > 0:

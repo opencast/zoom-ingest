@@ -58,7 +58,7 @@ class Opencast:
         os.remove(id+'.mp4')
 
 
-    def parse_queue(self, body):
+    def fetch_file(self, body):
         #NB: Previously decoded here, unsure if needed
         data = json.loads(body)#.decode("utf-8"))
         if "recording_files" not in data:

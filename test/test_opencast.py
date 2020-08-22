@@ -74,7 +74,7 @@ class TestOpencast(unittest.TestCase):
 
         opencast = Opencast(self.config, self.rabbit)
         opencast._do_download = MagicMock(return_value=None)
-        opencast.parse_queue(json.dumps(rabbit_msg))
+        opencast.fetch_file(json.dumps(rabbit_msg))
 
         url = webhook_event['payload']['object']['recording_files'][0]['download_url'] + '/?access_token=' + webhook_event['download_token']
         id = webhook_event['payload']['object']['recording_files'][0]['id']
