@@ -1,6 +1,7 @@
 import logging
 import configparser
-
+import signal
+import multiprocessing
 from flask import Flask, request
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
@@ -26,8 +27,21 @@ except KeyError as err:
 z = Zoom(config)
 r = Rabbit(config, z)
 o = Opencast(config, r)
-
 app = Flask(__name__)
+
+def sigint_handler(signum, frame):
+    '''Intercept sigint and terminate services gracefully.
+    '''
+    utils.terminate(True)
+
+
+def sigterm_handler(signum, frame):
+    '''Intercept sigterm and terminate all processes.
+    '''
+    sigint_handler(signum, frame)
+    for process in multiprocessing.active_children():
+        process.terminate()
+    sys.exit(0)
 
 @app.route('/', methods=['GET'])
 def get_index():

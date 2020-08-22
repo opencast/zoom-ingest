@@ -28,10 +28,13 @@ class Opencast:
         self.password = config["Opencast"]["Password"]
         self.logger.debug(f"Opencast password is {self.password}")
         self.logger.info("Setup complete, consuming rabbits")
-        if rabbit and type(rabbit) == zingest.rabbit.Rabbit:
-            rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
-        else:
+        if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
             raise TypeError("Rabbit is missing or the wrong type!")
+        else:
+            self.rabbit = rabbit
+
+    def run(self):
+        self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
 
     def _do_download(self, url, output):
