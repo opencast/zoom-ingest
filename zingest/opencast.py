@@ -32,9 +32,7 @@ class Opencast:
             raise TypeError("Rabbit is missing or the wrong type!")
         else:
             self.rabbit = rabbit
-
-    def run(self):
-        self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
+            self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
 
     def _do_download(self, url, output):
@@ -66,11 +64,17 @@ class Opencast:
         with open(f'{self.IN_PROGRESS_ROOT}/{uuid}.recording', 'w') as dump:
             dump.write(json.dumps(j))
             dump.close()
+        self.logger.info(f"Fetching {uuid}")
         data, id = self.fetch_file(body)
+        self.logger.info(f"Uploading {uuid} as {id}.mp4 to {self.url}")
         self.oc_upload(data["creator"], data["topic"], id)
-        os.remove(f'{self.IN_PROGRESS_ROOT}/{id}.mp4')
-        os.remove(f'{self.IN_PROGRESS_ROOT}/{uuid}.recording')
+        self._rm(f'{self.IN_PROGRESS_ROOT}/{id}.mp4')
+        self._rm(f'{self.IN_PROGRESS_ROOT}/{uuid}.recording')
 
+    def _rm(self, path):
+        self.logger.debug(f"Removing {path}")
+        if os.path.isfile(path):
+            os.remove(path)
 
     def fetch_file(self, body):
         #NB: Previously decoded here, unsure if needed

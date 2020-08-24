@@ -64,16 +64,11 @@ class Rabbit():
         credentials = pika.PlainCredentials(self.rabbit_user, self.rabbit_pass)
         connection = pika.BlockingConnection(pika.ConnectionParameters(self.rabbit_url, credentials=credentials))
         rcv_channel = connection.channel()
-        rcv_queue = rcv_channel.queue_declare(queue="zoomhook")
-        while True:
-            msg_count = rcv_queue.method.message_count
-            while msg_count > 0:
-                method,prop,body = rcv_channel.basic_get(queue="zoomhook", auto_ack=True)
-                callback(method, prop, body)
-                count_queue = rcv_channel.queue_declare(queue="zoomhook", passive=True)
-                msg_count = count_queue.method.message_count
-            if msg_count == 0:
-                sleep(5)
+        for method_frame, properties, body in rcv_channel.consume('zoomhook'):
+            callback(method_frame, properties, body)
+            rcv_channel.basic_ack(method_frame.delivery_tag)
+        requeued_messages = channel.cancel()
+        self.logger.debug('Requeued %i messages' % requeued_messages)
         rcv_channel.close()
         self.logger.debug("Closing rabbit connection")
         rcv_connection.close()
