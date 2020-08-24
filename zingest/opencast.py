@@ -6,7 +6,7 @@ import os.path
 from requests.auth import HTTPDigestAuth
 import sys
 import configparser
-
+from urllib.error import HTTPError
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 
@@ -28,11 +28,16 @@ class Opencast:
         self.password = config["Opencast"]["Password"]
         self.logger.debug(f"Opencast password is {self.password}")
         self.logger.info("Setup complete, consuming rabbits")
+        self.set_rabbit(rabbit)
+
+    def set_rabbit(self, rabbit):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
             raise TypeError("Rabbit is missing or the wrong type!")
         else:
             self.rabbit = rabbit
-            self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
+
+    def run():
+        self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
 
     def _do_download(self, url, output):
@@ -65,7 +70,11 @@ class Opencast:
             dump.write(json.dumps(j))
             dump.close()
         self.logger.info(f"Fetching {uuid}")
-        data, id = self.fetch_file(body)
+        try:
+            data, id = self.fetch_file(body)
+        except HTTPError as er:
+            self.logger.exception("Unable to fetch file")
+            return
         self.logger.info(f"Uploading {uuid} as {id}.mp4 to {self.url}")
         self.oc_upload(data["creator"], data["topic"], id)
         self._rm(f'{self.IN_PROGRESS_ROOT}/{id}.mp4')
