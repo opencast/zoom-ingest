@@ -45,7 +45,7 @@ class Opencast:
             #TODO: Verify that this download succeeds (ie, with a checksum) rather than checking file existence
             wget.download(url, output)
         except Exception as e:
-            self.logger.error("Could not download file {}".format(e))
+            self.logger.error(f"Could not download file {url}")
             raise e
 
 
