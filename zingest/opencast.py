@@ -1,6 +1,5 @@
 import json
 import requests
-import wget
 import os
 import os.path
 from requests.auth import HTTPDigestAuth
@@ -36,17 +35,22 @@ class Opencast:
         else:
             self.rabbit = rabbit
 
-    def run():
+    def run(self):
         self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
 
     def _do_download(self, url, output):
-        try:
-            #TODO: Verify that this download succeeds (ie, with a checksum) rather than checking file existence
-            wget.download(url, output)
-        except Exception as e:
-            self.logger.error(f"Could not download file {url}")
-            raise e
+        with requests.get(url, stream=True) as req:
+            #Raises an exception if there is one
+            req.raise_for_status()
+            with open(output, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    # If you have chunk encoded response uncomment if
+                    # and set chunk_size parameter to None.
+                    #if chunk:
+                    f.write(chunk)
+                f.close()
+            r.close()
 
 
     def _do_get(self, url):
