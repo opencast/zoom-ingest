@@ -28,7 +28,7 @@ def uploader():
     z = Zoom(config)
     r = Rabbit(config, z)
     o = Opencast(config, r)
-    
+    o.run()
 
 if not 'thread' in locals():
     thread = threading.Thread(target=uploader, daemon=True)

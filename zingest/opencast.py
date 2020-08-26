@@ -8,6 +8,7 @@ import configparser
 from urllib.error import HTTPError
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
+from zingest import db
 
 import logging
 import zingest.logger
@@ -63,26 +64,60 @@ class Opencast:
                       auth=HTTPDigestAuth(self.user, self.password), headers={'X-Requested-Auth': 'Digest'})
 
 
-    def rabbit_callback(self, method, properties, body):
-        #TODO: Record ${body} somewhere (DB?) so that if we get abuptly killed we don't lose state!
-        #TODO: Handle Exceptions (fetch_file raises, as does _do_download)
-        j = json.loads(body)
-        uuid = j['uuid']
-        if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
-            os.mkdir(f'{self.IN_PROGRESS_ROOT}')
-        with open(f'{self.IN_PROGRESS_ROOT}/{uuid}.recording', 'w') as dump:
-            dump.write(json.dumps(j))
-            dump.close()
-        self.logger.info(f"Fetching {uuid}")
+    @db.with_session
+    def rabbit_callback(dbs, self, method, properties, body):
         try:
-            data, id = self.fetch_file(body)
-        except HTTPError as er:
-            self.logger.exception("Unable to fetch file")
-            return
-        self.logger.info(f"Uploading {uuid} as {id}.mp4 to {self.url}")
-        self.oc_upload(data["creator"], data["topic"], id)
-        self._rm(f'{self.IN_PROGRESS_ROOT}/{id}.mp4')
-        self._rm(f'{self.IN_PROGRESS_ROOT}/{uuid}.recording')
+            j = json.loads(body)
+
+            try:
+                uuid = j['uuid']
+                rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
+                if None == rec:
+                    self.logger.debug(f"{uuid} not found in db, creating new record")
+                    #Create a database record so that we can recover if we're killed mid process
+                    rec = db.Recording(j)
+                    rec.update_status(db.Status.IN_PROGRESS)
+                    dbs.merge(rec)
+                    dbs.commit()
+                else:
+                    self.logger.debug(f"{uuid} found in db")
+                    #return
+            except Exception as dbe:
+                self.logger.exception("Database error")
+                #TODO: Push the message back into rabbit
+                return
+
+            self._process(j)
+
+            try:
+                #Create a database record so that we can recover if we're killed mid process
+                rec.update_status(db.Status.FINISHED)
+                dbs.merge(rec)
+                dbs.commit()
+            except Exception as dbe:
+                self.logger.exception("Database error")
+                #TODO: Now what? the message back into rabbit
+                return
+        except Exception as e:
+            self.logger.exception("Processing exception")
+            #We don't need to do anything here since we haven't marked the recording as FINISHED
+            #It will get caught up in the next background processing run
+
+
+    def _process(self, json):
+            uuid = json['uuid']
+            if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
+                os.mkdir(f'{self.IN_PROGRESS_ROOT}')
+
+            self.logger.info(f"Fetching {uuid}")
+            try:
+                data, fileid = self.fetch_file(json)
+            except HTTPError as er:
+                self.logger.exception("Unable to fetch file")
+                return
+            self.logger.info(f"Uploading {uuid} as {fileid}.mp4 to {self.url}")
+            self.oc_upload(data["creator"], data["topic"], id)
+            self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
 
     def _rm(self, path):
         self.logger.debug(f"Removing {path}")
@@ -91,7 +126,7 @@ class Opencast:
 
     def fetch_file(self, body):
         #NB: Previously decoded here, unsure if needed
-        data = json.loads(body)#.decode("utf-8"))
+        data = body #json.loads(body)#.decode("utf-8"))
         if "recording_files" not in data:
             self.logger.error("No recording found")
             raise NoMp4Files("No recording found")
