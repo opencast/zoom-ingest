@@ -25,34 +25,10 @@ def uploader():
     except KeyError as err:
         sys.exit("Key {0} was not found".format(err))
 
-    z = None
-    r = None
-    o = None
-    while True:
-        if not z:
-            try:
-                z = Zoom(config)
-            except Exception as e:
-                logger.exception("Zoom exception")
-                z = None
-                r = None
-                o = None
-
-        if not r:
-            try:
-                r = Rabbit(config, z)
-            except Exception as e:
-                logger.exception("Rabbit exception")
-                r = None
-                o = None
-
-        if not o:
-            try:
-                o = Opencast(config, r)
-            except Exception as e:
-                logger.exception("Opencast exception")
-                o = None
-
+    z = Zoom(config)
+    r = Rabbit(config, z)
+    o = Opencast(config, r)
+    
 
 if not 'thread' in locals():
     thread = threading.Thread(target=uploader, daemon=True)
