@@ -2,14 +2,7 @@ from zoomus import ZoomClient
 import json
 import zingest.logger
 import logging
-
-
-class BadWebhookData(Exception):
-    pass
-
-
-class NoMp4Files(Exception):
-    pass
+from zingest.common import BadWebhookData, NoMp4Files
 
 
 class Zoom:

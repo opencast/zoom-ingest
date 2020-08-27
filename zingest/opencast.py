@@ -13,6 +13,7 @@ from zingest import db
 import time
 import logging
 import zingest.logger
+from zingest.common import NoMp4Files
 
 class Opencast:
 
@@ -130,9 +131,9 @@ class Opencast:
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
 
             self.logger.info(f"Fetching {uuid}")
-            data, fileid = "data", "fileid" #self.fetch_file(json)
+            data, fileid = self.fetch_file(json)
             self.logger.info(f"Uploading {uuid} as {fileid}.mp4 to {self.url}")
-            #self.oc_upload(data["creator"], data["topic"], id)
+            self.oc_upload(data["creator"], data["topic"], id)
             self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
 
             rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).first()
@@ -203,16 +204,16 @@ class Opencast:
         for series in series_list["results"]:
             if series["title"] == series_title:
                 series_found = True
-                id = series["id"]
+                series_id = series["id"]
 
         #TODO: This needs to be optional, and/or support a default series
         if not series_found:
             #TODO: What if this fails?
-            id = self.create_series(creator, series_title)
+            series_id = self.create_series(creator, series_title)
 
         with open(rec_id+'.mp4', 'rb') as fobj:
             #TODO: The flavour here needs to be configurable.  Maybe.
-            data = {"title": title, "creator": creator, "isPartOf": id, "flavor": 'presentation/source'}
+            data = {"title": title, "creator": creator, "isPartOf": series_id, "flavor": 'presentation/source'}
             body = {'body': fobj}
             url = self.url + '/ingest/addMediaPackage'
             #TODO: What if this fails?
