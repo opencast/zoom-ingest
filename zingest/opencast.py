@@ -10,7 +10,7 @@ from urllib.error import HTTPError
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 from zingest import db
-
+import time
 import logging
 import zingest.logger
 
@@ -28,8 +28,9 @@ class Opencast:
         self.logger.debug(f"Opencast user is {self.user}")
         self.password = config["Opencast"]["Password"]
         self.logger.debug(f"Opencast password is {self.password}")
-        self.logger.info("Setup complete, consuming rabbits")
         self.set_rabbit(rabbit)
+        self.logger.info("Setup complete")
+
 
     def set_rabbit(self, rabbit):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
@@ -37,17 +38,29 @@ class Opencast:
         else:
             self.rabbit = rabbit
 
+
     def run(self):
-        self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
+        while True:
+            try:
+                self.logger.info("Consuming rabbits")
+                self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
+            except Exception as e:
+                self.logger.exception("BUG: Should not happen")
+
 
     @db.with_session
     def process_backlog(dbs, self):
-        try:
-            hour_ago = datetime.utcnow() - timedelta(hours = 1)
-            rec = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED)\
-                                         .filter(db.Recording.timestamp <= hour_ago)
-        except Exception as e:
-            self.logger.exception("Unhandled exception")
+        while True:
+            try:
+                self.logger.info("Checking backlog")
+                #FIXME: commented this out for testing hour_ago = datetime.utcnow() - timedelta(hours = 1)
+                hour_ago = datetime.utcnow() - timedelta(minutes = 1)
+                rec_list = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED, db.Recording.timestamp <= hour_ago).all()
+                for rec in rec_list:
+                    self._process(rec.get_data())
+                time.sleep(60)
+            except Exception as e:
+                self.logger.exception("BUG: Should not happen")
 
 
     def _do_download(self, url, output, expected_size):
@@ -80,29 +93,26 @@ class Opencast:
 
     @db.with_session
     def rabbit_callback(dbs, self, method, properties, body):
-        try:
-            j = json.loads(body)
-            uuid = j['uuid']
-            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
-            if None == rec:
-                self.logger.debug(f"{uuid} not found in db, creating new record")
-                #Create a database record so that we can recover if we're killed mid process
-                rec = db.Recording(j)
-                rec.update_status(db.Status.NEW)
-                dbs.merge(rec)
-                dbs.commit()
-            else:
-                self.logger.debug(f"{uuid} found in db")
-                #return
-        except Exception as dbe:
-            self.logger.exception("Database error")
-            #TODO: Push the message back into rabbit
+        #TODO: Throwing an error from here appears to push the mesage back into Rabbit, this should be double checked
+        j = json.loads(body)
+        uuid = j['uuid']
+        rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).all()
+        if 0 == len(rec):
+            self.logger.debug(f"{uuid} not found in db, creating new record")
+            #Create a database record so that we can recover if we're killed mid process
+            rec = db.Recording(j)
+            rec.update_status(db.Status.NEW)
+            dbs.merge(rec)
+            dbs.commit()
+        else:
+            self.logger.debug(f"{uuid} found in db")
             return
 
         self._process(j)
 
 
-    def _process(self, json):
+    @db.with_session
+    def _process(dbs, self, json):
         uuid = json['uuid']
         try:
             rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
@@ -120,24 +130,26 @@ class Opencast:
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
 
             self.logger.info(f"Fetching {uuid}")
-            data, fileid = self.fetch_file(json)
+            data, fileid = "data", "fileid" #self.fetch_file(json)
             self.logger.info(f"Uploading {uuid} as {fileid}.mp4 to {self.url}")
-            self.oc_upload(data["creator"], data["topic"], id)
+            #self.oc_upload(data["creator"], data["topic"], id)
             self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
 
-            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
+            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).first()
             if None == rec:
                 self.logger.error(f"BUG: {uuid} not found in db")
+                raise Exception(f"BUG: {uuid} not found in db")
             else:
                 rec.update_status(db.Status.FINISHED)
                 dbs.merge(rec)
                 dbs.commit()
         except HTTPError as er:
-            self.logger.exception("Unable to fetch file")
-            raise er
-        except Exception as dbe:
-            self.logger.exception("Database error")
-            raise dbe
+            self.logger.exception("Unable to fetch file, will retry later")
+            #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
+        except Exception as e:
+            self.logger.exception("General Exception")
+            #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
+
 
     def _rm(self, path):
         self.logger.debug(f"Removing {path}")
@@ -145,7 +157,9 @@ class Opencast:
             if os.path.isfile(path):
                 os.remove(path)
         except Exception as e:
-            self.logger.exception("Exception removing {path}.  File will need to be manually removed if it still exists.")
+            if os.path.isfile(path):
+                self.logger.exception("Exception removing {path}.  File will need to be manually removed.")
+
 
     def fetch_file(self, body):
         #NB: Previously decoded here, unsure if needed

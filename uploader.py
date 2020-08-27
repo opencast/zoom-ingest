@@ -11,28 +11,34 @@ logger = logging.getLogger("main")
 logger.setLevel(logging.DEBUG)
 logger.debug("Main init")
 
+try:
+    config = configparser.ConfigParser()
+    config.read('settings.ini')
+except FileNotFoundError:
+    sys.exit("No settings found")
+
+try:
+    if bool(config['logging']['debug']):
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug logging enabled")
+except KeyError as err:
+    sys.exit("Key {0} was not found".format(err))
+
+z = Zoom(config)
+r = Rabbit(config, z)
+o = Opencast(config, r)
+
 def uploader():
-    try:
-        config = configparser.ConfigParser()
-        config.read('settings.ini')
-    except FileNotFoundError:
-        sys.exit("No settings found")
-
-    try:
-        if bool(config['logging']['debug']):
-            logger.setLevel(logging.DEBUG)
-            logger.debug("Debug logging enabled")
-    except KeyError as err:
-        sys.exit("Key {0} was not found".format(err))
-
-    z = Zoom(config)
-    r = Rabbit(config, z)
-    o = Opencast(config, r)
     o.run()
 
-if not 'thread' in locals():
-    thread = threading.Thread(target=uploader, daemon=True)
-    thread.start()
+def reingester():
+    o.process_backlog()
+
+thread = threading.Thread(target=uploader, daemon=True)
+thread.start()
+
+thread = threading.Thread(target=reingester, daemon=True)
+thread.start()
 
 
 app = Flask(__name__)

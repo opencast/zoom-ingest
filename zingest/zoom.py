@@ -45,6 +45,7 @@ class Zoom:
             "recording_end",
             "download_url",
             "file_type",
+            "file_size",
             "recording_type",
             "status"
         ]
@@ -96,6 +97,7 @@ class Zoom:
                     "recording_end": file["recording_end"],
                     "download_url": file["download_url"],
                     "file_type": file["file_type"],
+                    "file_size": file["file_size"],
                     "recording_type": file["recording_type"]
                 })
         return recording_files
