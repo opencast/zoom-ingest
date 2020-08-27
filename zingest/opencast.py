@@ -5,6 +5,7 @@ import os.path
 from requests.auth import HTTPDigestAuth
 import sys
 import configparser
+from datetime import datetime, timedelta
 from urllib.error import HTTPError
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
@@ -39,6 +40,14 @@ class Opencast:
     def run(self):
         self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
+    @db.with_session
+    def process_backlog(dbs, self):
+        try:
+            hour_ago = datetime.utcnow() - timedelta(hours = 1)
+            rec = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED)\
+                                         .filter(db.Recording.timestamp <= hour_ago)
+        except Exception as e:
+            self.logger.exception("Unhandled exception")
 
 
     def _do_download(self, url, output, expected_size):
