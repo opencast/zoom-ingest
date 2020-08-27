@@ -40,7 +40,12 @@ class Opencast:
         self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
 
-    def _do_download(self, url, output):
+
+    def _do_download(self, url, output, expected_size):
+        #TODO: unclear what expected_size is in, .getsize is in bytes
+        if os.path.isfile(output) and expected_size == os.path.getsize(output):
+          self.logger.debug(f"{output} already exists and is the right size")
+          return
         with requests.get(url, stream=True) as req:
             #Raises an exception if there is one
             req.raise_for_status()
@@ -68,61 +73,70 @@ class Opencast:
     def rabbit_callback(dbs, self, method, properties, body):
         try:
             j = json.loads(body)
-
-            try:
-                uuid = j['uuid']
-                rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
-                if None == rec:
-                    self.logger.debug(f"{uuid} not found in db, creating new record")
-                    #Create a database record so that we can recover if we're killed mid process
-                    rec = db.Recording(j)
-                    rec.update_status(db.Status.IN_PROGRESS)
-                    dbs.merge(rec)
-                    dbs.commit()
-                else:
-                    self.logger.debug(f"{uuid} found in db")
-                    #return
-            except Exception as dbe:
-                self.logger.exception("Database error")
-                #TODO: Push the message back into rabbit
-                return
-
-            self._process(j)
-
-            try:
+            uuid = j['uuid']
+            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
+            if None == rec:
+                self.logger.debug(f"{uuid} not found in db, creating new record")
                 #Create a database record so that we can recover if we're killed mid process
-                rec.update_status(db.Status.FINISHED)
+                rec = db.Recording(j)
+                rec.update_status(db.Status.NEW)
                 dbs.merge(rec)
                 dbs.commit()
-            except Exception as dbe:
-                self.logger.exception("Database error")
-                #TODO: Now what? the message back into rabbit
-                return
-        except Exception as e:
-            self.logger.exception("Processing exception")
-            #We don't need to do anything here since we haven't marked the recording as FINISHED
-            #It will get caught up in the next background processing run
+            else:
+                self.logger.debug(f"{uuid} found in db")
+                #return
+        except Exception as dbe:
+            self.logger.exception("Database error")
+            #TODO: Push the message back into rabbit
+            return
+
+        self._process(j)
 
 
     def _process(self, json):
-            uuid = json['uuid']
+        uuid = json['uuid']
+        try:
+            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
+            if None == rec:
+                self.logger.warning(f"LIKELY A BUG: {uuid} not found in db, creating record and processing anyway")
+                #Create a database record so that we can recover if we're killed mid process
+                rec = db.Recording(j)
+                rec.update_status(db.Status.IN_PROGRESS)
+                dbs.merge(rec)
+                dbs.commit()
+            else:
+                self.logger.debug(f"{uuid} found in db")
+
             if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
 
             self.logger.info(f"Fetching {uuid}")
-            try:
-                data, fileid = self.fetch_file(json)
-            except HTTPError as er:
-                self.logger.exception("Unable to fetch file")
-                return
+            data, fileid = self.fetch_file(json)
             self.logger.info(f"Uploading {uuid} as {fileid}.mp4 to {self.url}")
             self.oc_upload(data["creator"], data["topic"], id)
             self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
 
+            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
+            if None == rec:
+                self.logger.error(f"BUG: {uuid} not found in db")
+            else:
+                rec.update_status(db.Status.FINISHED)
+                dbs.merge(rec)
+                dbs.commit()
+        except HTTPError as er:
+            self.logger.exception("Unable to fetch file")
+            raise er
+        except Exception as dbe:
+            self.logger.exception("Database error")
+            raise dbe
+
     def _rm(self, path):
         self.logger.debug(f"Removing {path}")
-        if os.path.isfile(path):
-            os.remove(path)
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+        except Exception as e:
+            self.logger.exception("Exception removing {path}.  File will need to be manually removed if it still exists.")
 
     def fetch_file(self, body):
         #NB: Previously decoded here, unsure if needed
@@ -133,19 +147,21 @@ class Opencast:
         files = data["recording_files"]
         
         dl_url = ''
-        id = ''
+        recording_id = ''
         for key in files[0].keys():
             if key == "download_url":
                 self.logger.debug(f"Download url found: {dl_url}")
                 dl_url = files[0][key]
             elif key == "recording_id":
-                id = files[0][key]
-                self.logger.debug(f"Recording id found: {id}")
+                recording_id = files[0][key]
+                self.logger.debug(f"Recording id found: {recording_id}")
+            elif key == "file_size":
+                expected_size = int(files[0][key])
+                self.logger.debug(f"Recording size found: {expected_size}")
 
-        self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {id}.mp4")
-        self._do_download(f"{dl_url}/?access_token={data['token']}", f"{id}.mp4")
-        self.logger.debug(f"Id is ${id}")
-        return data, id
+        self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {recording_id}.mp4")
+        self._do_download(f"{dl_url}/?access_token={data['token']}", f"{recording_id}.mp4", expected_size)
+        return data, recording_id
 
 
     def oc_upload(self, creator, title, rec_id):
