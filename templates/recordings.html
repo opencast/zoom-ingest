@@ -1,0 +1,28 @@
+<html>
+<head>
+  <title>Recordings for {{ user }}</title>
+</head>
+<body>
+  <h1>Recordings for {{ user }}</h1>
+  <table style="width:100%">
+    <tr>
+      <td>Date</td>
+      <td>Title</td>
+      <td>Status</td>
+      <td>Action</td>
+    </tr>
+    {% for recording in recordings %}
+    <tr>
+      <td>{{ recording.date }}</td>
+      <td><a href="{{ recording.url }}">{{ recording.title }}</td>
+      <td>{{ recording.status }}</td>
+      {% if recording.status | int != 2 %}
+      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}" disabled="true">Ingest</button></td>
+      {% else %}
+      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}" disabled="false">Ingest</button></td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </ul>
+</body>
+</html>
