@@ -17,9 +17,9 @@
       <td><a href="{{ recording.url }}">{{ recording.title }}</td>
       <td>{{ recording.status }}</td>
       {% if recording.status | int != 2 %}
-      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}" disabled="true">Ingest</button></td>
+      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}">Ingest</button></td>
       {% else %}
-      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}" disabled="false">Ingest</button></td>
+      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}" disabled="true">Ingest</button></td>
       {% endif %}
     </tr>
     {% endfor %}
