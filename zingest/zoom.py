@@ -3,7 +3,9 @@ import json
 import zingest.logger
 import logging
 from zingest.common import BadWebhookData, NoMp4Files
-
+from zingest import db
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
+from datetime import datetime, timedelta
 
 class Zoom:
 
@@ -113,14 +115,52 @@ class Zoom:
         user_list = self.zoom_client.user.get(id=email).json()
         return user_list['id']
 
-    def get_user_recordings(self, user_id):
+    def _get_user_recordings(self, user_id, from_date=None, to_date=None):
+        if None == from_date:
+            from_date = datetime.utcnow() - timedelta(days = 7)
+        if None == to_date:
+            to_date = datetime.utcnow()
         #This defaults to 300 records / page -> appears to be 300 *meetings* per call.  We'll deal with paging later
         #RATELIMIT: 20/60 req/s
-        #FIXME: Needs a from and to date (YYYY-MM-DD)
-        userId = json.loads(self.zoom_client.user.list().content)['users'][0]['id']
-        recordings_response = self.zoom_client.recording.list(user_id=userId, mc="false", page_size=30, to="2020-08-28", trash_type="meeting_recordings")#, from="2020-08-28")
+        params = {
+            'user_id': user_id,
+            'from': from_date.strftime('%Y-%m-%d'),
+            'to': to_date.strftime('%Y-%m-%d'),
+            'page_size': 30,
+            'trash_type': 'meeting_recordings',
+            'mc': 'false'
+        }
+        recordings_response = self.zoom_client.recording.list(**params)
         recordings = recordings_response.json()
         return recordings
+
+
+    @db.with_session
+    def get_user_recordings(dbs, self, user_id, from_date=None, to_date=None):
+        #Get the list of recordings from Zoom
+        zoom_results = self._get_user_recordings(user_id, from_date, to_date)
+        zoom_meetings = zoom_results['meetings']
+        self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
+        zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
+        self.logger.debug(f"Their IDs are { zoom_rec_meeting_ids }")
+        existing_db_recordings = dbs.query(db.Recording).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids)).all()
+        existing_data = { e.uuid: { 'status': e.status, 'posturl': "TODO" } for e in existing_db_recordings }
+        self.logger.debug(f"There are { len(existing_data) } existing db records")
+        renderable = []
+        for element in zoom_meetings:
+            rec_uuid = element['uuid']
+            posturl = existing_data[rec_uuid]['posturl'] if rec_uuid in existing_data else "MAKE_UP"
+            status = str(existing_data[rec_uuid]['status']) if rec_uuid in existing_data else str(db.Status.NEW)
+            item = {
+                'id': rec_uuid,
+                'title': element['topic'],
+                'date': element['start_time'],
+                'url': element['share_url'],
+                'posturl': posturl,
+                'status': status
+            }
+            renderable.append(item)
+        return renderable
 
 
     def get_recording(self, recording_id):

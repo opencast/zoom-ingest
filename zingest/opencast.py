@@ -116,7 +116,7 @@ class Opencast:
     def _process(dbs, self, json):
         uuid = json['uuid']
         try:
-            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid)
+            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).one_or_none()
             if None == rec:
                 self.logger.warning(f"LIKELY A BUG: {uuid} not found in db, creating record and processing anyway")
                 #Create a database record so that we can recover if we're killed mid process
@@ -136,7 +136,7 @@ class Opencast:
             self.oc_upload(data["creator"], data["topic"], id)
             self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
 
-            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).first()
+            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).one_or_none()
             if None == rec:
                 self.logger.error(f"BUG: {uuid} not found in db")
                 raise Exception(f"BUG: {uuid} not found in db")

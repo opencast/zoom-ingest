@@ -76,7 +76,8 @@ class Recording(Base):
 
     __tablename__ = 'recording'
 
-    uid = Column('uid', Text(), nullable=False, primary_key=True)
+    uuid = Column('uuid', Text(), nullable=False, primary_key=True)
+    user_id = Column('user_id', Text(), nullable=False)
     data = Column('data', LargeBinary(), nullable=False)
     status = Column('status', Integer(), nullable=False,
                     default=Status.NEW)
@@ -84,20 +85,15 @@ class Recording(Base):
                     default=datetime.utcnow())
 
     def __init__(self, data):
-        self.uid = data['uuid']
-        self.set_data(data)
+        self.uuid = data['uuid']
+        self.user_id = data['host_id']
+        self.data = json.dumps(data).encode('utf-8')
         self.update_status(Status.NEW)
 
     def get_data(self):
         '''Load JSON data from event.
         '''
         return json.loads(self.data.decode('utf-8'))
-
-    def set_data(self, data):
-        '''Store data as JSON.
-        '''
-        # Python 3 wants bytes
-        self.data = json.dumps(data).encode('utf-8')
 
     def status_str(self):
         '''Return status as string.
@@ -113,7 +109,7 @@ class Recording(Base):
 
         :return: String representation of object.
         '''
-        return f'<Recording(uuid={self.uid}, status={self.status})>'
+        return f'<Recording(uuid={self.uuid}, status={self.status})>'
 
     def serialize(self):
         '''Serialize this object as dictionary usable for conversion to JSON.
@@ -122,6 +118,7 @@ class Recording(Base):
         '''
         return {
             'uuid': self.uid,
+            'user_id': self.user_id,
             'data': self.get_data(),
             'status': self.status_str(),
             'timestamp': str(self.timestamp)

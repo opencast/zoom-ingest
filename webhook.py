@@ -44,12 +44,7 @@ app = Flask(__name__)
 
 @app.route('/recordings/<user_id>', methods=['GET'])
 def do_list_recordings(user_id):
-    full_list = z.get_user_recordings(user_id)
-    recordings = full_list['meetings']
-    renderable = []
-    for element in recordings:
-        item = { 'id': element['uuid'], 'title': element['topic'], 'date': element['start_time'], 'url': element['share_url'], 'posturl': 'TEMP', 'status': 0 }
-        renderable.append(item)
+    renderable = z.get_user_recordings(user_id)
     return render_template("recordings.html", recordings=renderable, user=user_id)
 
 
