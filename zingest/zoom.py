@@ -84,7 +84,7 @@ class Zoom:
 
     def parse_recording_files(self, payload):
         recording_files = []
-        for file in payload["object"]["recording_files"]:
+        for file in payload["recording_files"]:
             if file["file_type"].lower() == "mp4":
                 recording_files.append({
                     "recording_id": file["id"],
@@ -105,10 +105,11 @@ class Zoom:
         return user_list
 
     def get_recording_creator(self, payload):
+        return payload['host_id']
         #RATELIMIT: 30/80 req/s
-        user_list_response = self.zoom_client.user.get(id=payload["object"]["host_id"])
-        user_list = json.loads(user_list_response.content.decode("utf-8"))
-        return user_list['email']
+        #user_list_response = self.zoom_client.user.get(id=payload["object"]["host_id"])
+        #user_list = json.loads(user_list_response.content.decode("utf-8"))
+        #return user_list['email']
 
 
     def get_user_id(self, email):

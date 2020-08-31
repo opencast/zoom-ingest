@@ -36,12 +36,12 @@ class Rabbit():
         recording_files = self.zoom.parse_recording_files(payload)
 
         rabbit_msg = {
-            "uuid": payload["object"]["uuid"],
-            "zoom_series_id": payload["object"]["id"],
-            "topic": payload["object"]["topic"],
-            "start_time": payload["object"]["start_time"],
-            "duration": payload["object"]["duration"],
-            "host_id": payload["object"]["host_id"],
+            "uuid": payload["uuid"],
+            "zoom_series_id": payload["id"],
+            "topic": payload["topic"],
+            "start_time": payload["start_time"],
+            "duration": payload["duration"],
+            "host_id": payload["host_id"],
             "recording_files": recording_files,
             "token": token,
             "received_time": now,

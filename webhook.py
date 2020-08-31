@@ -69,6 +69,10 @@ def do_POST():
         logger.error("Payload is missing")
         return render_template_string("Missing payload field in webhook body", ""), 400
 
+    return handle_webhook(body)
+
+
+def handle_webhook(body):
     payload = body["payload"]
     try:
         z.validate_payload(payload)
@@ -87,7 +91,7 @@ def do_POST():
     logger.debug(f"Token is {token}")
 
     logger.debug("Sending rabbit message")
-    r.send_rabbit_msg(payload, token)
+    r.send_rabbit_msg(payload['object'], token)
 
     logger.debug("POST processed successfully")
     return "Success"

@@ -52,6 +52,13 @@ def with_session(f):
     return decorated
 
 
+@with_session
+def create_recording(dbs, j):
+    rec = Recording(j)
+    rec.update_status(Status.NEW)
+    dbs.merge(rec)
+    dbs.commit()
+
 class Constants():
 
     @classmethod

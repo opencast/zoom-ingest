@@ -97,14 +97,11 @@ class Opencast:
         #TODO: Throwing an error from here appears to push the mesage back into Rabbit, this should be double checked
         j = json.loads(body)
         uuid = j['uuid']
-        rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).all()
+        rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).all()
         if 0 == len(rec):
             self.logger.debug(f"{uuid} not found in db, creating new record")
             #Create a database record so that we can recover if we're killed mid process
-            rec = db.Recording(j)
-            rec.update_status(db.Status.NEW)
-            dbs.merge(rec)
-            dbs.commit()
+            db.create_recording(j)
         else:
             self.logger.debug(f"{uuid} found in db")
             return
@@ -116,7 +113,7 @@ class Opencast:
     def _process(dbs, self, json):
         uuid = json['uuid']
         try:
-            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).one_or_none()
+            rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if None == rec:
                 self.logger.warning(f"LIKELY A BUG: {uuid} not found in db, creating record and processing anyway")
                 #Create a database record so that we can recover if we're killed mid process
@@ -136,7 +133,7 @@ class Opencast:
             self.oc_upload(data["creator"], data["topic"], id)
             self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
 
-            rec = dbs.query(db.Recording).filter(db.Recording.uid == uuid).one_or_none()
+            rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if None == rec:
                 self.logger.error(f"BUG: {uuid} not found in db")
                 raise Exception(f"BUG: {uuid} not found in db")
