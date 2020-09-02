@@ -17,12 +17,12 @@
       <td><a href="{{ recording.url }}">{{ recording.title }}</td>
       <td>{{ recording.status }}</td>
       {% if recording.status | int != 2 %}
-      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}">Ingest</button></td>
+      <td><form action="/recording/{{ recording.id }}" method="get"><input type="submit" value="Select" /></form></td>
       {% else %}
-      <td><button type="submit" formmethod="post" formaction="{{ recording.posturl }}" disabled="true">Ingest</button></td>
+      <td><form action="/recording/{{ recording.id }}" method="get"><input type="submit" value="Select" disabled="true"/></form></td>
       {% endif %}
     </tr>
     {% endfor %}
-  </ul>
+  </table>
 </body>
 </html>

@@ -111,17 +111,25 @@ class Zoom:
         #user_list = json.loads(user_list_response.content.decode("utf-8"))
         #return user_list['email']
 
+    def get_user(self, email_or_id):
+        #TODO: Cache this
+        user = self.zoom_client.user.get(id=email_or_id).json()
+        return user
 
     def get_user_id(self, email):
-        user_list = self.zoom_client.user.get(id=email).json()
-        return user_list['id']
+        user = self.get_user(email)
+        return user['id']
+
+    def get_user_email(self, user_id):
+        user = self.get_user(user_id)
+        return user['email']
 
     def _get_user_recordings(self, user_id, from_date=None, to_date=None):
         if None == from_date:
             from_date = datetime.utcnow() - timedelta(days = 7)
         if None == to_date:
             to_date = datetime.utcnow()
-        #This defaults to 300 records / page -> appears to be 300 *meetings* per call.  We'll deal with paging later
+        #This defaults to 30 records / page -> appears to be 30 *meetings* per call.  We'll deal with paging later
         #RATELIMIT: 20/60 req/s
         params = {
             'user_id': user_id,
@@ -136,28 +144,32 @@ class Zoom:
         return recordings
 
 
-    @db.with_session
-    def get_user_recordings(dbs, self, user_id, from_date=None, to_date=None):
+    def get_user_recordings(self, user_id, from_date=None, to_date=None):
         #Get the list of recordings from Zoom
         zoom_results = self._get_user_recordings(user_id, from_date, to_date)
         zoom_meetings = zoom_results['meetings']
         self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
+        return self._build_renderable_event_list(zoom_meetings)
+
+
+    @db.with_session
+    def _build_renderable_event_list(dbs, self, zoom_meetings):
         zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
-        self.logger.debug(f"Their IDs are { zoom_rec_meeting_ids }")
+        self.logger.debug(f"Building renderable objects for zoom meetings: { zoom_rec_meeting_ids }")
         existing_db_recordings = dbs.query(db.Recording).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids)).all()
-        existing_data = { e.uuid: { 'status': e.status, 'posturl': "TODO" } for e in existing_db_recordings }
-        self.logger.debug(f"There are { len(existing_data) } existing db records")
+        existing_data = { e.uuid: { 'status': e.status } for e in existing_db_recordings }
+        self.logger.debug(f"There are { len(existing_data) } db records matching those IDs")
         renderable = []
         for element in zoom_meetings:
             rec_uuid = element['uuid']
-            posturl = existing_data[rec_uuid]['posturl'] if rec_uuid in existing_data else "MAKE_UP"
             status = str(existing_data[rec_uuid]['status']) if rec_uuid in existing_data else str(db.Status.NEW)
+            email = element['host_email'] if 'host_email' in element else self.get_user_email(element['host_id'])
             item = {
                 'id': rec_uuid,
                 'title': element['topic'],
                 'date': element['start_time'],
                 'url': element['share_url'],
-                'posturl': posturl,
+                'host': email,
                 'status': status
             }
             renderable.append(item)
@@ -166,6 +178,8 @@ class Zoom:
 
     def get_recording(self, recording_id):
         #RATELIMIT: 30/80 req/s
-        recording_response = self.zoom_client.meetings.recordings.get(meetingId=recording_id)
-        recording = json.loads(recording_response)
-        return recording
+        self.logger.debug(f"Getting recording { recording_id }")
+        recording_response = self.zoom_client.recording.get(meeting_id=recording_id)
+        recording = recording_response.json()
+        #We pass in a list of one, so we know that the returned list is of size 1	
+        return self._build_renderable_event_list([ recording ])[0]

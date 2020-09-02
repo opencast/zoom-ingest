@@ -131,3 +131,16 @@ class Recording(Base):
             'timestamp': str(self.timestamp)
         }
 
+
+class User(Base):
+    '''Database definition of a Zoom user.'''
+
+    __tablename__ = 'user'
+
+    user_id = Column('user_id', Text(), nullable=False, primary_key=True)
+    updated = Column('updated', DateTime(), nullable=False, default=datetime.utcnow())
+
+    def _init__(self, user_name):
+        self.user_id = user_name
+        self.updated = datetime.utcnow()
+

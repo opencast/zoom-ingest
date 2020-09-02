@@ -44,8 +44,30 @@ app = Flask(__name__)
 
 @app.route('/recordings/<user_id>', methods=['GET'])
 def do_list_recordings(user_id):
-    renderable = z.get_user_recordings(user_id)
+    #TODO: We only accept YYYY-MM-DD, validate this
+    from_date = request.args.get('from', None)
+    to_date = request.args.get('to', None)
+
+    renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date)
     return render_template("recordings.html", recordings=renderable, user=user_id)
+
+@app.route('/recording/<recording_id>', methods=['GET', 'POST'])
+def single_recording(recording_id):
+    if request.method == "GET":
+        return get_single_recording(recording_id)
+    elif request.method == "POST":
+        return ingest_single_recording(recording_id)
+
+def get_single_recording(recording_id):
+    renderable = z.get_recording(recording_id)
+    return render_template("ingest.html", recording=renderable)
+
+
+def ingest_single_recording(recording_id):
+    logger.debug(f"Post for { recording_id }")
+    for key in request.form.keys():
+        logger.debug(f"{ key }")
+    return "POSTED"
 
 
 @app.route('/', methods=['GET'])

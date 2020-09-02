@@ -1,0 +1,30 @@
+<html>
+<head>
+  <title>Recording {{ recording.title }}</title>
+</head>
+<body>
+  <h1>Details for <a href={{ recording.url }}>{{ recording.title }}</a></h1>
+  <form action="../">
+    <table style="width:100%">
+      <tr>
+        <td><label for="date">Date:</label><input type="text" id="date" name="date" value="{{ recording.date }}"></td>
+        <td><label for="title">Title</label><input type="text" id="title" name="title" value="{{ recording.title }}"></td>
+      </tr>
+      <tr>
+        <td><label for="presenter">Presenter(s)</label><input type="text" id="presenter" name="presenter" value="{{ recording.host }}"/></td>
+subject
+description
+language
+rights
+license
+series (list)
+contributor(s)
+publisher
+workflow (list)
+workflow options (sigh)
+      <tr>
+    </table>
+    <button type="submit" formmethod="post" formaction="{{ recording.posturl }}">Submit</button>
+  </form>
+</body>
+</html>
