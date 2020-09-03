@@ -1,0 +1,65 @@
+<html>
+<head>
+  <title>New Series</title>
+</head>
+<body>
+  <h1>Details for the new series</h1>
+  <form action="./series">
+    <input type="hidden"  name="origin_epid" id="origin_epid" value="{{ origin_epid }}"/>
+    <table style="width:50%">
+      <tr>
+        <td><label for="dc-title">Title</label></td><td><input type="text" id="dc-title" name="dc-title"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-subject">Subject</label></td><td><input type="text" id="dc-subject" name="dc-subject"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-description">Description</label></td><td><input type="textarea" id="dc-description" name="dc-description" rows="4" cols="50"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-language">Language</label></td><td><input type="text" id="dc-language" name="dc-language"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-rightsHolder">Rights Holder</label></td><td><input type="text" id="dc-rightsHolder" name="dc-rightsHolder"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-license">License</label></td><td><input type="text" id="dc-license" name="dc-license"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-creator">Presenter(s)</label></td><td><input type="text" id="dc-creator" name="dc-creator"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-contributor">Contributor(s)</label></td><td><input type="text" id="dc-contributor" name="dc-contributor"></td>
+      </tr>
+      <tr>
+        <td><label for="dc-publisher">Publisher</label></td><td><input type="text" id="dc-publisher" name="dc-publisher" value="ETH Zürich, ID MMS; Schweiz"></td>
+      </tr>
+      <tr>
+        <td><label for="acl">ACL</label></td>
+        <td>
+          <select id="acl" name="acl">
+            <option selected="true" disabled="disabled">Select ACL</option>
+            {% for key, value in acl_list.items() %}
+            <option value="{{ key }}">{{ value }}</option>
+            {% endfor %}
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <td><label for="theme">Theme</label></td>
+        <td>
+          <select id="theme" name="theme">
+            <option value="" selected="true">No Theme</option>
+            {% for key, value in theme_list.items() %}
+            <option value="{{ key }}">{{ value }}</option>
+            {% endfor %}
+          </select>
+        </td>
+      </tr>
+    </table>
+    <br/>
+    <button type="submit" formmethod="post">Submit</button>
+    <a href="javascript:history.back()">Back to the episode</a>
+  </form>
+</body>
+</htm
