@@ -5,39 +5,46 @@
 <body>
   <h1>Details for <a href={{ recording.url }}>{{ recording.title }}</a></h1>
   <form action="../">
-    <table style="width:100%">
+    <input type="hidden"  name="origin_email" id="origin_email" value="{{ recording.host }}"/>
+    <table style="width:50%">
       <tr>
-        <td><label for="date">Date:</label><input type="text" id="date" name="date" value="{{ recording.date }}"></td>
-        <td><label for="title">Title</label><input type="text" id="title" name="title" value="{{ recording.title }}"></td>
+        <td><label for="date">Date:</label></td><td><input type="text" id="date" name="date" value="{{ recording.date }}"></td>
+        <td><label for="dc-title">Title</label></td><td><input type="text" id="dc-title" name="dc-title" value="{{ recording.title }}"></td>
       </tr>
       <tr>
-        <td><label for="presenter">Presenter(s)</label><input type="text" id="presenter" name="presenter" value="{{ recording.host }}"></td>
-        <td><label for="contributor">Contributor(s)</label><input type="text" id="contributor" name="contributor"></td>
+        <td><label for="dc-creator">Presenter(s)</label></td><td><input type="text" id="dc-creator" name="dc-creator" value="{{ recording.host }}"></td>
+        <td><label for="dc-contributor">Contributor(s)</label></td><td><input type="text" id="dc-contributor" name="dc-contributor"></td>
+        <td><label for="dc-publisher">Publisher</label></td><td><input type="text" id="dc-publisher" name="dc-publisher" value="ETH Zürich, ID MMS; Schweiz"></td>
       </tr>
       <tr>
-        <td><label for="language">Language</label><input type="text" id="language" name="language"></td>
-        <td><label for="license">License</label><input type="text" id="license" name="license"></td>
+        <td><label for="dc-language">Language</label></td><td><input type="text" id="dc-language" name="dc-language"></td>
+        <td><label for="dc-license">License</label></td><td><input type="text" id="dc-license" name="dc-license"></td>
       </tr>
       <tr>
-        <td><label for="rights">Rights</label><input type="text" id="rights" name="rights"></td>
-        <td><label for="subject">Subject</label><input type="text" id="subject" name="subject"></td>
-      </tr>
-          <label for="series">Series</label>
-          <select id="series" name="series">
-            <option value="">--No Series--</option>
-            <option value="">test</option>
-            {% for series in series_list %}
-            <option value="{{ series.id }}">{{ series.title }}</option>
+        <td><label for="dc-rightsHolder">Rights Holder</label></td><td><input type="text" id="dc-rightsHolder" name="dc-rightsHolder"></td>
+        <td><label for="dc-subject">Subject</label></td><td><input type="text" id="dc-subject" name="dc-subject"></td>
+      <tr>
+        <td><label for="dc-isPartOf">Series</label></td>
+        <td>
+          <select id="dc-isPartOf" name="dc-isPartOf">
+            <option value="" selected="true">--No Series--</option>
+            {% for key, value in series_list.items() %}
+            <option value="{{ key }}">{{ value }}</option>
             {% endfor %}
           </select>
-          <label for="workflow">Workflow</label>
+          <a href="../series?epid={{ recording.id }}">Create New Series</a>
+        </td>
+        <td><label for="workflow">Workflow</label></td>
+        <td>
           <select id="workflow" name="workflow">
             <option selected="true" disabled="disabled">Select Workflow</option>
-            <option selected="true">Test</option>
-            {% for workflow in workflow_list %}
-            <option value="{{ workflow.id }}">{{ workflow.name }}</option>
+            {% for key, value in workflow_list.items() %}
+            <option value="{{ key }}">{{ value }}</option>
             {% endfor %}
           </select>
+        </td>
+      </tr>
+
 <!--subject
 series (list)
 publisher
@@ -58,7 +65,8 @@ publishers
 acl
 theme-->
     </table>
-    <label for="description">Description</label><input type="textarea" id="description" name="description" rows="4" cols="50">
+    <label for="dc-description">Description</label><input type="textarea" id="dc-description" name="dc-description" rows="4" cols="50">
+    <br/>
     <button type="submit" formmethod="post" formaction="{{ recording.posturl }}">Submit</button>
   </form>
 </body>

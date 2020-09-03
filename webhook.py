@@ -5,11 +5,12 @@ import sys
 from pprint import pformat
 
 from markupsafe import escape
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, url_for
 import logging
 import zingest.logger
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
+from zingest.opencast import Opencast
 
 MIN_DURATION = 0
 
@@ -39,6 +40,7 @@ except ValueError as err:
 
 z = Zoom(config)
 r = Rabbit(config, z)
+o = Opencast(config, r)
 
 app = Flask(__name__)
 
@@ -58,16 +60,30 @@ def single_recording(recording_id):
     elif request.method == "POST":
         return ingest_single_recording(recording_id)
 
+@app.route('/series', methods=['GET', 'POST'])
+def series():
+    if request.method == "GET":
+        epId = request.args.get('epid', "")
+        return render_template("series.html", acl_list = o.get_acls(), theme_list = o.get_themes(), origin_epid = epId)
+    elif request.method == "POST":
+        for key in request.form.keys():
+          logger.debug(f"{ key } = { request.form[key] }")
+        epid = request.form['origin_epid']
+        #Create the series
+        #Redirect either to the episode (epId) or back to the create series bits in case of error
+        return redirect(f'recording/{ epid }')
+
 def get_single_recording(recording_id):
     renderable = z.get_recording(recording_id)
-    return render_template("ingest.html", recording=renderable)
+    return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series())
 
 
 def ingest_single_recording(recording_id):
     logger.debug(f"Post for { recording_id }")
     for key in request.form.keys():
-        logger.debug(f"{ key }")
-    return "POSTED"
+        logger.debug(f"{ key } = { request.form[key] }")
+    user_id = request.form['origin_email']
+    return redirect(f'/recordings/{ user_id }')
 
 
 @app.route('/', methods=['GET'])

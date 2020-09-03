@@ -30,7 +30,19 @@ class Opencast:
         self.password = config["Opencast"]["Password"]
         self.logger.debug(f"Opencast password is {self.password}")
         self.set_rabbit(rabbit)
+        self.acls_updated = None
+        self.acls = None
+        self.themes_updated = None
+        self.themes = None
+        self.workflows_updated = None
+        self.workflows = None
+        self.series_updated = None
+        self.series = None
         self.logger.info("Setup complete")
+        self.get_acls()
+        self.get_themes()
+        self.get_workflows()
+        self.get_series()
 
 
     def set_rabbit(self, rabbit):
@@ -84,7 +96,7 @@ class Opencast:
 
     def _do_get(self, url):
         return requests.get(url, auth=HTTPDigestAuth(self.user, self.password),
-                                headers={'X-Requestedresponse = -Auth': 'Digest'})
+                                headers={'X-Requested-Auth': 'Digest'})
 
 
     def _do_post(self, url, data, files=None):
@@ -184,6 +196,45 @@ class Opencast:
         self._do_download(f"{dl_url}/?access_token={data['token']}", f"{recording_id}.mp4", expected_size)
         return data, recording_id
 
+
+    def get_themes(self):
+        if not self.themes or self.themes_updated <= datetime.utcnow() - timedelta(hours = 1):
+            self.logger.debug("Refreshing Opencast themes")
+            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+            results = self._do_get(self.url + '/admin-ng/themes/themes.json').json()['results']
+            self.themes_updated = datetime.utcnow()
+            self.themes = { result['id']: result['name'] for result in results }
+        return self.themes
+
+    def get_acls(self):
+        if not self.acls or self.acls_updated <= datetime.utcnow() - timedelta(hours = 1):
+            self.logger.debug("Refreshing Opencast ACLs")
+            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+            results = self._do_get(self.url + '/acl-manager/acl/acls.json').json()
+            self.acls_updated = datetime.utcnow()
+            self.acls = { result['id']: result['name'] for result in results }
+        return self.acls
+
+
+    def get_workflows(self):
+        if not self.workflows or self.workflows_updated <= datetime.utcnow() - timedelta(hours = 1):
+            self.logger.debug("Refreshing Opencast workflows")
+            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+            results = self._do_get(self.url + '/api/workflow-definitions?filter=tag:archive').json()
+            self.workflows_updated = datetime.utcnow()
+            self.workflows = { result['identifier']: result['title'] for result in results }
+        return self.workflows
+
+
+    def get_series(self):
+        if not self.series or self.series_updated <= datetime.utcnow() - timedelta(hours = 1):
+            self.logger.debug("Refreshing Opencast series list")
+            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+            #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
+            results = self._do_get(self.url + '/api/series').json()
+            self.series_updated = datetime.utcnow()
+            self.series = { result['identifier']: result['title'] for result in results }
+        return self.series
 
     def oc_upload(self, creator, title, rec_id):
 
