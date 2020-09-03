@@ -2,6 +2,7 @@ from zoomus import ZoomClient
 import json
 import zingest.logger
 import logging
+import functools
 from zingest.common import BadWebhookData, NoMp4Files
 from zingest import db
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
@@ -111,19 +112,22 @@ class Zoom:
         #user_list = json.loads(user_list_response.content.decode("utf-8"))
         #return user_list['email']
 
+    @functools.lru_cache(maxsize=32)
     def get_user(self, email_or_id):
-        #TODO: Cache this
         user = self.zoom_client.user.get(id=email_or_id).json()
         return user
 
     def get_user_id(self, email):
+        self.logger.debug(f"Looking up user id for { email }")
         user = self.get_user(email)
         return user['id']
 
     def get_user_email(self, user_id):
+        self.logger.debug(f"Looking up email for { user_id }")
         user = self.get_user(user_id)
         return user['email']
 
+    #We explicitly do not want to cache here since someone might want to know about their recordings *now* rather than when the cache lets them
     def _get_user_recordings(self, user_id, from_date=None, to_date=None):
         if None == from_date:
             from_date = datetime.utcnow() - timedelta(days = 7)
@@ -176,6 +180,7 @@ class Zoom:
         return renderable
 
 
+    @functools.lru_cache(maxsize=32)
     def get_recording(self, recording_id):
         #RATELIMIT: 30/80 req/s
         self.logger.debug(f"Getting recording { recording_id }")

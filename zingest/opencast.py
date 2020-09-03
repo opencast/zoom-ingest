@@ -38,11 +38,11 @@ class Opencast:
         self.workflows = None
         self.series_updated = None
         self.series = None
-        self.logger.info("Setup complete")
         self.get_acls()
         self.get_themes()
         self.get_workflows()
         self.get_series()
+        self.logger.info("Setup complete")
 
 
     def set_rabbit(self, rabbit):
