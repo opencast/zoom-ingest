@@ -31,12 +31,14 @@ class Opencast:
         self.logger.debug(f"Opencast password is {self.password}")
         self.set_rabbit(rabbit)
         self.acls_updated = None
+        self.acls_full = None
         self.acls = None
         self.themes_updated = None
         self.themes = None
         self.workflows_updated = None
         self.workflows = None
         self.series_updated = None
+        self.series_full = None
         self.series = None
         self.get_acls()
         self.get_themes()
@@ -212,8 +214,15 @@ class Opencast:
             #TODO: Handle paging.  I'm going to guess we don't need this for rev1
             results = self._do_get(self.url + '/acl-manager/acl/acls.json').json()
             self.acls_updated = datetime.utcnow()
+            self.acls_full = results
             self.acls = { result['id']: result['name'] for result in results }
         return self.acls
+
+
+    def get_single_acl(self, acl_id):
+        if not self.acls_full:
+            self.get_acls()
+        return self.acls_full[acl_id] if acl_id in self.acls_full else None
 
 
     def get_workflows(self):
@@ -233,8 +242,16 @@ class Opencast:
             #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
             results = self._do_get(self.url + '/api/series').json()
             self.series_updated = datetime.utcnow()
+            self.series_full = { result['identifier']: result for result in results }
             self.series = { result['identifier']: result['title'] for result in results }
         return self.series
+
+
+    def get_single_series(self, series_id):
+        if not self.series:
+            self.get_series()
+        return self.series_full[series_id] if series_id in self.series_full else None
+
 
     def oc_upload(self, creator, title, rec_id):
 
@@ -268,28 +285,43 @@ class Opencast:
             self._do_post(url, data=data, files=body, auth=auth)
  
 
-    def create_series(self, creator, title):
+    def create_series(self, dc_title, dc_subject=None, dc_description=None, dc_language=None, dc_rightsholder=None, dc_license=None, dc_presenters=None, dc_contributors=None, dc_publishers=None, acl_id=None, theme_id=None, **kwargs):
 
         metadata = [{"label": "Opencast Series DublinCore",
                      "flavor": "dublincore/series",
                      "fields": [{"id": "title",
-                                 "value": title},
+                                 "value": dc_title},
+                                {"id": "subjects",
+                                 "value": [dc_subject]},
+                                {"id": "description",
+                                 "value": dc_description},
+                                {"id": "language",
+                                 "value": dc_language},
+                                {"id": "rightsholder",
+                                 "value": dc_rightsholder},
+                                {"id": "license",
+                                 "value": dc_license},
                                 {"id": "creator",
-                                 "value": [creator]}]}]
-        #TODO: Load a default ACL template from somewhere
-        acl = [{"allow": True,
-                "action": "write",
-                "role": "ROLE_AAI_USER_"+creator},
-               {"allow": True,
-                "action": "read",
-                "role": "ROLE_AAI_USER_"+creator}]
+                                 "value": [dc_presenters]},
+                                {"id": "presenters",
+                                 "value": [dc_presenters]},
+                                {"id": "contributors",
+                                 "value": [dc_contributors]},
+                                {"id": "publishers",
+                                 "value": [dc_publishers]}
+                               ]
+                   }]
+
+        acl = self.get_single_acl(acl_id)
 
         data = {"metadata": json.dumps(metadata),
                 "acl": json.dumps(acl)}
 
-        response = self._do_post(url+'/api/series', data=data)
-
-        self.logger.debug(f"Creating series {title} get a {response.status_code} response")
+        if None != theme_id:
+            data['theme'] = str(theme_id)
 
         #What if response is something other than success?
-        return json.loads(response.content.decode("utf-8"))["identifier"]
+        response = self._do_post(self.url + '/api/series', data=data)
+
+        self.logger.debug(f"Creating series {dc_title} get a {response} response")
+        return response.json()['identifier']

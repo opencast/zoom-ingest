@@ -8,39 +8,39 @@
     <input type="hidden"  name="origin_epid" id="origin_epid" value="{{ origin_epid }}"/>
     <table style="width:50%">
       <tr>
-        <td><label for="dc-title">Title</label></td><td><input type="text" id="dc-title" name="dc-title"></td>
+        <td><label for="dc_title">Title</label></td><td><input type="text" id="dc_title" name="dc_title" {% if series != None %}value="{{ series['title'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-subject">Subject</label></td><td><input type="text" id="dc-subject" name="dc-subject"></td>
+        <td><label for="dc_subject">Subject</label></td><td><input type="text" id="dc_subject" name="dc_subject" {% if series != None %}value="{{ series['subject'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-description">Description</label></td><td><input type="textarea" id="dc-description" name="dc-description" rows="4" cols="50"></td>
+        <td><label for="dc_description">Description</label></td><td><input type="textarea" id="dc_description" name="dc_description" rows="4" cols="50" {% if series != None %}value="{{ series['description'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-language">Language</label></td><td><input type="text" id="dc-language" name="dc-language"></td>
+        <td><label for="dc_language">Language</label></td><td><input type="text" id="dc_language" name="dc_language" {% if series != None %}value="{{ series['language'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-rightsHolder">Rights Holder</label></td><td><input type="text" id="dc-rightsHolder" name="dc-rightsHolder"></td>
+        <td><label for="dc_rightsHolder">Rights Holder</label></td><td><input type="text" id="dc_rightsHolder" name="dc_rightsHolder" {% if series != None %}value="{{ series['rightsholder'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-license">License</label></td><td><input type="text" id="dc-license" name="dc-license"></td>
+        <td><label for="dc_license">License</label></td><td><input type="text" id="dc_license" name="dc_license" {% if series != None %}value="{{ series['license'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-creator">Presenter(s)</label></td><td><input type="text" id="dc-creator" name="dc-creator"></td>
+        <td><label for="dc_creator">Presenter(s)</label></td><td><input type="text" id="dc_creator" name="dc_creator" {% if series != None %}value="{{ series['creator'] }}">{% endif %}</td>
       </tr>
       <tr>
-        <td><label for="dc-contributor">Contributor(s)</label></td><td><input type="text" id="dc-contributor" name="dc-contributor"></td>
+        <td><label for="dc_contributor">Contributor(s)</label></td><td><input type="text" id="dc_contributor" name="dc_contributor" {% if series != None %}value="{{ series['contributor'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-publisher">Publisher</label></td><td><input type="text" id="dc-publisher" name="dc-publisher" value="ETH Zürich, ID MMS; Schweiz"></td>
+        <td><label for="dc_publisher">Publisher</label></td><td><input type="text" id="dc_publisher" name="dc_publisher" value="{% if series != None %}{{ series['publisher'] }}{% else %}ETH Zürich, ID MMS; Schweiz{% endif %}"></td>
       </tr>
       <tr>
         <td><label for="acl">ACL</label></td>
         <td>
-          <select id="acl" name="acl">
-            <option selected="true" disabled="disabled">Select ACL</option>
+          <select id="acl_id" name="acl_id">
+            <option {% if series != None %}selected="true"{% endif %} disabled="disabled">Select ACL</option>
             {% for key, value in acl_list.items() %}
-            <option value="{{ key }}">{{ value }}</option>
+            <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
         </td>
@@ -48,7 +48,7 @@
       <tr>
         <td><label for="theme">Theme</label></td>
         <td>
-          <select id="theme" name="theme">
+          <select id="theme_id" name="theme_id">
             <option value="" selected="true">No Theme</option>
             {% for key, value in theme_list.items() %}
             <option value="{{ key }}">{{ value }}</option>
@@ -58,7 +58,7 @@
       </tr>
     </table>
     <br/>
-    <button type="submit" formmethod="post">Submit</button>
+    <button type="submit" formmethod="post" {% if series != None %}disabled="disabled"{% endif %}>Submit</button>
     <a href="javascript:history.back()">Back to the episode</a>
   </form>
 </body>

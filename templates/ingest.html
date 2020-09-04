@@ -27,9 +27,9 @@
         <td><label for="dc-isPartOf">Series</label></td>
         <td>
           <select id="dc-isPartOf" name="dc-isPartOf">
-            <option value="" selected="true">--No Series--</option>
+            <option value="" {% if series == None %}selected="true"{% endif %}>--No Series--</option>
             {% for key, value in series_list.items() %}
-            <option value="{{ key }}">{{ value }}</option>
+            <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
           <a href="../series?epid={{ recording.id }}">Create New Series</a>
@@ -37,9 +37,9 @@
         <td><label for="workflow">Workflow</label></td>
         <td>
           <select id="workflow" name="workflow">
-            <option selected="true" disabled="disabled">Select Workflow</option>
+            <option {% if workflow == None %}selected="true"{% endif %} disabled="disabled">Select Workflow</option>
             {% for key, value in workflow_list.items() %}
-            <option value="{{ key }}">{{ value }}</option>
+            <option value="{{ key }}" {% if workflow['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
         </td>

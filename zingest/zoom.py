@@ -128,18 +128,20 @@ class Zoom:
         return user['email']
 
     #We explicitly do not want to cache here since someone might want to know about their recordings *now* rather than when the cache lets them
-    def _get_user_recordings(self, user_id, from_date=None, to_date=None):
+    def _get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None):
         if None == from_date:
             from_date = datetime.utcnow() - timedelta(days = 7)
         if None == to_date:
             to_date = datetime.utcnow()
+        if None == page_size:
+            page_size = 30
         #This defaults to 30 records / page -> appears to be 30 *meetings* per call.  We'll deal with paging later
         #RATELIMIT: 20/60 req/s
         params = {
             'user_id': user_id,
             'from': from_date.strftime('%Y-%m-%d'),
             'to': to_date.strftime('%Y-%m-%d'),
-            'page_size': 30,
+            'page_size': int(page_size),
             'trash_type': 'meeting_recordings',
             'mc': 'false'
         }
@@ -148,9 +150,9 @@ class Zoom:
         return recordings
 
 
-    def get_user_recordings(self, user_id, from_date=None, to_date=None):
+    def get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None):
         #Get the list of recordings from Zoom
-        zoom_results = self._get_user_recordings(user_id, from_date, to_date)
+        zoom_results = self._get_user_recordings(user_id, from_date, to_date, page_size)
         zoom_meetings = zoom_results['meetings']
         self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
         return self._build_renderable_event_list(zoom_meetings)
