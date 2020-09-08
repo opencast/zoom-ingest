@@ -7,6 +7,7 @@ from pprint import pformat
 from markupsafe import escape
 from flask import Flask, request, render_template, redirect, url_for
 import logging
+from datetime import datetime
 import zingest.logger
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
@@ -45,11 +46,18 @@ o = Opencast(config, r)
 app = Flask(__name__)
 
 
+def validate_date(date_string):
+    if date_string != None:
+        return datetime.strptime(date_string, '%Y-%m-%d')
+    else:
+        return None
+
+
 @app.route('/recordings/<user_id>', methods=['GET'])
 def do_list_recordings(user_id):
     #TODO: We only accept YYYY-MM-DD, validate this
-    from_date = request.args.get('from', None)
-    to_date = request.args.get('to', None)
+    from_date = validate_date(request.args.get('from', None))
+    to_date = validate_date(request.args.get('to', None))
     page_size = request.args.get('pg_size', None)
 
     renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = page_size)
@@ -74,7 +82,7 @@ def get_single_recording(recording_id, series_id = None, workflow_id = None):
 
 
 def ingest_single_recording(recording_id):
-    logger.debug(f"Post for { recording_id }")
+    logger.info(f"Post for { recording_id }")
     for key in request.form.keys():
         logger.debug(f"{ key } = { request.form[key] }")
     user_id = request.form['origin_email']
@@ -94,11 +102,12 @@ def get_series_list(series_id=None):
     elif request.method == "POST":
         for key in request.form.keys():
           logger.debug(f"{ key } = { request.form[key] }")
+        #TODO: Validate required terms are present
         epid = request.form['origin_epid']
         #Create the series
-        o.create_series(**request.form)
+        new_series_id = o.create_series(**request.form)
         #Redirect either to the episode (epId) or back to the create series bits in case of error
-        return redirect(f'recording/{ epid }?sid={ series_id }')
+        return redirect(f'recording/{ epid }?sid={ new_series_id }')
 
 
 @app.route('/', methods=['GET'])

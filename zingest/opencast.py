@@ -18,6 +18,7 @@ from zingest.common import NoMp4Files
 class Opencast:
 
     IN_PROGRESS_ROOT = "in-progress"
+    HEADERS = {'X-Requested-Auth': 'Digest'}
 
     def __init__(self, config, rabbit):
         self.logger = logging.getLogger("opencast")
@@ -29,9 +30,9 @@ class Opencast:
         self.logger.debug(f"Opencast user is {self.user}")
         self.password = config["Opencast"]["Password"]
         self.logger.debug(f"Opencast password is {self.password}")
+        self.auth = HTTPDigestAuth(self.user, self.password)
         self.set_rabbit(rabbit)
         self.acls_updated = None
-        self.acls_full = None
         self.acls = None
         self.themes_updated = None
         self.themes = None
@@ -101,9 +102,9 @@ class Opencast:
                                 headers={'X-Requested-Auth': 'Digest'})
 
 
-    def _do_post(self, url, data, files=None):
-        return requests.post(url, data=data, files=files,
-                      auth=HTTPDigestAuth(self.user, self.password), headers={'X-Requested-Auth': 'Digest'})
+    def _do_post(self, url, **kwargs):
+        self.logger.debug(f"POSTing { kwargs['data'] } to { url }")#, with { len(files) } files")
+        return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, **kwargs)
 
 
     @db.with_session
@@ -206,6 +207,7 @@ class Opencast:
             results = self._do_get(self.url + '/admin-ng/themes/themes.json').json()['results']
             self.themes_updated = datetime.utcnow()
             self.themes = { result['id']: result['name'] for result in results }
+            self.logger.debug(f"Found { len(self.themes) } themes")
         return self.themes
 
     def get_acls(self):
@@ -214,15 +216,16 @@ class Opencast:
             #TODO: Handle paging.  I'm going to guess we don't need this for rev1
             results = self._do_get(self.url + '/acl-manager/acl/acls.json').json()
             self.acls_updated = datetime.utcnow()
-            self.acls_full = results
-            self.acls = { result['id']: result['name'] for result in results }
+            self.acls = { str(result['id']): { 'name': result['name'], 'acl': result['acl']['ace'] } for result in results }
+            self.logger.debug(f"Found { len(self.acls) } ACLs")
+            self.logger.debug(f'{ self.acls }')
         return self.acls
 
 
     def get_single_acl(self, acl_id):
-        if not self.acls_full:
+        if not self.acls:
             self.get_acls()
-        return self.acls_full[acl_id] if acl_id in self.acls_full else None
+        return self.acls[acl_id]['acl'] if acl_id in self.acls else None
 
 
     def get_workflows(self):
@@ -232,6 +235,7 @@ class Opencast:
             results = self._do_get(self.url + '/api/workflow-definitions?filter=tag:archive').json()
             self.workflows_updated = datetime.utcnow()
             self.workflows = { result['identifier']: result['title'] for result in results }
+            self.logger.debug(f"Found { len(self.workflows) } workflows")
         return self.workflows
 
 
@@ -250,6 +254,7 @@ class Opencast:
     def get_single_series(self, series_id):
         if not self.series:
             self.get_series()
+        #try fetching the series by id, in case this is a new series
         return self.series_full[series_id] if series_id in self.series_full else None
 
 
@@ -285,43 +290,40 @@ class Opencast:
             self._do_post(url, data=data, files=body, auth=auth)
  
 
-    def create_series(self, dc_title, dc_subject=None, dc_description=None, dc_language=None, dc_rightsholder=None, dc_license=None, dc_presenters=None, dc_contributors=None, dc_publishers=None, acl_id=None, theme_id=None, **kwargs):
+    def create_series(self, dc_title, acl_id, theme_id=None, **kwargs):
+
+        fields = []
+        for key, value in kwargs.items():
+            name = key.replace("dc_","")
+            if name in ("origin_epid") or "" == value:
+                continue
+            if name in ("publisher", "contributor", "presenter", "creator"):
+                element = {'id': name , 'value': value.split(",") }
+            else:
+                element = {'id': name , 'value': value }
+            fields.append(element)
+        fields.append({'id': 'title', 'value': dc_title })
 
         metadata = [{"label": "Opencast Series DublinCore",
                      "flavor": "dublincore/series",
-                     "fields": [{"id": "title",
-                                 "value": dc_title},
-                                {"id": "subjects",
-                                 "value": [dc_subject]},
-                                {"id": "description",
-                                 "value": dc_description},
-                                {"id": "language",
-                                 "value": dc_language},
-                                {"id": "rightsholder",
-                                 "value": dc_rightsholder},
-                                {"id": "license",
-                                 "value": dc_license},
-                                {"id": "creator",
-                                 "value": [dc_presenters]},
-                                {"id": "presenters",
-                                 "value": [dc_presenters]},
-                                {"id": "contributors",
-                                 "value": [dc_contributors]},
-                                {"id": "publishers",
-                                 "value": [dc_publishers]}
-                               ]
+                     "fields": fields
                    }]
+        self.logger.debug(f"Creating series with fields { fields }")
 
         acl = self.get_single_acl(acl_id)
+        self.logger.debug(f"Using ACL id { acl_id }, which looks like { acl }")
 
         data = {"metadata": json.dumps(metadata),
                 "acl": json.dumps(acl)}
 
-        if None != theme_id:
+        if None != theme_id and "" != theme_id:
+            self.logger.debug(f"Theme id is { theme_id }")
             data['theme'] = str(theme_id)
+        else:
+            self.logger.debug(f"No theme ID found")
 
         #What if response is something other than success?
-        response = self._do_post(self.url + '/api/series', data=data)
+        response = self._do_post(self.url + '/api/series', data = data)# metadata = json.dumps(metadata), acl = json.dumps(acl))
 
         self.logger.debug(f"Creating series {dc_title} get a {response} response")
         return response.json()['identifier']
