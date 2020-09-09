@@ -15,6 +15,10 @@ import logging
 import zingest.logger
 from zingest.common import NoMp4Files
 
+
+class OpencastException(Exception):
+    pass
+
 class Opencast:
 
     IN_PROGRESS_ROOT = "in-progress"
@@ -252,9 +256,15 @@ class Opencast:
 
 
     def get_single_series(self, series_id):
+        #If there's somehow no series list, fetch them all
         if not self.series:
             self.get_series()
-        #try fetching the series by id, in case this is a new series
+        #if the series is not in the cache, attempt to fetch it directly and add it
+        if not series_id in self.series_full:
+            series = self._do_get(self.url + f'/api/series/{ series_id }').json()
+            self.series_full[series_id] = series
+            self.series[series_id] = series['title']
+        #If it's still not found, return None, otherwise return the data
         return self.series_full[series_id] if series_id in self.series_full else None
 
 
@@ -310,6 +320,7 @@ class Opencast:
                    }]
         self.logger.debug(f"Creating series with fields { fields }")
 
+        #We know this call is safe since for the ACL to render it has to already be present in the local acl list :)
         acl = self.get_single_acl(acl_id)
         self.logger.debug(f"Using ACL id { acl_id }, which looks like { acl }")
 
@@ -323,7 +334,12 @@ class Opencast:
             self.logger.debug(f"No theme ID found")
 
         #What if response is something other than success?
-        response = self._do_post(self.url + '/api/series', data = data)# metadata = json.dumps(metadata), acl = json.dumps(acl))
-
-        self.logger.debug(f"Creating series {dc_title} get a {response} response")
-        return response.json()['identifier']
+        try:
+            response = self._do_post(self.url + '/api/series', data = data)
+            self.logger.debug(f"Creating series { dc_title } get a {response} response")
+            if 201 != response.status_code:
+                raise OpencastException(f"Creating series returned a { response.status_code } http response")
+            identifier = response.json()['identifier']
+            return response.json()['identifier']
+        except Exception as e:
+            raise OpencastException(e)

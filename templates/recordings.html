@@ -17,9 +17,7 @@
       <td><a href="{{ recording.url }}">{{ recording.title }}</td>
       <td>{{ recording.status }}</td>
       {% if recording.status | int != 2 %}
-      <td><form action="/recording/{{ recording.id }}" method="get"><input type="submit" value="Select" /></form></td>
-      {% else %}
-      <td><form action="/recording/{{ recording.id }}" method="get"><input type="submit" value="Select" disabled="true"/></form></td>
+      <td><a href="{{ recording.url }}">Select</a></td>
       {% endif %}
     </tr>
     {% endfor %}

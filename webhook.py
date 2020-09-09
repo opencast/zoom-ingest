@@ -1,7 +1,7 @@
 import json
 import configparser
 import sys
-
+from urllib.parse import urlencode
 from pprint import pformat
 
 from markupsafe import escape
@@ -48,19 +48,33 @@ app = Flask(__name__)
 
 def validate_date(date_string):
     if date_string != None:
-        return datetime.strptime(date_string, '%Y-%m-%d')
+        return datetime.strptime(date_string, '%Y-%m-%d').date()
     else:
         return None
 
 
-@app.route('/recordings/<user_id>', methods=['GET'])
-def do_list_recordings(user_id):
-    #TODO: We only accept YYYY-MM-DD, validate this
+def get_query_params():
     from_date = validate_date(request.args.get('from', None))
     to_date = validate_date(request.args.get('to', None))
-    page_size = request.args.get('pg_size', None)
+    page_size = request.args.get('page_size', None)
+    return { 'from': from_date, 'to': to_date, 'page_size': page_size }
 
-    renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = page_size)
+
+def build_query_string(param_dict = None):
+    if None == param_dict:
+        param_dict = get_query_params()
+    clean_dict = { key: value for key, value in param_dict.items() if None != value }
+    return urlencode(clean_dict)
+
+
+@app.route('/recordings/<user_id>', methods=['GET'])
+def do_list_recordings(user_id):
+    query_params = get_query_params()
+    query_string = build_query_string(query_params)
+
+    renderable = z.get_user_recordings(user_id, from_date = query_params['from'], to_date = query_params['to'], page_size = query_params['page_size'])
+    for item in renderable:
+        item['url'] = f'/recording/{ item["id"] }?{ query_string }'
     return render_template("recordings.html", recordings=renderable, user=user_id)
 
 
@@ -68,17 +82,20 @@ def do_list_recordings(user_id):
 def single_recording(recording_id):
     if request.method == "GET":
         series_id = request.args.get("sid", None)
-        return get_single_recording(recording_id, series_id)
+        query_string = build_query_string()
+        logger.info(f"what the hell { query_string }")
+        return get_single_recording(recording_id, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
         return ingest_single_recording(recording_id)
 
 
-def get_single_recording(recording_id, series_id = None, workflow_id = None):
+def get_single_recording(recording_id, series_id = None, workflow_id = None, query_string=None):
     renderable = z.get_recording(recording_id)
     series = None
     if series_id:
         series = o.get_single_series(series_id)
-    return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, workflow = workflow_id)
+    logger.info(f"rendering with { query_string }")
+    return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, workflow = workflow_id, query_string = query_string)
 
 
 def ingest_single_recording(recording_id):
@@ -86,7 +103,9 @@ def ingest_single_recording(recording_id):
     for key in request.form.keys():
         logger.debug(f"{ key } = { request.form[key] }")
     user_id = request.form['origin_email']
-    return redirect(f'/recordings/{ user_id }')
+    query_string = request.form['origin_query_string']
+
+    return redirect(f'/recordings/{ user_id }?{ query_string }')
 
 
 @app.route('/series', defaults={'series_id': None}, methods=['GET', 'POST'])
