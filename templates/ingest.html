@@ -10,25 +10,25 @@
     <table style="width:50%">
       <tr>
         <td><label for="date">Date:</label></td><td><input type="text" id="date" name="date" value="{{ recording.date }}"></td>
-        <td><label for="dc-title">Title</label></td><td><input type="text" id="dc-title" name="dc-title" value="{{ recording.title }}"></td>
+        <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" value="{{ recording.title }}"></td>
       </tr>
       <tr>
-        <td><label for="dc-creator">Presenter(s)</label></td><td><input type="text" id="dc-creator" name="dc-creator" value="{{ recording.host }}"></td>
-        <td><label for="dc-contributor">Contributor(s)</label></td><td><input type="text" id="dc-contributor" name="dc-contributor"{% if series != None %} value="{{ series['contributors'] | join(', ') }}"{% endif %}></td>
-        <td><label for="dc-organizer">Organizers(s)</label></td><td><input type="text" id="dc-organizer" name="dc-organizer"{% if series != None %} value="{{ series['organizers'] | join(', ') }}"{% endif %}></td>
-        <td><label for="dc-publisher">Publisher(s)</label></td><td><input type="text" id="dc-publisher" name="dc-publisher"{% if series != None %} value="{{ series['publishers'] | join(', ') }}"{% else %} value="ETH Zürich, ID MMS; Schweiz"{% endif %}></td>
+        <td><label for="creator">Presenter(s)</label></td><td><input type="text" id="creators" name="creators" value="{{ recording.host }}"></td>
+        <td><label for="contributor">Contributor(s)</label></td><td><input type="text" id="contributors" name="contributors"{% if series != None %} value="{{ series['contributors'] | join(', ') }}"{% endif %}></td>
+        <td><label for="organizer">Organizers(s)</label></td><td><input type="text" id="organizers" name="organizers"{% if series != None %} value="{{ series['organizers'] | join(', ') }}"{% endif %}></td>
+        <td><label for="publisher">Publisher(s)</label></td><td><input type="text" id="publishers" name="publishers"{% if series != None %} value="{{ series['publishers'] | join(', ') }}"{% else %} value="ETH Zürich, ID MMS; Schweiz"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-language">Language</label></td><td><input type="text" id="dc-language" name="dc-language"{% if series != None %} value="{{ series['language'] }}"{% endif %}></td>
-        <td><label for="dc-license">License</label></td><td><input type="text" id="dc-license" name="dc-license"{% if series != None %} value="{{ series['license'] }}"{% endif %}></td>
+        <td><label for="language">Language</label></td><td><input type="text" id="language" name="language"{% if series != None %} value="{{ series['language'] }}"{% endif %}></td>
+        <td><label for="license">License</label></td><td><input type="text" id="license" name="license"{% if series != None %} value="{{ series['license'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="dc-rightsHolder">Rights Holder</label></td><td><input type="text" id="dc-rightsHolder" name="dc-rightsHolder"{% if series != None %} value="{{ series['rightsholder'] }}"{% endif %}></td>
-        <td><label for="dc-subject">Subject(s)</label></td><td><input type="text" id="dc-subject" name="dc-subject"{% if series != None %} value="{{ series['subjects'] | join(', ')}}"{% endif %}></td>
+        <td><label for="rightsHolder">Rights Holder</label></td><td><input type="text" id="rightsHolder" name="rightsHolder"{% if series != None %} value="{{ series['rightsholder'] }}"{% endif %}></td>
+        <td><label for="subject">Subject(s)</label></td><td><input type="text" id="subjects" name="subjects"{% if series != None %} value="{{ series['subjects'] | join(', ')}}"{% endif %}></td>
       <tr>
-        <td><label for="dc-isPartOf">Series</label></td>
+        <td><label for="isPartOf">Series</label></td>
         <td>
-          <select id="dc-isPartOf" name="dc-isPartOf">
+          <select id="isPartOf" name="isPartOf">
             <option value="" {% if series == None %}selected="true"{% endif %}>--No Series--</option>
             {% for key, value in series_list.items() %}
             <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
@@ -47,7 +47,7 @@
         </td>
       </tr>
     </table>
-    <label for="dc-description">Description</label><input type="textarea" id="dc-description" name="dc-description" rows="4" cols="50"{% if series != None %} value="{{ series['description'] }}"{% endif %}>
+    <label for="description">Description</label><input type="textarea" id="description" name="description" rows="4" cols="50"{% if series != None %} value="{{ series['description'] }}"{% endif %}>
     <br/>
     <button type="submit" formmethod="post" formaction="{{ recording.posturl }}">Submit</button>
   </form>

@@ -26,6 +26,15 @@ class Zoom:
         required_payload_fields = [
             "object"
         ]
+        try:
+            for field in required_payload_fields:
+                if field not in payload.keys():
+                    raise BadWebhookData(f"Missing required payload field '{field}'. Keys found: {payload.keys()}")
+        except Exception as e:
+            raise BadWebhookData("Unrecognized payload format. {}".format(e))
+
+
+    def validate_object(self, obj):
         required_object_fields = [
             "id",  # zoom series id
             "uuid",  # unique id of the meeting instance,
@@ -47,14 +56,9 @@ class Zoom:
         ]
 
         try:
-            for field in required_payload_fields:
-                if field not in payload.keys():
-                    raise BadWebhookData(f"Missing required payload field '{field}'. Keys found: {payload.keys()}")
-
-            obj = payload["object"]
             for field in required_object_fields:
                 if field not in obj.keys():
-                    raise BadWebhookData(f"Missing required object field '{field}'. Keys found: {payload.keys()}")
+                    raise BadWebhookData(f"Missing required object field '{field}'. Keys found: {obj.keys()}")
 
             files = obj["recording_files"]
             self.logger.debug(f"Found {len(files)} potential files")
@@ -80,7 +84,7 @@ class Zoom:
             # on who the caller is
             raise
         except Exception as e:
-            raise BadWebhookData("Unrecognized payload format. {}".format(e))
+            raise BadWebhookData("Unrecognized object format. {}".format(e))
 
 
     def parse_recording_files(self, payload):
@@ -186,7 +190,10 @@ class Zoom:
     def get_recording(self, recording_id):
         #RATELIMIT: 30/80 req/s
         self.logger.debug(f"Getting recording { recording_id }")
-        recording_response = self.zoom_client.recording.get(meeting_id=recording_id)
-        recording = recording_response.json()
+        return self.zoom_client.recording.get(meeting_id=recording_id).json()
+
+
+    def get_renderable_recording(self, recording_id):
+        recording = self.get_recording(recording_id)
         #We pass in a list of one, so we know that the returned list is of size 1	
         return self._build_renderable_event_list([ recording ])[0]

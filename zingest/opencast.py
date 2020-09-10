@@ -92,13 +92,13 @@ class Opencast:
             #Raises an exception if there is one
             req.raise_for_status()
             with open(output, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192):
+                for chunk in req.iter_content(chunk_size=8192):
                     # If you have chunk encoded response uncomment if
                     # and set chunk_size parameter to None.
                     #if chunk:
                     f.write(chunk)
                 f.close()
-            r.close()
+            req.close()
 
 
     def _do_get(self, url):
@@ -149,7 +149,9 @@ class Opencast:
             self.logger.info(f"Fetching {uuid}")
             data, fileid = self.fetch_file(json)
             self.logger.info(f"Uploading {uuid} as {fileid}.mp4 to {self.url}")
-            self.oc_upload(data["creator"], data["topic"], id)
+            params = json['zingest_params']
+            self.logger.info(f"{ uuid } / { params }")
+            self.oc_upload(uuid, params)
             self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
 
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
@@ -198,9 +200,11 @@ class Opencast:
             elif key == "file_size":
                 expected_size = int(files[0][key])
                 self.logger.debug(f"Recording size found: {expected_size}")
-
-        self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {recording_id}.mp4")
-        self._do_download(f"{dl_url}/?access_token={data['token']}", f"{recording_id}.mp4", expected_size)
+        #TODO: Is token even needed?
+        #self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {recording_id}.mp4")
+        #self._do_download(f"{dl_url}/?access_token={data['token']}", f"{recording_id}.mp4", expected_size)
+        self.logger.debug(f"Downloading from {dl_url} to {recording_id}.mp4")
+        self._do_download(f"{dl_url}", f"{recording_id}.mp4", expected_size)
         return data, recording_id
 
 
@@ -268,51 +272,36 @@ class Opencast:
         return self.series_full[series_id] if series_id in self.series_full else None
 
 
-    def oc_upload(self, creator, title, rec_id):
+    def oc_upload(self, rec_id, **kwargs):
 
-        response = self._do_get(self.url + '/admin-ng/series/series.json')
-
-        series_list = json.loads(response.content.decode("utf-8"))
-        #TODO: Abort?  Or upload with a default user?
-        try:
-            self.username = creator[:creator.index("@")]
-        except ValueError:
-            self.logger.warning("Invalid username: '@' is missing, upload is aborted")
-            return
-        series_title = "Zoom Recordings " + username
-        series_found = False
-        for series in series_list["results"]:
-            if series["title"] == series_title:
-                series_found = True
-                series_id = series["id"]
-
-        #TODO: This needs to be optional, and/or support a default series
-        if not series_found:
-            #TODO: What if this fails?
-            series_id = self.create_series(creator, series_title)
+        series_id = kwargs['isPartOf'] if 'isPartOf' in kwards else None
+        if None == self.get_single_series(series_id):
+            self.logger.error("Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
+            #TODO: Raise an exception here
+            return #for now
 
         with open(rec_id+'.mp4', 'rb') as fobj:
             #TODO: The flavour here needs to be configurable.  Maybe.
-            data = {"title": title, "creator": creator, "isPartOf": series_id, "flavor": 'presentation/source'}
+            data = kwargs
+            data["flavor"] = 'presentation/source'
             body = {'body': fobj}
             url = self.url + '/ingest/addMediaPackage'
             #TODO: What if this fails?
-            self._do_post(url, data=data, files=body, auth=auth)
+            self._do_post(url, data=data, files=body)
  
 
-    def create_series(self, dc_title, acl_id, theme_id=None, **kwargs):
+    def create_series(self, title, acl_id, theme_id=None, **kwargs):
 
         fields = []
-        for key, value in kwargs.items():
-            name = key.replace("dc_","")
-            if name in ("origin_epid") or "" == value:
+        for name, value in kwargs.items():
+            if name.startswith("origin") or "" == value:
                 continue
             if name in ("publisher", "contributor", "presenter", "creator"):
                 element = {'id': name , 'value': value.split(",") }
             else:
                 element = {'id': name , 'value': value }
             fields.append(element)
-        fields.append({'id': 'title', 'value': dc_title })
+        fields.append({'id': 'title', 'value': title })
 
         metadata = [{"label": "Opencast Series DublinCore",
                      "flavor": "dublincore/series",

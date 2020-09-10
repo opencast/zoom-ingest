@@ -64,7 +64,9 @@ def build_query_string(param_dict = None):
     if None == param_dict:
         param_dict = get_query_params()
     clean_dict = { key: value for key, value in param_dict.items() if None != value }
-    return urlencode(clean_dict)
+    query_string = urlencode(clean_dict)
+    logger.debug(f"Query string is { query_string }")
+    return query_string
 
 
 @app.route('/recordings/<user_id>', methods=['GET'])
@@ -83,28 +85,31 @@ def single_recording(recording_id):
     if request.method == "GET":
         series_id = request.args.get("sid", None)
         query_string = build_query_string()
-        logger.info(f"what the hell { query_string }")
         return get_single_recording(recording_id, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
         return ingest_single_recording(recording_id)
 
 
 def get_single_recording(recording_id, series_id = None, workflow_id = None, query_string=None):
-    renderable = z.get_recording(recording_id)
+    renderable = z.get_renderable_recording(recording_id)
     series = None
     if series_id:
         series = o.get_single_series(series_id)
-    logger.info(f"rendering with { query_string }")
     return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, workflow = workflow_id, query_string = query_string)
 
 
 def ingest_single_recording(recording_id):
-    logger.info(f"Post for { recording_id }")
+    logger.info(f"Ingesting for { recording_id }")
     for key in request.form.keys():
         logger.debug(f"{ key } = { request.form[key] }")
     user_id = request.form['origin_email']
     query_string = request.form['origin_query_string']
-
+    #TODO: Validate required terms are present
+    #TODO: Handle upload failure
+    recording_json = z.get_recording(recording_id)
+    params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not '' == value }
+    recording_json['zingest_params'] = params
+    _queue_recording(recording_json)
     return redirect(f'/recordings/{ user_id }?{ query_string }')
 
 
@@ -119,8 +124,6 @@ def get_series_list(series_id=None):
         epId = request.args.get('epid', "")
         return render_template("series.html", series = series, acl_list = o.get_acls(), theme_list = o.get_themes(), origin_epid = epId)
     elif request.method == "POST":
-        for key in request.form.keys():
-          logger.debug(f"{ key } = { request.form[key] }")
         #TODO: Validate required terms are present
         epid = request.form['origin_epid']
         #Create the series
@@ -150,30 +153,40 @@ def do_POST():
         logger.error("Payload is missing")
         return render_template_string("Missing payload field in webhook body", ""), 400
 
-    return handle_webhook(body)
-
-
-def handle_webhook(body):
     payload = body["payload"]
     try:
         z.validate_payload(payload)
     except BadWebhookData as e:
         logger.error("Payload failed validation")
         return render_template_string("Payload failed validation", ""), 400
+
+    if "download_token" in body:
+        token = body["download_token"]
+        logger.debug(f"Token is {token}")
+    else:
+        token = None
+        logger.debug("Token missing, using None")
+
+    return _queue_recording(payload['object'], token)
+
+
+def _queue_recording(obj, token=None):
+    try:
+        z.validate_object(obj)
+    except BadWebhookData as e:
+        logger.error("Object failed validation")
+        return render_template_string("Object failed validation", ""), 400
     except NoMp4Files as e:
         logger.error("No mp4 files found!")
         return render_template_string("No mp4 files found!", ""), 400
 
-    if payload["object"]["duration"] < MIN_DURATION:
+    if obj["duration"] < MIN_DURATION:
         logger.error("Recording is too short")
         return render_template_string("Recording is too short", ""), 400
 
-    token = body["download_token"]
-    logger.debug(f"Token is {token}")
-
     logger.debug("Sending rabbit message")
-    r.send_rabbit_msg(payload['object'], token)
+    r.send_rabbit_msg(obj, token)
 
     logger.debug("POST processed successfully")
-    return "Success"
+    return f"Successfully sent { obj['uuid'] } to rabbit"
 

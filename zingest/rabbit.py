@@ -43,6 +43,7 @@ class Rabbit():
             "duration": payload["duration"],
             "host_id": payload["host_id"],
             "recording_files": recording_files,
+            "zingest_params": payload['zingest_params'],
             "token": token,
             "received_time": now,
             "creator": creator
