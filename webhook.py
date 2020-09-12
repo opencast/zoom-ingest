@@ -84,18 +84,23 @@ def do_list_recordings(user_id):
 def single_recording(recording_id):
     if request.method == "GET":
         series_id = request.args.get("sid", None)
+        acl_id = request.args.get("acl", None)
         query_string = build_query_string()
         return get_single_recording(recording_id, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
         return ingest_single_recording(recording_id)
 
 
-def get_single_recording(recording_id, series_id = None, workflow_id = None, query_string=None):
+def get_single_recording(recording_id, series_id = None, acl_id = None, workflow_id = None, query_string=None):
     renderable = z.get_renderable_recording(recording_id)
     series = None
     if series_id:
         series = o.get_single_series(series_id)
-    return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, workflow = workflow_id, query_string = query_string)
+    acl = None
+    if acl_id:
+        acl = o.get_single_acl(acl_id)
+    logger.info(o.get_acls())
+    return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string)
 
 
 def ingest_single_recording(recording_id):
@@ -128,8 +133,13 @@ def get_series_list(series_id=None):
         epid = request.form['origin_epid']
         #Create the series
         new_series_id = o.create_series(**request.form)
+        acl_id = request.form.get('acl_id', None)
         #Redirect either to the episode (epId) or back to the create series bits in case of error
+        if acl_id:
+            return redirect(f'recording/{ epid }?sid={ new_series_id }&acl={ acl_id }')
         return redirect(f'recording/{ epid }?sid={ new_series_id }')
+
+
 
 
 @app.route('/', methods=['GET'])

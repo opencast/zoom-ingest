@@ -14,6 +14,7 @@ import time
 import logging
 import zingest.logger
 from zingest.common import NoMp4Files
+from pathlib import Path
 
 
 class OpencastException(Exception):
@@ -84,6 +85,7 @@ class Opencast:
 
 
     def _do_download(self, url, output, expected_size):
+        Path(f"{ self.IN_PROGRESS_ROOT }").mkdir(parents=True, exist_ok=True)
         #TODO: unclear what expected_size is in, .getsize is in bytes
         if os.path.isfile(output) and expected_size == os.path.getsize(output):
           self.logger.debug(f"{output} already exists and is the right size")
@@ -147,12 +149,12 @@ class Opencast:
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
 
             self.logger.info(f"Fetching {uuid}")
-            data, fileid = self.fetch_file(json)
-            self.logger.info(f"Uploading {uuid} as {fileid}.mp4 to {self.url}")
+            filename = self.fetch_file(json)
+            self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
             params = json['zingest_params']
-            self.logger.info(f"{ uuid } / { params }")
-            self.oc_upload(uuid, params)
-            self._rm(f'{self.IN_PROGRESS_ROOT}/{fileid}.mp4')
+
+            self.oc_upload(filename, **params)
+            self._rm(filename)
 
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if None == rec:
@@ -180,9 +182,8 @@ class Opencast:
                 self.logger.exception("Exception removing {path}.  File will need to be manually removed.")
 
 
-    def fetch_file(self, body):
+    def fetch_file(self, data):
         #NB: Previously decoded here, unsure if needed
-        data = body #json.loads(body)#.decode("utf-8"))
         if "recording_files" not in data:
             self.logger.error("No recording found")
             raise NoMp4Files("No recording found")
@@ -200,12 +201,13 @@ class Opencast:
             elif key == "file_size":
                 expected_size = int(files[0][key])
                 self.logger.debug(f"Recording size found: {expected_size}")
+        filename = f"{self.IN_PROGRESS_ROOT}/{recording_id}.mp4"
         #TODO: Is token even needed?
         #self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {recording_id}.mp4")
         #self._do_download(f"{dl_url}/?access_token={data['token']}", f"{recording_id}.mp4", expected_size)
-        self.logger.debug(f"Downloading from {dl_url} to {recording_id}.mp4")
-        self._do_download(f"{dl_url}", f"{recording_id}.mp4", expected_size)
-        return data, recording_id
+        self.logger.debug(f"Downloading from {dl_url} to { filename }")
+        self._do_download(dl_url, filename, expected_size)
+        return filename
 
 
     def get_themes(self):
@@ -226,7 +228,6 @@ class Opencast:
             self.acls_updated = datetime.utcnow()
             self.acls = { str(result['id']): { 'name': result['name'], 'acl': result['acl']['ace'] } for result in results }
             self.logger.debug(f"Found { len(self.acls) } ACLs")
-            self.logger.debug(f'{ self.acls }')
         return self.acls
 
 
@@ -272,26 +273,7 @@ class Opencast:
         return self.series_full[series_id] if series_id in self.series_full else None
 
 
-    def oc_upload(self, rec_id, **kwargs):
-
-        series_id = kwargs['isPartOf'] if 'isPartOf' in kwards else None
-        if None == self.get_single_series(series_id):
-            self.logger.error("Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
-            #TODO: Raise an exception here
-            return #for now
-
-        with open(rec_id+'.mp4', 'rb') as fobj:
-            #TODO: The flavour here needs to be configurable.  Maybe.
-            data = kwargs
-            data["flavor"] = 'presentation/source'
-            body = {'body': fobj}
-            url = self.url + '/ingest/addMediaPackage'
-            #TODO: What if this fails?
-            self._do_post(url, data=data, files=body)
- 
-
-    def create_series(self, title, acl_id, theme_id=None, **kwargs):
-
+    def _prep_metadata_fields(self, **kwargs):
         fields = []
         for name, value in kwargs.items():
             if name.startswith("origin") or "" == value:
@@ -301,6 +283,30 @@ class Opencast:
             else:
                 element = {'id': name , 'value': value }
             fields.append(element)
+        self.logger.debug(f"Metadata blob is { fields }")
+        return fields
+
+    def oc_upload(self, filename, **kwargs):
+
+        series_id = kwargs['isPartOf'] if 'isPartOf' in kwargs else None
+        if series_id and not self.get_single_series(series_id):
+            self.logger.error("Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
+            #TODO: Raise an exception here
+            return #for now
+
+        with open(filename, 'rb') as fobj:
+            #TODO: The flavour here needs to be configurable.  Maybe.
+            data = self._prep_metadata_fields(**kwargs)
+            data.append({ 'id': "flavor", 'value': 'presentation/source' })
+            body = {'body': fobj}
+            url = self.url + '/ingest/addMediaPackage'
+            #TODO: What if this fails?
+            self._do_post(url, data=data, files=body)
+ 
+
+    def create_series(self, title, acl_id, theme_id=None, **kwargs):
+
+        fields = self._prep_metadata_fields(**kwargs)
         fields.append({'id': 'title', 'value': title })
 
         metadata = [{"label": "Opencast Series DublinCore",
@@ -325,7 +331,7 @@ class Opencast:
         #What if response is something other than success?
         try:
             response = self._do_post(self.url + '/api/series', data = data)
-            self.logger.debug(f"Creating series { dc_title } get a {response} response")
+            self.logger.debug(f"Creating series { title } get a {response} response")
             if 201 != response.status_code:
                 raise OpencastException(f"Creating series returned a { response.status_code } http response")
             identifier = response.json()['identifier']

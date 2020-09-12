@@ -36,6 +36,16 @@
           </select>
           <a href="../series?epid={{ recording.id }}">Create New Series</a>
         </td>
+        <td><label for="acl_id">ACL</label></td>
+        <td>
+          <select id="acl_id" name="acl_id">
+            <option value="" {% if acl == None %}selected="true"{% endif %}>--Blank ACL--</option>
+            {% for key, value in acl_list.items() %}
+            <option value="{{ key['id'] }}" {% if acl['identifier'] == key['id'] %}selected="true"{% endif %}>{{ value['name'] }}</option>
+            {% endfor %}
+          </select>
+          <a href="../series?epid={{ recording.id }}">Create New Series</a>
+        </td>
         <td><label for="workflow">Workflow</label></td>
         <td>
           <select id="workflow" name="workflow">

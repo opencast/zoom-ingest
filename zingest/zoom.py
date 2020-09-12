@@ -103,6 +103,9 @@ class Zoom:
         return recording_files
 
 
+    def get_download_token(self):
+        return { "Authorization": "Bearer JWT_TOKEN_HERE" }
+
     def list_available_users(self):
         #TODO: This could get very large, implement paging
         #300 is the maximum page size per the docs
