@@ -41,7 +41,7 @@ except ValueError as err:
 
 z = Zoom(config)
 r = Rabbit(config, z)
-o = Opencast(config, r)
+o = Opencast(config, r, z)
 
 app = Flask(__name__)
 

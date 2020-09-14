@@ -1,4 +1,5 @@
 from zoomus import ZoomClient
+import jwt
 import json
 import zingest.logger
 import logging
@@ -10,6 +11,8 @@ from datetime import datetime, timedelta
 
 class Zoom:
 
+    JWT_HEADERS = { "alg": "HS256", "typ": "JWT" }
+
     def __init__(self, config):
         self.logger = logging.getLogger("zoom")
         self.logger.setLevel(logging.DEBUG)
@@ -19,6 +22,8 @@ class Zoom:
         self.zoom_client = ZoomClient(self.api_key, self.api_secret)
         self.logger.info("Setup complete")
         self.logger.debug(f"Init with {self.api_key}:{self.api_secret}")
+        #Ensure this is a datetime, but also that the expirey has already happened
+        self.expirey = datetime.utcnow() - timedelta(seconds=30)
 
 
     def validate_payload(self, payload):
@@ -103,8 +108,16 @@ class Zoom:
         return recording_files
 
 
-    def get_download_token(self):
-        return { "Authorization": "Bearer JWT_TOKEN_HERE" }
+    def get_download_header(self):
+        if datetime.utcnow() + timedelta(seconds=1) > self.expirey:
+            #Expires after 30 seconds
+            self.expirey = datetime.utcnow() + timedelta(seconds=30)
+            payload = { "iss": self.api_key, "exp": self.expirey }
+            jwt_token = str(jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS))
+            self.jwt = { "Authorization": f"Bearer { jwt_token }" }
+            self.logger.debug(f"JWT header updated to: { self.jwt }")
+        return self.jwt
+
 
     def list_available_users(self):
         #TODO: This could get very large, implement paging

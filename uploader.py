@@ -26,7 +26,7 @@ except KeyError as err:
 
 z = Zoom(config)
 r = Rabbit(config, z)
-o = Opencast(config, r)
+o = Opencast(config, r, z)
 
 def uploader():
     o.run()

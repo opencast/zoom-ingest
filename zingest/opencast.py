@@ -25,7 +25,7 @@ class Opencast:
     IN_PROGRESS_ROOT = "in-progress"
     HEADERS = {'X-Requested-Auth': 'Digest'}
 
-    def __init__(self, config, rabbit):
+    def __init__(self, config, rabbit, zoom):
         self.logger = logging.getLogger("opencast")
         self.logger.setLevel(logging.DEBUG)
 
@@ -37,6 +37,7 @@ class Opencast:
         self.logger.debug(f"Opencast password is {self.password}")
         self.auth = HTTPDigestAuth(self.user, self.password)
         self.set_rabbit(rabbit)
+        self.set_zoom(zoom)
         self.acls_updated = None
         self.acls = None
         self.themes_updated = None
@@ -58,6 +59,12 @@ class Opencast:
             raise TypeError("Rabbit is missing or the wrong type!")
         else:
             self.rabbit = rabbit
+
+    def set_zoom(self, zoom):
+        if not zoom or type(zoom) != zingest.zoom.Zoom:
+            raise TypeError("Zoom is missing or the wrong type!")
+        else:
+            self.zoom = zoom
 
 
     def run(self):
@@ -90,7 +97,7 @@ class Opencast:
         if os.path.isfile(output) and expected_size == os.path.getsize(output):
           self.logger.debug(f"{output} already exists and is the right size")
           return
-        with requests.get(url, stream=True) as req:
+        with requests.get(url, stream=True, headers=self.zoom.get_download_header()) as req:
             #Raises an exception if there is one
             req.raise_for_status()
             with open(output, 'wb') as f:
@@ -193,8 +200,8 @@ class Opencast:
         recording_id = ''
         for key in files[0].keys():
             if key == "download_url":
-                self.logger.debug(f"Download url found: {dl_url}")
                 dl_url = files[0][key]
+                self.logger.debug(f"Download url found: {dl_url}")
             elif key == "recording_id":
                 recording_id = files[0][key]
                 self.logger.debug(f"Recording id found: {recording_id}")
