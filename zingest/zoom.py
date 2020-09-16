@@ -7,7 +7,7 @@ import functools
 from zingest.common import BadWebhookData, NoMp4Files
 from zingest import db
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 class Zoom:
 
@@ -107,16 +107,25 @@ class Zoom:
                 })
         return recording_files
 
-
-    def get_download_header(self):
+    def get_download_token(self):
+        self.jwt_token = ""
         if datetime.utcnow() + timedelta(seconds=1) > self.expirey:
             #Expires after 30 seconds
-            self.expirey = datetime.utcnow() + timedelta(seconds=30)
+            self.expirey = datetime.utcnow() + timedelta(minutes=5)
+            #self.expirey = datetime(year=2020, month=10, day=1, hour=0, minute=0, second=0, tzinfo=timezone.utc)
             payload = { "iss": self.api_key, "exp": self.expirey }
-            jwt_token = str(jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS))
-            self.jwt = { "Authorization": f"Bearer { jwt_token }" }
-            self.logger.debug(f"JWT header updated to: { self.jwt }")
-        return self.jwt
+            self.logger.debug(f"{ payload }")
+            self.logger.debug(f"{ Zoom.JWT_HEADERS }")
+            self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS).decode("utf-8")
+        return self.jwt_token
+
+
+    def get_download_header(self):
+        jwt_token = self.get_download_token()
+        jwt_header = { "Authorization": f"Bearer { jwt_token }" }
+        self.logger.debug(f"{ jwt.decode(jwt_token, self.api_secret, algorithms=['HS256']) }")
+        self.logger.debug(f"JWT header updated to: { jwt_header }")
+        return jwt_header
 
 
     def list_available_users(self):

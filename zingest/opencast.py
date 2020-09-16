@@ -97,7 +97,7 @@ class Opencast:
         if os.path.isfile(output) and expected_size == os.path.getsize(output):
           self.logger.debug(f"{output} already exists and is the right size")
           return
-        with requests.get(url, stream=True, headers=self.zoom.get_download_header()) as req:
+        with requests.get(url, stream=True) as req:
             #Raises an exception if there is one
             req.raise_for_status()
             with open(output, 'wb') as f:
@@ -209,11 +209,10 @@ class Opencast:
                 expected_size = int(files[0][key])
                 self.logger.debug(f"Recording size found: {expected_size}")
         filename = f"{self.IN_PROGRESS_ROOT}/{recording_id}.mp4"
-        #TODO: Is token even needed?
-        #self.logger.debug(f"Downloading from {dl_url}/?access_token={data['token']} to {recording_id}.mp4")
-        #self._do_download(f"{dl_url}/?access_token={data['token']}", f"{recording_id}.mp4", expected_size)
-        self.logger.debug(f"Downloading from {dl_url} to { filename }")
-        self._do_download(dl_url, filename, expected_size)
+        token = self.zoom.get_download_token()
+        url = f"{dl_url}/?access_token={ token }"
+        self.logger.debug(f"Downloading from { url } to { filename }")
+        self._do_download(f"{dl_url}/?access_token={ token }", filename, expected_size)
         return filename
 
 
