@@ -115,9 +115,9 @@ class Opencast:
                                 headers={'X-Requested-Auth': 'Digest'})
 
 
-    def _do_post(self, url, data):
-        self.logger.debug(f"POSTing { data } to { url }")#, with { len(files) } files")
-        return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, data=data)
+    def _do_post(self, url, data, files):
+        self.logger.debug(f"POSTing { data } to { url }")
+        return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, data=data, files=files)
 
 
     @db.with_session
@@ -312,15 +312,12 @@ class Opencast:
             fields.append({ 'id': "flavor", 'value': 'presentation/source' })
             post_data['metadata'] = [{ "flavor": "dublincore/episode", "fields": fields }]
             post_data['acl'] = self.get_single_acl(acl_id)
-            post_data['processing'] = { "workflow": workflow_id }
             #post_data['presentation'] = fobj
             self.logger.debug(f"Postdata blob is { post_data }")
             #TODO: What if this fails?
-            #FIXME: The following line fails to function
-            resp = requests.post(self.url + '/api/events', auth=self.auth, headers=Opencast.HEADERS, data=post_data)
-            self.logger.error(resp)
-            self.logger.error(resp.text)
-
+            resp = self._do_post(url=f"{ self.url }/ingest/addMediaPackage/{ workflow_id }", data={"title": kwargs['title'], "flavor": "presentation/source"}, files={"BODY": fobj})
+            self.logger.debug(f"{ resp.text }")
+            #Take ep id, POST aclid=acl_id to /acl-manager/apply/episode/{ epid }
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
 
