@@ -100,6 +100,7 @@ def get_single_recording(recording_id, series_id = None, acl_id = None, workflow
     if acl_id:
         acl = o.get_single_acl(acl_id)
     logger.info(o.get_acls())
+    logger.info(acl)
     return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string)
 
 

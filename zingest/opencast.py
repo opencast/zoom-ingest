@@ -115,9 +115,9 @@ class Opencast:
                                 headers={'X-Requested-Auth': 'Digest'})
 
 
-    def _do_post(self, url, **kwargs):
-        self.logger.debug(f"POSTing { kwargs['data'] } to { url }")#, with { len(files) } files")
-        return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, **kwargs)
+    def _do_post(self, url, data):
+        self.logger.debug(f"POSTing { data } to { url }")#, with { len(files) } files")
+        return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, data=data)
 
 
     @db.with_session
@@ -160,17 +160,18 @@ class Opencast:
             self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
             params = json['zingest_params']
 
-            self.oc_upload(filename, **params)
-            self._rm(filename)
+            self.oc_upload(uuid, filename, **params)
+            #self._rm(filename)
 
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if None == rec:
                 self.logger.error(f"BUG: {uuid} not found in db")
                 raise Exception(f"BUG: {uuid} not found in db")
             else:
-                rec.update_status(db.Status.FINISHED)
-                dbs.merge(rec)
-                dbs.commit()
+                pass
+                #rec.update_status(db.Status.FINISHED)
+                #dbs.merge(rec)
+                #dbs.commit()
         except HTTPError as er:
             self.logger.exception("Unable to fetch file, will retry later")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
@@ -292,22 +293,32 @@ class Opencast:
         self.logger.debug(f"Metadata blob is { fields }")
         return fields
 
-    def oc_upload(self, filename, **kwargs):
+    def oc_upload(self, rec_id, filename, acl_id=None, isPartOf=None, workflow_id=None, **kwargs):
 
-        series_id = kwargs['isPartOf'] if 'isPartOf' in kwargs else None
+        if not workflow_id:
+            self.logger.error(f"Attempting to ingest { rec_id } with no workflow id!")
+            #TODO: Raise an exception here
+            return #for now
+
+        series_id = isPartOf
         if series_id and not self.get_single_series(series_id):
-            self.logger.error("Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
+            self.logger.error(f"Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
             #TODO: Raise an exception here
             return #for now
 
         with open(filename, 'rb') as fobj:
+            post_data = {}
             #TODO: The flavour here needs to be configurable.  Maybe.
-            data = self._prep_metadata_fields(**kwargs)
-            data.append({ 'id': "flavor", 'value': 'presentation/source' })
-            body = {'body': fobj}
-            url = self.url + '/ingest/addMediaPackage'
+            fields = self._prep_metadata_fields(**kwargs)
+            fields.append({ 'id': "flavor", 'value': 'presentation/source' })
+            post_data['metadata'] = [{ "flavor": "dublincore/episode", "fields": [ fields ] }]
+            post_data['acl'] = self.get_single_acl(acl_id)
+            post_data['processing'] = { "workflow": workflow_id }
+            #post_data['presentation'] = fobj
+            self.logger.debug(f"Postdata blob is { post_data }")
             #TODO: What if this fails?
-            self._do_post(url, data=data, files=body)
+            resp = requests.post(self.url + '/api/events', auth=self.auth, headers=Opencast.HEADERS, data=post_data)
+            self.logger.info(resp)
  
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):

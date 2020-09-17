@@ -114,8 +114,6 @@ class Zoom:
             self.expirey = datetime.utcnow() + timedelta(minutes=5)
             #self.expirey = datetime(year=2020, month=10, day=1, hour=0, minute=0, second=0, tzinfo=timezone.utc)
             payload = { "iss": self.api_key, "exp": self.expirey }
-            self.logger.debug(f"{ payload }")
-            self.logger.debug(f"{ Zoom.JWT_HEADERS }")
             self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS).decode("utf-8")
         return self.jwt_token
 
@@ -123,8 +121,6 @@ class Zoom:
     def get_download_header(self):
         jwt_token = self.get_download_token()
         jwt_header = { "Authorization": f"Bearer { jwt_token }" }
-        self.logger.debug(f"{ jwt.decode(jwt_token, self.api_secret, algorithms=['HS256']) }")
-        self.logger.debug(f"JWT header updated to: { jwt_header }")
         return jwt_header
 
 
