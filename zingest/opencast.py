@@ -196,7 +196,7 @@ class Opencast:
             self.logger.error("No recording found")
             raise NoMp4Files("No recording found")
         files = data["recording_files"]
-        
+
         dl_url = ''
         recording_id = ''
         for key in files[0].keys():
@@ -290,7 +290,6 @@ class Opencast:
             else:
                 element = {'id': name , 'value': value }
             fields.append(element)
-        self.logger.debug(f"Metadata blob is { fields }")
         return fields
 
     def oc_upload(self, rec_id, filename, acl_id=None, isPartOf=None, workflow_id=None, **kwargs):
@@ -311,15 +310,17 @@ class Opencast:
             #TODO: The flavour here needs to be configurable.  Maybe.
             fields = self._prep_metadata_fields(**kwargs)
             fields.append({ 'id': "flavor", 'value': 'presentation/source' })
-            post_data['metadata'] = [{ "flavor": "dublincore/episode", "fields": [ fields ] }]
+            post_data['metadata'] = [{ "flavor": "dublincore/episode", "fields": fields }]
             post_data['acl'] = self.get_single_acl(acl_id)
             post_data['processing'] = { "workflow": workflow_id }
             #post_data['presentation'] = fobj
             self.logger.debug(f"Postdata blob is { post_data }")
             #TODO: What if this fails?
+            #FIXME: The following line fails to function
             resp = requests.post(self.url + '/api/events', auth=self.auth, headers=Opencast.HEADERS, data=post_data)
-            self.logger.info(resp)
- 
+            self.logger.error(resp)
+            self.logger.error(resp.text)
+
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
 
