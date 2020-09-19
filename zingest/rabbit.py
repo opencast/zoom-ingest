@@ -70,7 +70,6 @@ class Rabbit():
         connection = pika.BlockingConnection(pika.ConnectionParameters(self.rabbit_url, credentials=credentials))
         rcv_channel = connection.channel()
         rcv_channel.queue_declare(queue="zoomhook")
-        #FIXME: This throws an exception if the consumer is started before something is in the queue!
         for method_frame, properties, body in rcv_channel.consume('zoomhook'):
             self.logger.debug(f"Message {method_frame.delivery_tag}, running callback")
             callback(method_frame, properties, body)
