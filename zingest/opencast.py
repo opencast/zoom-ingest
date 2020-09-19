@@ -15,6 +15,7 @@ import logging
 import zingest.logger
 from zingest.common import NoMp4Files
 from pathlib import Path
+from dcxml import simpledc
 
 
 class OpencastException(Exception):
@@ -115,7 +116,7 @@ class Opencast:
                                 headers={'X-Requested-Auth': 'Digest'})
 
 
-    def _do_post(self, url, data, files):
+    def _do_post(self, url, data, files=None):
         self.logger.debug(f"POSTing { data } to { url }")
         return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, data=data, files=files)
 
@@ -248,7 +249,7 @@ class Opencast:
         if not self.workflows or self.workflows_updated <= datetime.utcnow() - timedelta(hours = 1):
             self.logger.debug("Refreshing Opencast workflows")
             #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-            results = self._do_get(self.url + '/api/workflow-definitions?filter=tag:archive').json()
+            results = self._do_get(self.url + '/api/workflow-definitions?filter=tag:upload&filter=tag:schedule').json()
             self.workflows_updated = datetime.utcnow()
             self.workflows = { result['identifier']: result['title'] for result in results }
             self.logger.debug(f"Found { len(self.workflows) } workflows")
@@ -292,6 +293,22 @@ class Opencast:
             fields.append(element)
         return fields
 
+
+    def _prep_dc_catalog(self, **kwargs):
+        #I tried the dcxml library, but the namespace settings don't seem to work
+        catalog = '<?xml version="1.0" encoding="UTF-8"?><dublincore xmlns="http://www.opencastproject.org/xsd/1.0/dublincore/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+        for name, value in kwargs.items():
+            if name.startswith("origin") or "" == value:
+                continue
+            if name in ("contibutor", "creator"):# ("publisher", "contributor", "presenter", "creator"):
+                for item in value.split(","):
+                    term = f"<dcterms:{ name }>{ item }</dcterms:{ name }>"
+            else:
+                term = f"<dcterms:{ name }>{ value }</dcterms:{ name }>"
+            catalog += term
+        catalog += "</dublincore>"
+        return catalog
+
     def oc_upload(self, rec_id, filename, acl_id=None, isPartOf=None, workflow_id=None, **kwargs):
 
         if not workflow_id:
@@ -305,18 +322,17 @@ class Opencast:
             #TODO: Raise an exception here
             return #for now
 
+        epdc = self._prep_dc_catalog(**kwargs)
+        #TODO: Make this configurable, cf pyca's setup
+        wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}
+
         with open(filename, 'rb') as fobj:
-            post_data = {}
-            #TODO: The flavour here needs to be configurable.  Maybe.
-            fields = self._prep_metadata_fields(**kwargs)
-            fields.append({ 'id': "flavor", 'value': 'presentation/source' })
-            post_data['metadata'] = [{ "flavor": "dublincore/episode", "fields": fields }]
-            post_data['acl'] = self.get_single_acl(acl_id)
-            #post_data['presentation'] = fobj
-            self.logger.debug(f"Postdata blob is { post_data }")
-            #TODO: What if this fails?
-            resp = self._do_post(url=f"{ self.url }/ingest/addMediaPackage/{ workflow_id }", data={"title": kwargs['title'], "flavor": "presentation/source"}, files={"BODY": fobj})
-            self.logger.debug(f"{ resp.text }")
+            mp = self._do_get(f'{self. url }/ingest/createMediaPackage').text
+            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': "dublincore/episode", 'mediaPackage': mp, "dublinCore": epdc}).text
+            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': "presentation/source", 'mediaPackage': mp}, files={"BODY": fobj}).text
+            mp = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={'mediaPackage': mp, **wf_config}).text
+            #FIXME: Set the ACL!
+            self.logger.debug(mp)
             #Take ep id, POST aclid=acl_id to /acl-manager/apply/episode/{ epid }
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
