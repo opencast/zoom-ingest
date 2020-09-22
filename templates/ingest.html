@@ -13,10 +13,10 @@
         <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" value="{{ recording.title }}"></td>
       </tr>
       <tr>
-        <td><label for="creator">Presenter(s)</label></td><td><input type="text" id="creators" name="creators" value="{{ recording.host }}"></td>
-        <td><label for="contributor">Contributor(s)</label></td><td><input type="text" id="contributors" name="contributors"{% if series != None %} value="{{ series['contributors'] | join(', ') }}"{% endif %}></td>
-        <td><label for="organizer">Organizers(s)</label></td><td><input type="text" id="organizers" name="organizers"{% if series != None %} value="{{ series['organizers'] | join(', ') }}"{% endif %}></td>
-        <td><label for="publisher">Publisher(s)</label></td><td><input type="text" id="publishers" name="publishers"{% if series != None %} value="{{ series['publishers'] | join(', ') }}"{% else %} value="ETH Zürich, ID MMS; Schweiz"{% endif %}></td>
+        <td><label for="creator">Presenter(s)</label></td><td><input type="text" id="creator" name="creator" value="{{ recording.host }}"></td>
+        <td><label for="contributor">Contributor(s)</label></td><td><input type="text" id="contributor" name="contributor"{% if series != None %} value="{{ series['contributor'] | join(', ') }}"{% endif %}></td>
+        <td><label for="organizer">Organizers(s)</label></td><td><input type="text" id="organizer" name="organizer"{% if series != None %} value="{{ series['organizer'] | join(', ') }}"{% endif %}></td>
+        <td><label for="publisher">Publisher(s)</label></td><td><input type="text" id="publisher" name="publisher"{% if series != None %} value="{{ series['publisher'] | join(', ') }}"{% else %} value="ETH Zürich, ID MMS; Schweiz"{% endif %}></td>
       </tr>
       <tr>
         <td><label for="language">Language</label></td><td><input type="text" id="language" name="language"{% if series != None %} value="{{ series['language'] }}"{% endif %}></td>

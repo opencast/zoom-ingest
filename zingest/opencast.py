@@ -16,6 +16,7 @@ import zingest.logger
 from zingest.common import NoMp4Files
 from pathlib import Path
 from dcxml import simpledc
+import xml.etree.ElementTree as ET
 
 
 class OpencastException(Exception):
@@ -170,8 +171,8 @@ class Opencast:
                 raise Exception(f"BUG: {uuid} not found in db")
             else:
                 pass
-                #rec.update_status(db.Status.FINISHED)
-                #dbs.merge(rec)
+                rec.update_status(db.Status.FINISHED)
+                dbs.merge(rec)
                 #dbs.commit()
         except HTTPError as er:
             self.logger.exception("Unable to fetch file, will retry later")
@@ -281,15 +282,26 @@ class Opencast:
         return self.series_full[series_id] if series_id in self.series_full else None
 
 
+    def _ensure_list(self, value):
+        if type(value) != list:
+            return [ value ]
+        return value
+
+
     def _prep_metadata_fields(self, **kwargs):
         fields = []
         for name, value in kwargs.items():
-            if name.startswith("origin") or "" == value:
+            if name.startswith("origin"):
                 continue
             if name in ("publisher", "contributor", "presenter", "creator"):
-                element = {'id': name , 'value': value.split(",") }
+                self.logger.debug(f"{ name } handling")
+                self.logger.debug(f"{ self._ensure_list(value.split(",")) } handling")
+                element = {'id': name , 'value': self._ensure_list(value.split(",")) }
+            if name == "date":
+                element = {'id': 'startDate' , 'value': value }
             else:
                 element = {'id': name , 'value': value }
+            self.logger.debug(f'{ name } -> { element }')
             fields.append(element)
         return fields
 
@@ -298,7 +310,8 @@ class Opencast:
         #I tried the dcxml library, but the namespace settings don't seem to work
         catalog = '<?xml version="1.0" encoding="UTF-8"?><dublincore xmlns="http://www.opencastproject.org/xsd/1.0/dublincore/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
         for name, value in kwargs.items():
-            if name.startswith("origin") or "" == value:
+            self.logger.debug(f'{ name }')
+            if name.startswith("origin"):
                 continue
             if name in ("contibutor", "creator"):# ("publisher", "contributor", "presenter", "creator"):
                 for item in value.split(","):
@@ -322,18 +335,31 @@ class Opencast:
             #TODO: Raise an exception here
             return #for now
 
+        acl = self.get_single_acl(acl_id)
         epdc = self._prep_dc_catalog(**kwargs)
         #TODO: Make this configurable, cf pyca's setup
         wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}
 
         with open(filename, 'rb') as fobj:
+            #We're json.dumps()ing because python dicts are *not* valid json - they use single quotes but need to use doubles
+            processing = json.dumps({ 'workflow': workflow_id, 'configuration': wf_config })
+            metadata = json.dumps([{ 'flavor': 'dublincore/episode', 'fields': self._prep_metadata_fields(**kwargs) }])
+            acl = json.dumps(acl)
+            self._do_post(f'{ self.url }/api/events', data={ 'acl': acl, 'metadata': metadata, 'processing': processing}, files={ "BODY": fobj } )
+
+
+
+
+            return
             mp = self._do_get(f'{self. url }/ingest/createMediaPackage').text
-            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': "dublincore/episode", 'mediaPackage': mp, "dublinCore": epdc}).text
-            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': "presentation/source", 'mediaPackage': mp}, files={"BODY": fobj}).text
-            mp = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={'mediaPackage': mp, **wf_config}).text
-            #FIXME: Set the ACL!
-            self.logger.debug(mp)
-            #Take ep id, POST aclid=acl_id to /acl-manager/apply/episode/{ epid }
+            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={ 'flavor': "dublincore/episode", 'mediaPackage': mp, "dublinCore": epdc } ).text
+            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={ 'flavor': "presentation/source", 'mediaPackage': mp }, files={ "BODY": fobj } ).text
+            workflowxml = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={ 'mediaPackage': mp, **wf_config } ).text
+            workflow = ET.fromstring(workflowxml)
+            mpid = workflow.find('{http://mediapackage.opencastproject.org}mediapackage').get('id')
+            #FIXME: We need to sleep until the workflow is *done* if we do it this way
+            self._do_post(f'{ self.url }/api/events/{ mpid }/acl', data={ 'acl' : acl } )
+
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
 
