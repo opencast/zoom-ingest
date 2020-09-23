@@ -99,15 +99,11 @@ def get_single_recording(recording_id, series_id = None, acl_id = None, workflow
     acl = None
     if acl_id:
         acl = o.get_single_acl(acl_id)
-    logger.info(o.get_acls())
-    logger.info(acl)
     return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string)
 
 
 def ingest_single_recording(recording_id):
     logger.info(f"Ingesting for { recording_id }")
-    for key in request.form.keys():
-        logger.debug(f"{ key } = { request.form[key] }")
     user_id = request.form['origin_email']
     query_string = request.form['origin_query_string']
     #TODO: Validate required terms are present

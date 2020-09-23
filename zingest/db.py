@@ -90,12 +90,14 @@ class Recording(Base):
                     default=Status.NEW)
     timestamp = Column('timestamp', DateTime(), nullable=False,
                     default=datetime.utcnow())
+    workflow_id = Column('workflow_id', Text(), nullable=True, default=None)
 
     def __init__(self, data):
         self.uuid = data['uuid']
         self.user_id = data['host_id']
         self.data = json.dumps(data).encode('utf-8')
         self.update_status(Status.NEW)
+        self.workflow_id = None
 
     def get_data(self):
         '''Load JSON data from event.
@@ -110,6 +112,9 @@ class Recording(Base):
     def update_status(self, new_status):
         self.status = new_status
         self.timestamp = datetime.utcnow()
+
+    def set_workflow_id(self, workflow_id):
+        self.workflow_id = workflow_id
 
     def __repr__(self):
         '''Return a string representation of an artist object.
@@ -128,6 +133,7 @@ class Recording(Base):
             'user_id': self.user_id,
             'data': self.get_data(),
             'status': self.status_str(),
+            'wf_id': self.workflow_id,
             'timestamp': str(self.timestamp)
         }
 

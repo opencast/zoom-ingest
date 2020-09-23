@@ -15,8 +15,7 @@ import logging
 import zingest.logger
 from zingest.common import NoMp4Files
 from pathlib import Path
-from dcxml import simpledc
-import xml.etree.ElementTree as ET
+
 
 
 class OpencastException(Exception):
@@ -162,7 +161,7 @@ class Opencast:
             self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
             params = json['zingest_params']
 
-            self.oc_upload(uuid, filename, **params)
+            workflow_id = self.oc_upload(uuid, filename, **params)
             #self._rm(filename)
 
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
@@ -172,8 +171,9 @@ class Opencast:
             else:
                 pass
                 rec.update_status(db.Status.FINISHED)
+                rec.set_workflow_id(workflow_id)
                 dbs.merge(rec)
-                #dbs.commit()
+                dbs.commit()
         except HTTPError as er:
             self.logger.exception("Unable to fetch file, will retry later")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
@@ -293,34 +293,24 @@ class Opencast:
         for name, value in kwargs.items():
             if name.startswith("origin"):
                 continue
-            if name in ("publisher", "contributor", "presenter", "creator"):
-                self.logger.debug(f"{ name } handling")
-                self.logger.debug(f"{ self._ensure_list(value.split(",")) } handling")
-                element = {'id': name , 'value': self._ensure_list(value.split(",")) }
-            if name == "date":
+            if name in ("publisher", "contributor", "presenter", "creator", "subjects"):
+                element = {'id': name , 'value': self._ensure_list(value.split(',')) }
+            elif name == "date":
                 element = {'id': 'startDate' , 'value': value }
             else:
                 element = {'id': name , 'value': value }
-            self.logger.debug(f'{ name } -> { element }')
             fields.append(element)
         return fields
 
 
-    def _prep_dc_catalog(self, **kwargs):
-        #I tried the dcxml library, but the namespace settings don't seem to work
-        catalog = '<?xml version="1.0" encoding="UTF-8"?><dublincore xmlns="http://www.opencastproject.org/xsd/1.0/dublincore/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
-        for name, value in kwargs.items():
-            self.logger.debug(f'{ name }')
-            if name.startswith("origin"):
-                continue
-            if name in ("contibutor", "creator"):# ("publisher", "contributor", "presenter", "creator"):
-                for item in value.split(","):
-                    term = f"<dcterms:{ name }>{ item }</dcterms:{ name }>"
-            else:
-                term = f"<dcterms:{ name }>{ value }</dcterms:{ name }>"
-            catalog += term
-        catalog += "</dublincore>"
-        return catalog
+    def _prep_episode_metadata_fields(self, **kwargs):
+        fields = self._prep_metadata_fields(**kwargs)
+        #This is a horible hack, but the episode endpoint needs the publisher as a string, not an array
+        # The series endpoint, of course, handles this correctly
+        for field in fields:
+            if field['id'] == "publisher":
+                field['value'] = kwargs['publisher']
+        return fields
 
     def oc_upload(self, rec_id, filename, acl_id=None, isPartOf=None, workflow_id=None, **kwargs):
 
@@ -335,30 +325,20 @@ class Opencast:
             #TODO: Raise an exception here
             return #for now
 
-        acl = self.get_single_acl(acl_id)
-        epdc = self._prep_dc_catalog(**kwargs)
+        acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
+        metadata = self._prep_episode_metadata_fields(**kwargs)
+
         #TODO: Make this configurable, cf pyca's setup
         wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}
 
         with open(filename, 'rb') as fobj:
             #We're json.dumps()ing because python dicts are *not* valid json - they use single quotes but need to use doubles
             processing = json.dumps({ 'workflow': workflow_id, 'configuration': wf_config })
-            metadata = json.dumps([{ 'flavor': 'dublincore/episode', 'fields': self._prep_metadata_fields(**kwargs) }])
+            metadata = json.dumps([{ 'flavor': 'dublincore/episode', 'fields': metadata }])
             acl = json.dumps(acl)
-            self._do_post(f'{ self.url }/api/events', data={ 'acl': acl, 'metadata': metadata, 'processing': processing}, files={ "BODY": fobj } )
-
-
-
-
-            return
-            mp = self._do_get(f'{self. url }/ingest/createMediaPackage').text
-            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={ 'flavor': "dublincore/episode", 'mediaPackage': mp, "dublinCore": epdc } ).text
-            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={ 'flavor': "presentation/source", 'mediaPackage': mp }, files={ "BODY": fobj } ).text
-            workflowxml = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={ 'mediaPackage': mp, **wf_config } ).text
-            workflow = ET.fromstring(workflowxml)
-            mpid = workflow.find('{http://mediapackage.opencastproject.org}mediapackage').get('id')
-            #FIXME: We need to sleep until the workflow is *done* if we do it this way
-            self._do_post(f'{ self.url }/api/events/{ mpid }/acl', data={ 'acl' : acl } )
+            event_json = self._do_post(f'{ self.url }/api/events', data={ 'acl': acl, 'metadata': metadata, 'processing': processing}, files={ "presentation": fobj } ).json()
+            mpid = event_json['identifier']
+        return mpid
 
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
