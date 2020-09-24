@@ -82,8 +82,7 @@ class Opencast:
         while True:
             try:
                 self.logger.info("Checking backlog")
-                #FIXME: commented this out for testing hour_ago = datetime.utcnow() - timedelta(hours = 1)
-                hour_ago = datetime.utcnow() - timedelta(minutes = 1)
+                hour_ago = datetime.utcnow() - timedelta(hours = 1)
                 rec_list = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED, db.Recording.timestamp <= hour_ago).all()
                 for rec in rec_list:
                     self._process(rec.get_data())
@@ -144,7 +143,6 @@ class Opencast:
         try:
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if None == rec:
-                self.logger.warning(f"LIKELY A BUG: {uuid} not found in db, creating record and processing anyway")
                 #Create a database record so that we can recover if we're killed mid process
                 rec = db.Recording(j)
                 rec.update_status(db.Status.IN_PROGRESS)
