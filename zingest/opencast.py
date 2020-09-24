@@ -160,8 +160,9 @@ class Opencast:
             filename = self.fetch_file(json)
             self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
             params = json['zingest_params']
+            self.logger.error(params)
 
-            workflow_id = self.oc_upload(uuid, filename, **params)
+            workflow_id = self.oc_upload(uuid, filename, json['duration'], **params)
             #self._rm(filename)
 
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
@@ -169,7 +170,6 @@ class Opencast:
                 self.logger.error(f"BUG: {uuid} not found in db")
                 raise Exception(f"BUG: {uuid} not found in db")
             else:
-                pass
                 rec.update_status(db.Status.FINISHED)
                 rec.set_workflow_id(workflow_id)
                 dbs.merge(rec)
@@ -313,26 +313,24 @@ class Opencast:
         return fields
 
 
-    def oc_upload(self, rec_id, filename, acl_id=None, isPartOf=None, workflow_id=None, **kwargs):
+    def oc_upload(self, rec_id, filename, duration, acl_id=None, workflow_id=None, **kwargs):
 
         if not workflow_id:
             self.logger.error(f"Attempting to ingest { rec_id } with no workflow id!")
             #TODO: Raise an exception here
             return #for now
 
-        series_id = isPartOf
-        if series_id and not self.get_single_series(series_id):
-            self.logger.error(f"Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
-            #TODO: Raise an exception here
-            return #for now
-        series = self.get_single_series(series_id)
+        if "isPartOf" in kwargs:
+            series_id = kwargs['isPartOf']
+            if series_id and not self.get_single_series(series_id):
+                self.logger.error(f"Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
+                #TODO: Raise an exception here
+                return #for now
 
         acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
         episode_metadata = self._prep_episode_metadata_fields(**kwargs)
+        episode_metadata.append({ 'id': 'duration', 'value': duration })
         metadata = [{ 'flavor': 'dublincore/episode', 'fields': episode_metadata }]
-        if series:
-            formatted_series = [{ 'id': key, 'value': value } for key, value in series.items() ]
-            metadata.append({ 'flavor': 'dublincore/series', 'fields': formatted_series })
 
         #TODO: Make this configurable, cf pyca's setup
         wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}

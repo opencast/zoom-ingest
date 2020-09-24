@@ -39,7 +39,7 @@
         <td><label for="acl_id">ACL</label></td>
         <td>
           <select id="acl_id" name="acl_id" required>
-            <option value="" {% if acl == None %}selected="true"{% endif %}>--Blank ACL--</option>
+            <option value="" {% if acl == None %}selected="true"{% endif %} disabled="disabled">--Blank ACL--</option>
             {% for key, value in acl_list.items() %}
             <option value="{{ key }}" {% if acl['identifier'] == key %}selected="true"{% endif %}>{{ value['name'] }}</option>
             {% endfor %}
@@ -49,7 +49,7 @@
         <td><label for="workflow_id">Workflow</label></td>
         <td>
           <select id="workflow_id" name="workflow_id" required>
-            <option {% if workflow == None %}selected="true"{% endif %} disabled="disabled">Select Workflow</option>
+            <option value=""{% if workflow == None %}selected="true"{% endif %} disabled="disabled">Select Workflow</option>
             {% for key, value in workflow_list.items() %}
             <option value="{{ key }}" {% if workflow['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}

@@ -18,7 +18,7 @@ class Zoom:
         self.logger.setLevel(logging.DEBUG)
 
         self.api_key = config['JWT']['Key']
-        self.api_secret = config['JWT']['Secret']  
+        self.api_secret = config['JWT']['Secret']
         self.zoom_client = ZoomClient(self.api_key, self.api_secret)
         self.logger.info("Setup complete")
         self.logger.debug(f"Init with {self.api_key}:{self.api_secret}")
@@ -178,6 +178,10 @@ class Zoom:
     def get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None):
         #Get the list of recordings from Zoom
         zoom_results = self._get_user_recordings(user_id, from_date, to_date, page_size)
+        if 'meetings' not in zoom_results:
+            self.logger.warning("Got a response from Zoom, but data was invalid")
+            self.logger.debug(f"{ zoom_results }")
+            return []
         zoom_meetings = zoom_results['meetings']
         self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
         return self._build_renderable_event_list(zoom_meetings)
@@ -216,5 +220,5 @@ class Zoom:
 
     def get_renderable_recording(self, recording_id):
         recording = self.get_recording(recording_id)
-        #We pass in a list of one, so we know that the returned list is of size 1	
+        #We pass in a list of one, so we know that the returned list is of size 1
         return self._build_renderable_event_list([ recording ])[0]

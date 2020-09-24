@@ -38,7 +38,7 @@
         <td><label for="acl">ACL</label></td>
         <td>
           <select id="acl_id" name="acl_id" required>
-            <option {% if series == None %}selected="true"{% endif %} disabled="disabled">Select ACL</option>
+              <option value=""{% if series == None %}selected="true"{% endif %} disabled="disabled">Select ACL</option>
             {% for key, value in acl_list.items() %}
             <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value['name'] }}</option>
             {% endfor %}
