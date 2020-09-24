@@ -163,7 +163,7 @@ class Opencast:
             self.logger.error(params)
 
             workflow_id = self.oc_upload(uuid, filename, json['duration'], **params)
-            #self._rm(filename)
+            self._rm(filename)
 
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if None == rec:
