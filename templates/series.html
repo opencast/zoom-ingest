@@ -8,7 +8,7 @@
     <input type="hidden"  name="origin_epid" id="origin_epid" value="{{ origin_epid }}"/>
     <table style="width:50%">
       <tr>
-        <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" {% if series != None %}value="{{ series['title'] }}"{% endif %}> *</td>
+        <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" {% if series != None %}value="{{ series['title'] }}" {% endif %}required> *</td>
       </tr>
       <tr>
         <td><label for="subject">Subject</label></td><td><input type="text" id="subject" name="subject" {% if series != None %}value="{{ series['subject'] }}"{% endif %}></td>
@@ -37,7 +37,7 @@
       <tr>
         <td><label for="acl">ACL</label></td>
         <td>
-          <select id="acl_id" name="acl_id">
+          <select id="acl_id" name="acl_id" required>
             <option {% if series == None %}selected="true"{% endif %} disabled="disabled">Select ACL</option>
             {% for key, value in acl_list.items() %}
             <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value['name'] }}</option>

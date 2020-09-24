@@ -10,7 +10,7 @@
     <table style="width:50%">
       <tr>
         <td><label for="date">Date:</label></td><td><input type="text" id="date" name="date" value="{{ recording.date }}"></td>
-        <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" value="{{ recording.title }}"></td>
+        <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" value="{{ recording.title }}" required></td>
       </tr>
       <tr>
         <td><label for="creator">Presenter(s)</label></td><td><input type="text" id="creator" name="creator" value="{{ recording.host }}"></td>
@@ -38,7 +38,7 @@
         </td>
         <td><label for="acl_id">ACL</label></td>
         <td>
-          <select id="acl_id" name="acl_id">
+          <select id="acl_id" name="acl_id" required>
             <option value="" {% if acl == None %}selected="true"{% endif %}>--Blank ACL--</option>
             {% for key, value in acl_list.items() %}
             <option value="{{ key }}" {% if acl['identifier'] == key %}selected="true"{% endif %}>{{ value['name'] }}</option>
@@ -48,7 +48,7 @@
         </td>
         <td><label for="workflow_id">Workflow</label></td>
         <td>
-          <select id="workflow_id" name="workflow_id">
+          <select id="workflow_id" name="workflow_id" required>
             <option {% if workflow == None %}selected="true"{% endif %} disabled="disabled">Select Workflow</option>
             {% for key, value in workflow_list.items() %}
             <option value="{{ key }}" {% if workflow['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
