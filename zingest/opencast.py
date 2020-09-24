@@ -312,6 +312,7 @@ class Opencast:
                 field['value'] = kwargs['publisher']
         return fields
 
+
     def oc_upload(self, rec_id, filename, acl_id=None, isPartOf=None, workflow_id=None, **kwargs):
 
         if not workflow_id:
@@ -324,9 +325,14 @@ class Opencast:
             self.logger.error(f"Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
             #TODO: Raise an exception here
             return #for now
+        series = self.get_single_series(series_id)
 
         acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
-        metadata = self._prep_episode_metadata_fields(**kwargs)
+        episode_metadata = self._prep_episode_metadata_fields(**kwargs)
+        metadata = [{ 'flavor': 'dublincore/episode', 'fields': episode_metadata }]
+        if series:
+            formatted_series = [{ 'id': key, 'value': value } for key, value in series.items() ]
+            metadata.append({ 'flavor': 'dublincore/series', 'fields': formatted_series })
 
         #TODO: Make this configurable, cf pyca's setup
         wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}
@@ -334,7 +340,7 @@ class Opencast:
         with open(filename, 'rb') as fobj:
             #We're json.dumps()ing because python dicts are *not* valid json - they use single quotes but need to use doubles
             processing = json.dumps({ 'workflow': workflow_id, 'configuration': wf_config })
-            metadata = json.dumps([{ 'flavor': 'dublincore/episode', 'fields': metadata }])
+            metadata = json.dumps(metadata)
             acl = json.dumps(acl)
             event_json = self._do_post(f'{ self.url }/api/events', data={ 'acl': acl, 'metadata': metadata, 'processing': processing}, files={ "presentation": fobj } ).json()
             mpid = event_json['identifier']
