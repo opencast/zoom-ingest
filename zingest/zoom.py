@@ -128,7 +128,7 @@ class Zoom:
         #TODO: This could get very large, implement paging
         #300 is the maximum page size per the docs
         user_list = self.zoom_client.user.list(page_size=300).json()
-        return user_list
+        return user_list['users']
 
     def get_recording_creator(self, payload):
         return payload['host_id']

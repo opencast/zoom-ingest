@@ -143,7 +143,8 @@ def get_series_list(series_id=None):
 
 @app.route('/', methods=['GET'])
 def do_GET():
-    return "Hello World"
+    users = z.list_available_users()
+    return render_template("users.html", users = users)
 
 
 @app.route('/', methods=['POST'])

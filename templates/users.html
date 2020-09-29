@@ -1,0 +1,22 @@
+<html>
+<head>
+  <title>List of Zoom users</title>
+</head>
+<body>
+  <h1>Zoom users in your account</h1>
+  <table style="width:100%">
+    <tr>
+      <td><h2>Name</h2></td>
+      <td><h2>Eamil</h2></td>
+      <td><h2>Recordings</h2></td>
+    </tr>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.first_name }} {{ user.last_name }}</td>
+      <td>{{ user.email }}</td>
+      <td><a href="/recordings/{{ user.email }}">List</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
