@@ -10,8 +10,8 @@ run entirely on local infrastructure.
 
 Python packages:
 
-- `pika`  
-- `requests`  
+- `pika`
+- `requests`
 - `zoomus`
 - `flask`
 - `gunicon`
@@ -20,7 +20,7 @@ Python packages:
 External dependencies:
 
 - A RabbitMQ server
-- A database server (tested against sqlite)
+- A database server (tested against sqlite and mariadb 10)
 
 **Basic configuration:**
 
@@ -55,7 +55,8 @@ require additional fiddling.
 
 **Installation**
 
-The packages above can all be installed via *pip*: `pip3 install -r requirements.txt` 
+The packages above can all be installed via *pip*: `pip3 install -r requirements.txt`.  Note that depending
+on the target database you may need to install system packages, and/or additional pip packages.
 
 **Usage**
 
