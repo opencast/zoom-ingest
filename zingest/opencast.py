@@ -158,7 +158,7 @@ class Opencast:
             filename = self.fetch_file(json)
             self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
             params = json['zingest_params']
-            self.logger.error(params)
+            return
 
             workflow_id = self.oc_upload(uuid, filename, json['duration'], **params)
             self._rm(filename)
@@ -215,6 +215,32 @@ class Opencast:
         self.logger.debug(f"Downloading from { url } to { filename }")
         self._do_download(f"{dl_url}/?access_token={ token }", filename, expected_size)
         return filename
+
+
+    @db.with_session
+    def get_in_progress(dbs, self):
+        results = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED).all()
+        ip = []
+        for result in results:
+            data = result.get_data()
+            item = {
+                'id': result.rec_id,
+                'title': data['topic'],
+                'date': data['start_time'],
+                'url': data['share_url'],
+                'host': result.get_user_id(),
+                'status': result.status_str()
+            }
+            ip.append(item)
+        return ip
+
+    @db.with_session
+    def cancel_ingest(dbs, self, ingest_id):
+        try:
+            ingest = dbs.delete(db.Recording).filter(db.Recording.rec_id == ingest_id)
+            dbs.commit()
+        except Exception as e:
+            self.logger.exception(f"Unable to delete { ingest_id }")
 
 
     def get_themes(self):

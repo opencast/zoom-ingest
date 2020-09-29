@@ -19,10 +19,11 @@ def init(config):
     db = 'sqlite:///zoom.db'
     if "Database" in config and "database" in config['Database']:
         db = config['Database']['database']
+        engine = create_engine(db)
         log.info(f"Database connection string loaded from config file")
     else:
-      log.warn(f"Using default SQLite database, this is probably not what you want!")
-    engine = create_engine(db)
+        log.warn(f"Using default SQLite database, this is probably not what you want!")
+        engine = create_engine(db)
     Base.metadata.create_all(engine)
 
 
@@ -112,6 +113,9 @@ class Recording(Base):
         '''Load JSON data from event.
         '''
         return json.loads(self.data.decode('utf-8'))
+
+    def get_user_id(self):
+        return self.user_id
 
     def status_str(self):
         '''Return status as string.

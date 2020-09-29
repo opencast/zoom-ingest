@@ -42,6 +42,7 @@ class Rabbit():
             "start_time": payload["start_time"],
             "duration": payload["duration"],
             "host_id": payload["host_id"],
+            "share_url": payload["share_url"],
             "recording_files": recording_files,
             "zingest_params": payload['zingest_params'],
             "token": token,

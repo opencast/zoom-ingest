@@ -197,7 +197,7 @@ class Zoom:
         renderable = []
         for element in zoom_meetings:
             rec_uuid = element['uuid']
-            status = str(existing_data[rec_uuid]['status']) if rec_uuid in existing_data else str(db.Status.NEW)
+            status = db.Status.str(existing_data[rec_uuid]['status']) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
             email = element['host_email'] if 'host_email' in element else self.get_user_email(element['host_id'])
             item = {
                 'id': rec_uuid,

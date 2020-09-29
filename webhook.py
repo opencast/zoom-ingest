@@ -147,6 +147,17 @@ def do_GET():
     return render_template("users.html", users = users)
 
 
+@app.route('/cancel', methods=['GET', 'POST'])
+def do_cancels():
+    if request.method == "GET":
+        current = o.get_in_progress()
+        return render_template("cancellables.html", recordings = current)
+    else:
+        o.cancel_ingest(request.form['ingestid'])
+        current = o.get_in_progress()
+        return render_template("cancellables.html", recordings = current)
+
+
 @app.route('/', methods=['POST'])
 @app.errorhandler(400)
 def do_POST():
