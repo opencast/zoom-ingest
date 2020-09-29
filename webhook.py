@@ -12,6 +12,7 @@ import zingest.logger
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 from zingest.opencast import Opencast
+import zingest.db
 
 MIN_DURATION = 0
 
@@ -39,6 +40,7 @@ except KeyError as err:
 except ValueError as err:
     sys.exit("Invalid value, integer expected : {0}".format(err))
 
+zingest.db.init(config)
 z = Zoom(config)
 r = Rabbit(config, z)
 o = Opencast(config, r, z)

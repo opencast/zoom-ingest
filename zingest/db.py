@@ -1,20 +1,28 @@
 import json
 import string
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, Text, LargeBinary, DateTime, \
+from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, \
     create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from functools import wraps
 Base = declarative_base()
+import logging
 
 
-def init():
+def init(config):
     '''Initialize connection to database. Additionally the basic database
     structure will be created if nonexistent.
     '''
     global engine
-    engine = create_engine('sqlite:///zoom.db')
+    log = logging.getLogger("db")
+    db = 'sqlite:///zoom.db'
+    if "Database" in config and "database" in config['Database']:
+        db = config['Database']['database']
+        log.info(f"Database connection string loaded from config file")
+    else:
+      log.warn(f"Using default SQLite database, this is probably not what you want!")
+    engine = create_engine(db)
     Base.metadata.create_all(engine)
 
 
@@ -83,14 +91,15 @@ class Recording(Base):
 
     __tablename__ = 'recording'
 
-    uuid = Column('uuid', Text(), nullable=False, primary_key=True)
-    user_id = Column('user_id', Text(), nullable=False)
+    rec_id = Column('id', Integer, primary_key=True)
+    uuid = Column('uuid', String(length=32), nullable=False)
+    user_id = Column('user_id', String(length=32), nullable=False)
     data = Column('data', LargeBinary(), nullable=False)
     status = Column('status', Integer(), nullable=False,
                     default=Status.NEW)
     timestamp = Column('timestamp', DateTime(), nullable=False,
                     default=datetime.utcnow())
-    workflow_id = Column('workflow_id', Text(), nullable=True, default=None)
+    workflow_id = Column('workflow_id', String(length=36), nullable=True, default=None)
 
     def __init__(self, data):
         self.uuid = data['uuid']
@@ -143,7 +152,7 @@ class User(Base):
 
     __tablename__ = 'user'
 
-    user_id = Column('user_id', Text(), nullable=False, primary_key=True)
+    user_id = Column('user_id', String(length=32), nullable=False, primary_key=True)
     updated = Column('updated', DateTime(), nullable=False, default=datetime.utcnow())
 
     def _init__(self, user_name):

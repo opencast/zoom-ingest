@@ -6,6 +6,7 @@ from zingest.zoom import Zoom
 from zingest.opencast import Opencast
 import zingest.logger
 import threading
+import zingest.db
 
 logger = logging.getLogger("main")
 logger.setLevel(logging.DEBUG)
@@ -24,6 +25,7 @@ try:
 except KeyError as err:
     sys.exit("Key {0} was not found".format(err))
 
+zingest.db.init(config)
 z = Zoom(config)
 r = Rabbit(config, z)
 o = Opencast(config, r, z)
