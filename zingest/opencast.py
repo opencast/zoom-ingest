@@ -15,7 +15,7 @@ import logging
 import zingest.logger
 from zingest.common import NoMp4Files
 from pathlib import Path
-
+import xmltodict
 
 
 class OpencastException(Exception):
@@ -347,6 +347,35 @@ class Opencast:
                 field['value'] = kwargs['publisher']
         return fields
 
+    def _prep_episode_dublincore(self, **kwargs):
+        dc = {"dublincore": {"@xmlns": "http://www.opencastproject.org/xsd/1.0/dublincore/", "@xmlns:dcterms": "http://purl.org/dc/terms/", "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"}}
+        for name, value in kwargs.items():
+            if name.startswith("origin"):
+                continue
+            if name in ("publisher", "contributor", "presenter", "creator", "subjects"):
+                element_name = f"dcterms:{ name }"
+                element_value = self._ensure_list(value.split(','))
+            elif name == "date":
+                element_name = f"dcterms:startDate"
+                element_value = value
+            else:
+                element_name = f"dcterms:{ name }"
+                element_value = value
+            dc['dublincore'][element_name] = element_value
+        return xmltodict.unparse(dc)
+
+    def _prep_episode_xacml(self, episode_id, acl):
+      xacml = {"Policy": {"@PolicyId": episode_id, "@Version": "2.0", "@RuleCombiningAlgId": "urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides", "@xmlns": "urn:oasis:names:tc:xacml:2.0:policy:schema:os"}}
+      xacml['Policy']['Target'] = {"Resources": {"Resource": {"ResourceMatch": {"@MatchId": "urn:oasis:names:tc:xacml:1.0:function:string-equal", "AttributeValue": {"@DataType": "http://www.w3.org/2001/XMLSchema#string", "#text": episode_id}, "ResourceAttributeDesignator": {"@AttributeId": "urn:oasis:names:tc:xacml:1.0:resource:resource-id", "@DataType": "http://www.w3.org/2001/XMLSchema#string"}}}}},
+      rules = []
+      for ace in acl:
+          role_name = ace['role']
+          rw = ace['action']
+          rules.append({"@RuleId": f"{ role_name }_{ rw }_Permit", "@Effect": "Permit", "Target": {"Actions": {"Action": {"ActionMatch": {"@MatchId": "urn:oasis:names:tc:xacml:1.0:function:string-equal", "AttributeValue": {"@DataType": "http://www.w3.org/2001/XMLSchema#string", "#text": rw}, "ActionAttributeDesignator": {"@AttributeId": "urn:oasis:names:tc:xacml:1.0:action:action-id", "@DataType": "http://www.w3.org/2001/XMLSchema#string"}}}}}, "Condition": {"Apply": {"@FunctionId": "urn:oasis:names:tc:xacml:1.0:function:string-is-in", "AttributeValue": {"@DataType": "http://www.w3.org/2001/XMLSchema#string", "#text": role_name}, "SubjectAttributeDesignator": {"@AttributeId": "urn:oasis:names:tc:xacml:2.0:subject:role", "@DataType": "http://www.w3.org/2001/XMLSchema#string"}}}})
+      rules.append({"@RuleId": "DenyRule", "@Effect": "Deny"})
+      xacml['Policy']['Rule'] = rules
+      return xmltodict.unparse(xacml)
+
 
     def oc_upload(self, rec_id, filename, duration, acl_id=None, workflow_id=None, **kwargs):
 
@@ -355,28 +384,43 @@ class Opencast:
             #TODO: Raise an exception here
             return #for now
 
+        series_id = None
         if "isPartOf" in kwargs:
             series_id = kwargs['isPartOf']
             if series_id and not self.get_single_series(series_id):
                 self.logger.error(f"Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
                 #TODO: Raise an exception here
                 return #for now
+            series_dc = self._do_get(f'{ self.url }/series/{ series_id }.xml').text
+            series_acl = self._do_get(f'{ self.url }/series/{ series_id }/acl.xml').text
 
-        acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
-        episode_metadata = self._prep_episode_metadata_fields(**kwargs)
-        episode_metadata.append({ 'id': 'duration', 'value': duration })
-        metadata = [{ 'flavor': 'dublincore/episode', 'fields': episode_metadata }]
+        selected_acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
+        ep_dc = self._prep_episode_dublincore(**kwargs)
+        ep_acl = self._prep_episode_xacml(rec_id, selected_acl)
 
         #TODO: Make this configurable, cf pyca's setup
         wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}
 
         with open(filename, 'rb') as fobj:
-            #We're json.dumps()ing because python dicts are *not* valid json - they use single quotes but need to use doubles
-            processing = json.dumps({ 'workflow': workflow_id, 'configuration': wf_config })
-            metadata = json.dumps(metadata)
-            acl = json.dumps(acl)
-            event_json = self._do_post(f'{ self.url }/api/events', data={ 'acl': acl, 'metadata': metadata, 'processing': processing}, files={ "presentation": fobj } ).json()
-            mpid = event_json['identifier']
+            self.logger.info(f"Creating mediapackage for { rec_id }")
+            mp = self._do_get(f'{ self.url }/ingest/createMediaPackage').text
+            self.logger.debug(f"Ingesting episode security settings for { rec_id }")
+            mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files={ "BODY": ep_acl }).text
+            self.logger.debug(f"Ingesting episode dublin core settings for { rec_id }")
+            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': ep_dc}).text
+            if series_id:
+                self.logger.debug(f"Ingesting series security settings for { rec_id }")
+                mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+series', 'mediaPackage': mp}, files={ "BODY": series_acl }).text
+                self.logger.debug(f"Ingesting series dublin core settings for { rec_id }")
+                mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/series', 'mediaPackage': mp, 'dublinCore': series_dc}).text
+            self.logger.info(f"Ingesting zoom video for { rec_id }")
+            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": fobj }).text
+            self.logger.info(f"Triggering processing for { rec_id }")
+            workflow = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={'mediaPackage': mp}).text
+            wfdict = xmltodict.parse(workflow)
+            mpid = wfdict['wf:workflow']['mp:mediapackage']['@id']
+            workflow_instance_id = wfdict['wf:workflow']['@id']
+            self.logger.info(f"Ingested { rec_id } as workflow { workflow_instance_id } on mediapackage { mpid }")
         return mpid
 
 
