@@ -6,9 +6,9 @@
   <h1>Zoom users in your account</h1>
   <table style="width:100%">
     <tr>
-      <td><h2>Name</h2></td>
-      <td><h2>Eamil</h2></td>
-      <td><h2>Recordings</h2></td>
+      <th style="text-align:left">Name</td>
+      <th style="text-align:left">Eamil</td>
+      <th style="text-align:left">Recordings</td>
     </tr>
     {% for user in users %}
     <tr>
@@ -18,5 +18,8 @@
     </tr>
     {% endfor %}
   </table>
+  <hr/>
+  <a href="/">Full user list</a>
+  <a href="/cancel">Cancellable ingests</a>
 </body>
 </html>

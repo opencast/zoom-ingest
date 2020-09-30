@@ -79,7 +79,7 @@ def do_list_recordings(user_id):
     renderable = z.get_user_recordings(user_id, from_date = query_params['from'], to_date = query_params['to'], page_size = query_params['page_size'])
     for item in renderable:
         item['url'] = f'/recording/{ item["id"] }?{ query_string }'
-    return render_template("recordings.html", recordings=renderable, user=user_id)
+    return render_template("list-user-recordings.html", recordings=renderable, user=user_id)
 
 
 @app.route('/recording/<recording_id>', methods=['GET', 'POST'])
@@ -101,7 +101,7 @@ def get_single_recording(recording_id, series_id = None, acl_id = None, workflow
     acl = None
     if acl_id:
         acl = o.get_single_acl(acl_id)
-    return render_template("ingest.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string)
+    return render_template("ingest-recording.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string)
 
 
 def ingest_single_recording(recording_id):
@@ -126,7 +126,7 @@ def get_series_list(series_id=None):
             series = o.get_single_series(series_id)
             #TODO: Need to get the theme and acl data from the respective endpoints ({sid}/acl and {sid}/properties -> { 'theme': $id })
         epId = request.args.get('epid', "")
-        return render_template("series.html", series = series, acl_list = o.get_acls(), theme_list = o.get_themes(), origin_epid = epId)
+        return render_template("create-series.html", series = series, acl_list = o.get_acls(), theme_list = o.get_themes(), origin_epid = epId)
     elif request.method == "POST":
         #TODO: Validate required terms are present
         epid = request.form['origin_epid']
@@ -144,18 +144,28 @@ def get_series_list(series_id=None):
 @app.route('/', methods=['GET'])
 def do_GET():
     users = z.list_available_users()
-    return render_template("users.html", users = users)
+    return render_template("list-users.html", users = users)
 
 
 @app.route('/cancel', methods=['GET', 'POST'])
 def do_cancels():
     if request.method == "GET":
         current = o.get_in_progress()
-        return render_template("cancellables.html", recordings = current)
+        return render_template("cancel-ingest.html", recordings = current)
     else:
         o.cancel_ingest(request.form['ingestid'])
         current = o.get_in_progress()
-        return render_template("cancellables.html", recordings = current)
+        return render_template("cancel-ingest.html", recordings = current)
+
+@app.route('/delete', methods=['GET', 'POST'])
+def do_deletes():
+    if request.method == "GET":
+        current = o.get_in_progress()
+        return render_template("delete-record.html", recordings = current)
+    else:
+        o.cancel_ingest(request.form['ingestid'])
+        current = o.get_in_progress()
+        return render_template("delete-record.html", recordings = current)
 
 
 @app.route('/', methods=['POST'])

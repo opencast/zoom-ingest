@@ -6,10 +6,10 @@
   <h1>Recordings for {{ user }}</h1>
   <table style="width:100%">
     <tr>
-      <td>Date</td>
-      <td>Title</td>
-      <td>Status</td>
-      <td>Action</td>
+      <th style="text-align:left">Date</th>
+      <th style="text-align:left">Title</th>
+      <th style="text-align:left">Status</th>
+      <th style="text-align:left">Action</th>
     </tr>
     {% for recording in recordings %}
     <tr>
@@ -22,5 +22,8 @@
     </tr>
     {% endfor %}
   </table>
+  <hr/>
+  <a href="/">Full user list</a>
+  <a href="/cancel">Cancellable ingests</a>
 </body>
 </html>

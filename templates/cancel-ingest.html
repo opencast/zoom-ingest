@@ -1,0 +1,33 @@
+<html>
+<head>
+  <title>Cancellable Recordings</title>
+</head>
+<body>
+  <h1>Cancellable ingests</h1>
+  <table style="width:100%">
+    <tr>
+      <th style="text-align:left">Date</th>
+      <th style="text-align:left">Title</th>
+      <th style="text-align:left">Host</th>
+      <th style="text-align:left">Cancel</th>
+    </tr>
+    {% for recording in recordings %}
+    <tr>
+      <td>{{ recording.date }}</td>
+      <td><a href="{{ recording.url }}">{{ recording.title }}</td>
+      <td>{{ recording.host }}</td>
+      <td>
+        <form action="/cancel" method="post">
+          <input type="hidden" id="ingestid" name="ingestid" value="{{ recording.id }}"><br>
+          <input type="submit" value="Submit">
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <hr/>
+  <a href="/">Full user list</a>
+  <a href="/cancel">Cancellable ingests</a>
+  <a href="/delete">Delete record of ingest</a>
+</body>
+</html>

@@ -220,6 +220,16 @@ class Opencast:
     @db.with_session
     def get_in_progress(dbs, self):
         results = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED).all()
+        return self._build_ingest_renderable(results)
+
+
+    @db.with_session
+    def get_finished(dbs, self):
+        results = dbs.query(db.Recording).filter(db.Recording.status == db.Status.FINISHED).all()
+        return self._build_ingest_renderable(results)
+
+
+    def _build_ingest_renderable(self, results):
         ip = []
         for result in results:
             data = result.get_data()
@@ -228,16 +238,17 @@ class Opencast:
                 'title': data['topic'],
                 'date': data['start_time'],
                 'url': data['share_url'],
-                'host': result.get_user_id(),
+                'host': self.zoom.get_user_email(result.get_user_id()),
                 'status': result.status_str()
             }
             ip.append(item)
         return ip
 
+
     @db.with_session
     def cancel_ingest(dbs, self, ingest_id):
         try:
-            ingest = dbs.delete(db.Recording).filter(db.Recording.rec_id == ingest_id)
+            ingest = dbs.query(db.Recording).filter(db.Recording.rec_id == ingest_id).delete(synchronize_session=False)
             dbs.commit()
         except Exception as e:
             self.logger.exception(f"Unable to delete { ingest_id }")
