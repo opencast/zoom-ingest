@@ -16,6 +16,7 @@ import zingest.logger
 from zingest.common import NoMp4Files
 from pathlib import Path
 import xmltodict
+from requests.exceptions import ConnectionError
 
 
 class OpencastException(Exception):
@@ -256,22 +257,46 @@ class Opencast:
 
     def get_themes(self):
         if not self.themes or self.themes_updated <= datetime.utcnow() - timedelta(hours = 1):
-            self.logger.debug("Refreshing Opencast themes")
-            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-            results = self._do_get(self.url + '/admin-ng/themes/themes.json').json()['results']
-            self.themes_updated = datetime.utcnow()
-            self.themes = { result['id']: result['name'] for result in results }
-            self.logger.debug(f"Found { len(self.themes) } themes")
+            attempts = 1
+            successful = False
+            while attempts <= 5:
+                try:
+                    self.logger.debug("Refreshing Opencast themes")
+                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+                    results = self._do_get(self.url + '/admin-ng/themes/themes.json').json()['results']
+                    self.themes_updated = datetime.utcnow()
+                    self.themes = { result['id']: result['name'] for result in results }
+                    self.logger.debug(f"Found { len(self.themes) } themes")
+                    successful = True
+                    break
+                except ConnectionError as e:
+                    self.logger.error(f"Attempt { attempts } to fetch themes failed with a ConnectionError, retrying in { attempts * 5 }s")
+                    attempts += 1
+                    time.sleep(attempts * 5)
+            if not successful:
+                self.logger.error("Unable to update themes!  UI will still function but theme data is missing!")
         return self.themes
 
     def get_acls(self):
         if not self.acls or self.acls_updated <= datetime.utcnow() - timedelta(hours = 1):
-            self.logger.debug("Refreshing Opencast ACLs")
-            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-            results = self._do_get(self.url + '/acl-manager/acl/acls.json').json()
-            self.acls_updated = datetime.utcnow()
-            self.acls = { str(result['id']): { 'name': result['name'], 'acl': result['acl']['ace'] } for result in results }
-            self.logger.debug(f"Found { len(self.acls) } ACLs")
+            attempts = 1
+            successful = False
+            while attempts <= 5:
+                try:
+                    self.logger.debug("Refreshing Opencast ACLs")
+                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+                    results = self._do_get(self.url + '/acl-manager/acl/acls.json').json()
+                    self.acls_updated = datetime.utcnow()
+                    self.acls = { str(result['id']): { 'name': result['name'], 'acl': result['acl']['ace'] } for result in results }
+                    self.logger.debug(f"Found { len(self.acls) } ACLs")
+                    successful = True
+                    break
+                except ConnectionError as e:
+                    self.logger.error(f"Attempt { attempts } to fetch ACLs failed with a ConnectionError, retrying in { attempts * 5 }s")
+                    attempts += 1
+                    time.sleep(attempts * 5)
+            if not successful:
+                self.logger.error("Unable to update ACLs!  UI will still function but ACL data is missing!")
         return self.acls
 
 
@@ -283,24 +308,48 @@ class Opencast:
 
     def get_workflows(self):
         if not self.workflows or self.workflows_updated <= datetime.utcnow() - timedelta(hours = 1):
-            self.logger.debug("Refreshing Opencast workflows")
-            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-            results = self._do_get(self.url + '/api/workflow-definitions?filter=tag:upload&filter=tag:schedule').json()
-            self.workflows_updated = datetime.utcnow()
-            self.workflows = { result['identifier']: result['title'] for result in results }
-            self.logger.debug(f"Found { len(self.workflows) } workflows")
+            attempts = 1
+            successful = False
+            while attempts <= 5:
+                try:
+                    self.logger.debug("Refreshing Opencast workflows")
+                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+                    results = self._do_get(self.url + '/api/workflow-definitions?filter=tag:upload&filter=tag:schedule').json()
+                    self.workflows_updated = datetime.utcnow()
+                    self.workflows = { result['identifier']: result['title'] for result in results }
+                    self.logger.debug(f"Found { len(self.workflows) } workflows")
+                    successful = True
+                    break
+                except ConnectionError as e:
+                    self.logger.error(f"Attempt { attempts } to fetch workflows failed with a ConnectionError, retrying in { attempts * 5 }s")
+                    attempts += 1
+                    time.sleep(attempts * 5)
+            if not successful:
+                self.logger.error("Unable to update workflows!  UI will still function but workflow data is missing!")
         return self.workflows
 
 
     def get_series(self):
         if not self.series or self.series_updated <= datetime.utcnow() - timedelta(hours = 1):
-            self.logger.debug("Refreshing Opencast series list")
-            #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-            #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
-            results = self._do_get(self.url + '/api/series').json()
-            self.series_updated = datetime.utcnow()
-            self.series_full = { result['identifier']: result for result in results }
-            self.series = { result['identifier']: result['title'] for result in results }
+            attempts = 1
+            successful = False
+            while attempts <= 5:
+                try:
+                    self.logger.debug("Refreshing Opencast series list")
+                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
+                    #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
+                    results = self._do_get(self.url + '/api/series').json()
+                    self.series_updated = datetime.utcnow()
+                    self.series_full = { result['identifier']: result for result in results }
+                    self.series = { result['identifier']: result['title'] for result in results }
+                    successful = True
+                    break
+                except ConnectionError as e:
+                    self.logger.error(f"Attempt { attempts } to fetch series failed with a ConnectionError, retrying in { attempts * 5 }s")
+                    attempts += 1
+                    time.sleep(attempts * 5)
+            if not successful:
+                self.logger.error("Unable to update series!  UI will still function but series data is missing!")
         return self.series
 
 
