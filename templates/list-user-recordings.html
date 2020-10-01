@@ -4,6 +4,8 @@
 </head>
 <body>
   <h1>Recordings for {{ user }}</h1>
+  <h3>Displaying recordings from {{ from_date }} to {{ to_date }}</h3>
+  <p><a href="?from={{ week_back }}&to={{ to_date }}">1 week earlier</a> | <a href="?from={{ from_date }}&to={{ week_forward }}">1 week later</a></p>
   <table style="width:100%">
     <tr>
       <th style="text-align:left">Date</th>

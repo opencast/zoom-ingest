@@ -7,7 +7,7 @@ from pprint import pformat
 from markupsafe import escape
 from flask import Flask, request, render_template, redirect, url_for
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import zingest.logger
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
@@ -76,10 +76,16 @@ def do_list_recordings(user_id):
     query_params = get_query_params()
     query_string = build_query_string(query_params)
 
-    renderable = z.get_user_recordings(user_id, from_date = query_params['from'], to_date = query_params['to'], page_size = query_params['page_size'])
+    from_date = query_params['from'] if query_params['from'] != None else date.today() - timedelta(days = 7)
+    to_date = query_params['to'] if query_params['to'] != None else date.today()
+    week_back = from_date - timedelta(days = 7)
+    week_forward = to_date + timedelta(days = 7)
+
+    renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'])
+
     for item in renderable:
         item['url'] = f'/recording/{ item["id"] }?{ query_string }'
-    return render_template("list-user-recordings.html", recordings=renderable, user=user_id)
+    return render_template("list-user-recordings.html", recordings=renderable, user=user_id, from_date=from_date, to_date=to_date, week_back=week_back, week_forward=week_forward)
 
 
 @app.route('/recording/<recording_id>', methods=['GET', 'POST'])
