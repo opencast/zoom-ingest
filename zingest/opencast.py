@@ -387,19 +387,11 @@ class Opencast:
         return fields
 
 
-    def _prep_episode_metadata_fields(self, **kwargs):
-        fields = self._prep_metadata_fields(**kwargs)
-        #This is a horible hack, but the episode endpoint needs the publisher as a string, not an array
-        # The series endpoint, of course, handles this correctly
-        for field in fields:
-            if field['id'] == "publisher":
-                field['value'] = kwargs['publisher']
-        return fields
-
-    def _prep_episode_dublincore(self, **kwargs):
+    def _prep_dublincore(self, **kwargs):
         dc = {"dublincore": {"@xmlns": "http://www.opencastproject.org/xsd/1.0/dublincore/", "@xmlns:dcterms": "http://purl.org/dc/terms/", "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"}}
         for name, value in kwargs.items():
-            if name.startswith("origin"):
+            #TODO: This logic is bad, the variables should be prefixed with dc- and everything else filtered out
+            if name.startswith("origin") or name.startswith('eth'):
                 continue
             if name in ("publisher", "contributor", "presenter", "creator", "subjects"):
                 element_name = f"dcterms:{ name }"
@@ -412,6 +404,18 @@ class Opencast:
                 element_value = value
             dc['dublincore'][element_name] = element_value
         return xmltodict.unparse(dc)
+
+
+    def _prep_eth_dublincore(self, **kwargs):
+        dc = {"ethterms": {"@xmlns": "http://ethz.ch/video/opencast", "@xmlns:ethterms": "http://ethz.ch/video/metadata"}}
+        for name, value in kwargs.items():
+            if not name.startswith('eth'):
+                continue
+            element_name = f"ethterms:{ name }"
+            element_value = value
+            dc['ethterms'][element_name] = element_value
+        return xmltodict.unparse(dc)
+
 
     def _prep_episode_xacml(self, episode_id, acl):
       xacml = {"Policy": {"@PolicyId": episode_id, "@Version": "2.0", "@RuleCombiningAlgId": "urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides", "@xmlns": "urn:oasis:names:tc:xacml:2.0:policy:schema:os"}}
@@ -441,10 +445,13 @@ class Opencast:
                 #TODO: Raise an exception here
                 return #for now
             series_dc = self._do_get(f'{ self.url }/series/{ series_id }.xml').text
+            #FIXME: THIS IS BROKEN, this data needs to be queried from the OC endpoint, since we don't have it cached (and shouldn't)
+            # eth_series_dc = self._prep_eth_dublincore(**kwargs)
             series_acl = self._do_get(f'{ self.url }/series/{ series_id }/acl.xml').text
 
         selected_acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
-        ep_dc = self._prep_episode_dublincore(**kwargs)
+        ep_dc = self._prep_dublincore(**kwargs)
+        eth_dc = self._prep_eth_dublincore(**kwargs)
         ep_acl = self._prep_episode_xacml(rec_id, selected_acl)
 
         #TODO: Make this configurable, cf pyca's setup
@@ -457,11 +464,15 @@ class Opencast:
             mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files={ "BODY": ep_acl }).text
             self.logger.debug(f"Ingesting episode dublin core settings for { rec_id }")
             mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': ep_dc}).text
+            self.logger.debug(f"Ingesting episode ethterms for { rec_id }")
+            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/episode', 'mediaPackage': mp, 'dublinCore': eth_dc}).text
             if series_id:
                 self.logger.debug(f"Ingesting series security settings for { rec_id }")
                 mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+series', 'mediaPackage': mp}, files={ "BODY": series_acl }).text
                 self.logger.debug(f"Ingesting series dublin core settings for { rec_id }")
                 mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/series', 'mediaPackage': mp, 'dublinCore': series_dc}).text
+                self.logger.debug(f"Ingesting series ethterms for { rec_id }")
+                mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/series', 'mediaPackage': mp, 'dublinCore': eth_series_dc}).text
             self.logger.info(f"Ingesting zoom video for { rec_id }")
             mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": fobj }).text
             self.logger.info(f"Triggering processing for { rec_id }")

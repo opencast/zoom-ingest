@@ -6,7 +6,9 @@
   <h1>Details for the new series</h1>
   <form action="./series">
     <input type="hidden"  name="origin_epid" id="origin_epid" value="{{ origin_epid }}"/>
-    <table style="width:50%">
+    <table style="width:100%">
+      <tr>
+        <td><h3>Common Opencast Metadata</h3></td>
       <tr>
         <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" {% if series != None %}value="{{ series['title'] }}" {% endif %}required> *</td>
       </tr>
@@ -26,7 +28,7 @@
         <td><label for="license">License</label></td><td><input type="text" id="license" name="license" {% if series != None %}value="{{ series['license'] }}"{% endif %}></td>
       </tr>
       <tr>
-        <td><label for="creator">Presenter(s)</label></td><td><input type="text" id="creator" name="creator" {% if series != None %}value="{{ series['creator'] }}">{% endif %}</td>
+        <td><label for="creator">Organizers(s)</label></td><td><input type="text" id="creator" name="creator" {% if series != None %}value="{{ series['creator'] }}">{% endif %}</td>
       </tr>
       <tr>
         <td><label for="contributor">Contributor(s)</label></td><td><input type="text" id="contributor" name="contributor" {% if series != None %}value="{{ series['contributor'] }}"{% endif %}></td>
@@ -55,6 +57,59 @@
             {% endfor %}
           </select>
         </td>
+      </tr>
+      <tr>
+        <td><h3>ETH Extended Metadata</h3></td>
+      </tr>
+      <tr>
+        <td><label for="advertised">Advertised</label></td><td><input type="text" id="advertised" name="eth-advertised"></td>
+      </tr>
+      <tr>
+        <td><label for="subtype">Subtype</label></td><td><input type="text" id="subtype" name="eth-subtype"></td>
+      </tr>
+      <tr>
+        <td><label for="episodes">Episodes</label></td><td><input type="text" id="episodes" name="eth-episodes"></td>
+      </tr>
+      <tr>
+        <td><label for="vp1">VP URL 1</label></td><td><input type="text" id="vp1" name="eth-vpUrl1"></td>
+      </tr>
+      <tr>
+        <td><label for="vp2">VP URL 2</label></td><td><input type="text" id="vp2" name="eth-vpUrl2"></td>
+      </tr>
+      <tr>
+        <td><label for="mmp2">MMP URL Old 2</label></td><td><input type="text" id="mmp2" name="eth-mmpUrlOld2"></td>
+      </tr>
+      <tr>
+        <td><label for="mmp1">MMP URL Old 1</label></td><td><input type="text" id="mmp1" name="eth-mmpUrlOld1"></td>
+      </tr>
+      <tr>
+        <td><label for="doiprefix">DOI Prefix</label></td><td><input type="text" id="doiprefix" name="eth-doiprefix"></td>
+      </tr>
+      <tr>
+        <td><label for="doiid">DOI ID</label></td><td><input type="text" id="doiid" name="eth-doiid"></td>
+      </tr>
+      <tr>
+        <td><label for="department">Department</label></td><td><input type="text" id="department" name="eth-department"></td>
+      </tr>
+      <tr>
+        <td><label for="shis">SHIS</label></td><td><input type="text" id="shis" name="eth-shis"></td>
+      <tr>
+        <td><label for="reverseOrder">Reverse Order</label></td><td><input type="text" id="reverseOrder" name="eth-reverseOrder"></td>
+      </tr>
+      <tr>
+        <td><label for="vvz">VVZ</label></td><td><input type="text" id="vvz" name="eth-vvz"></td>
+      </tr>
+      <tr>
+        <td><label for="semester">Semester</label></td><td><input type="text" id="semester" name="eth-semester"></td>
+      </tr>
+      <tr>
+        <td><label for="notesSeries">Notes</label></td><td><input type="text" id="notesSeries" name="eth-notesSeries"></td>
+      </tr>
+      <tr>
+        <td><label for="urlSeries">URL</label></td><td><input type="text" id="urlSeries" name="eth-urlSeries"></td>
+      </tr>
+      <tr>
+        <td><label for="legacyseriesid">Legacy Series ID</label></td><td><input type="text" id="legacyseriesid" name="eth-legacySeriesId"></td>
       </tr>
     </table>
     <br/>

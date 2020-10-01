@@ -7,24 +7,51 @@
   <form action="../">
     <input type="hidden"  name="origin_email" id="origin_email" value="{{ recording.host }}"/>
     <input type="hidden"  name="origin_query_string" id="origin_query_string" value="{{ query_string }}"/>
-    <table style="width:50%">
+    <table style="width:100%">
+      <tr><td><h3>Common Episode Metadata</h3></td><td/><td><h3>ETH Extended Metadata</h3></td><td/></tr>
       <tr>
-        <td><label for="date">Date:</label></td><td><input type="text" id="date" name="date" value="{{ recording.date }}"></td>
+        <td><label for="date">Date</label></td><td><input type="text" id="date" name="date" value="{{ recording.date }}"></td>
+        <td><label for="accessibility">Accessibility Description</label></td><td><input type="text" id="accessibility" name="eth-accessibility"></td>
+      </tr>
+      <tr>
+        <td><label for="duration">Duration</label>/td><td><input type="text" id="duration" name="duration" value="{{ recording.duration }}"></td>
+        <td><label for="order">Order</label></td><td><input type="text" id="order" name="eth-order"></td>
+      </tr>
+      <tr>
         <td><label for="title">Title</label></td><td><input type="text" id="title" name="title" value="{{ recording.title }}" required></td>
+        <td><label for="owner">Owner</label></td><td><input type="text" id="owner" name="eth-owner"></td>
+      </tr>
+      <tr>
+        <td><label for="description">Description</label></td><td><input type="textarea" id="description" name="description" rows="4" cols="50"{% if series != None %} value="{{ series['description'] }}"{% endif %}></td>
+        <td><label for="notes">Notes</label></td><td><input type="text" id="notes" name="eth-notes"></td>
       </tr>
       <tr>
         <td><label for="creator">Presenter(s)</label></td><td><input type="text" id="creator" name="creator" value="{{ recording.host }}"></td>
+        <td><label for="legacy">Legacy ID</label></td><td><input type="text" id="legacy" name="eth-legacyid"></td>
+      </tr>
+      <tr>
         <td><label for="contributor">Contributor(s)</label></td><td><input type="text" id="contributor" name="contributor"{% if series != None %} value="{{ series['contributor'] | join(', ') }}"{% endif %}></td>
-        <!--<td><label for="organizer">Organizers(s)</label></td><td><input type="text" id="organizer" name="organizer"{% if series != None %} value="{{ series['organizer'] | join(', ') }}"{% endif %}></td>-->
+      </tr>
+      <tr>
         <td><label for="publisher">Publisher(s)</label></td><td><input type="text" id="publisher" name="publisher"{% if series != None %} value="{{ series['publisher'] | join(', ') }}"{% else %} value="ETH Zürich, ID MMS; Schweiz"{% endif %}></td>
       </tr>
       <tr>
         <td><label for="language">Language</label></td><td><input type="text" id="language" name="language"{% if series != None %} value="{{ series['language'] }}"{% endif %}></td>
+      </tr>
+      <tr>
         <td><label for="license">License</label></td><td><input type="text" id="license" name="license"{% if series != None %} value="{{ series['license'] }}"{% endif %}></td>
       </tr>
       <tr>
+        <td><label for="location">Location</label></td><td><input type="text" id="location" name="location"{% if series != None %} value="{{ series['location'] }}"{% endif %}></td>
+      </tr>
+      <tr>
         <td><label for="rightsHolder">Rights Holder</label></td><td><input type="text" id="rightsHolder" name="rightsHolder"{% if series != None %} value="{{ series['rightsholder'] }}"{% endif %}></td>
+      </tr>
+      <tr>
         <td><label for="subject">Subject(s)</label></td><td><input type="text" id="subjects" name="subjects"{% if series != None %} value="{{ series['subjects'] | join(', ')}}"{% endif %}></td>
+      </tr>
+      <tr>
+        <td><label for="source">Source</label></td><td><input type="text" id="source" name="source"{% if series != None %} value="{{ series['source'] }}"{% endif %}></td>
       <tr>
         <td><label for="isPartOf">Series</label></td>
         <td>
@@ -36,6 +63,8 @@
           </select>
           <a href="../series?epid={{ recording.id }}">Create New Series</a>
         </td>
+      </tr>
+      <tr>
         <td><label for="acl_id">ACL</label></td>
         <td>
           <select id="acl_id" name="acl_id" required>
@@ -46,6 +75,8 @@
           </select>
           <a href="../series?epid={{ recording.id }}">Create New Series</a>
         </td>
+      </tr>
+      <tr>
         <td><label for="workflow_id">Workflow</label></td>
         <td>
           <select id="workflow_id" name="workflow_id" required>
@@ -57,7 +88,6 @@
         </td>
       </tr>
     </table>
-    <label for="description">Description</label><input type="textarea" id="description" name="description" rows="4" cols="50"{% if series != None %} value="{{ series['description'] }}"{% endif %}>
     <br/>
     <button type="submit" formmethod="post" formaction="{{ recording.posturl }}">Submit</button>
   </form>
