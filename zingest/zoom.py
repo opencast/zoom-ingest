@@ -124,11 +124,11 @@ class Zoom:
         return jwt_header
 
 
-    def list_available_users(self):
+    def list_available_users(self, page):
         #TODO: This could get very large, implement paging
         #300 is the maximum page size per the docs
-        user_list = self.zoom_client.user.list(page_size=300).json()
-        return user_list['users']
+        self.logger.debug(f"Fetching 300 users, page { page }")
+        return self.zoom_client.user.list(page_size=300, page_number=page).json()
 
     def get_recording_creator(self, payload):
         return payload['host_id']

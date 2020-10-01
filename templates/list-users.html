@@ -4,6 +4,8 @@
 </head>
 <body>
   <h1>Zoom users in your account</h1>
+  <h3>Displaying users {{ user_from }} to {{ user_to }}</h3>
+  <p>{% if last_page %}<a href="./?page={{ last_page }}">{% endif %}Prev page{% if last_page %}</a>{% endif %} | {% if next_page %}<a href="./?page={{ next_page }}">{% endif %}Next Page{% if next_page %}</a>{% endif %}</p>
   <table style="width:100%">
     <tr>
       <th style="text-align:left">Name</td>

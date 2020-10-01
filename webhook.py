@@ -143,8 +143,18 @@ def get_series_list(series_id=None):
 
 @app.route('/', methods=['GET'])
 def do_GET():
-    users = z.list_available_users()
-    return render_template("list-users.html", users = users)
+    page_num = request.args.get('page', 1)
+    users = z.list_available_users(page_num)
+    page_number = int(users['page_number'])
+    page_size = int(users['page_size'])
+    total_users = int(users['total_records'])
+
+    user_from = (page_number - 1) * page_size + 1
+    user_to = min(page_number * page_size, total_users)
+    last_page = None if user_from <= page_size else page_number - 1
+    next_page = None if page_number * page_size >= total_users else page_number + 1
+
+    return render_template("list-users.html", users = users['users'], user_from = user_from, user_to = user_to, last_page = last_page, next_page = next_page)
 
 
 @app.route('/cancel', methods=['GET', 'POST'])
