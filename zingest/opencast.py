@@ -120,6 +120,10 @@ class Opencast:
         self.logger.debug(f"POSTing { data } to { url }")
         return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, data=data, files=files)
 
+    def _do_put(self, url, data):
+        self.logger.debug(f"PUTing { data } to { url }")
+        return requests.put(url, auth=self.auth, headers=Opencast.HEADERS, data=data)
+
 
     @db.with_session
     def rabbit_callback(dbs, self, method, properties, body):
@@ -375,7 +379,8 @@ class Opencast:
     def _prep_metadata_fields(self, **kwargs):
         fields = []
         for name, value in kwargs.items():
-            if name.startswith("origin"):
+            #TODO: This logic is bad, the variables should be prefixed with dc- and everything else filtered out
+            if name.startswith("origin") or name.startswith('eth'):
                 continue
             if name in ("publisher", "contributor", "presenter", "creator", "subjects"):
                 element = {'id': name , 'value': self._ensure_list(value.split(',')) }
@@ -445,8 +450,7 @@ class Opencast:
                 #TODO: Raise an exception here
                 return #for now
             series_dc = self._do_get(f'{ self.url }/series/{ series_id }.xml').text
-            #FIXME: THIS IS BROKEN, this data needs to be queried from the OC endpoint, since we don't have it cached (and shouldn't)
-            # eth_series_dc = self._prep_eth_dublincore(**kwargs)
+            eth_series_dc = self._do_get(f'{ self.url }/series/{ series_id }/elements/ethterms.xml').text
             series_acl = self._do_get(f'{ self.url }/series/{ series_id }/acl.xml').text
 
         selected_acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
@@ -501,6 +505,7 @@ class Opencast:
 
         data = {"metadata": json.dumps(metadata),
                 "acl": json.dumps(acl)}
+        eth_dc = self._prep_eth_dublincore(**kwargs)
 
         if None != theme_id and "" != theme_id:
             self.logger.debug(f"Theme id is { theme_id }")
@@ -511,10 +516,12 @@ class Opencast:
         #What if response is something other than success?
         try:
             response = self._do_post(self.url + '/api/series', data = data)
-            self.logger.debug(f"Creating series { title } get a {response} response")
+            self.logger.debug(f"Creating series { title } get a { response.status_code } response")
             if 201 != response.status_code:
                 raise OpencastException(f"Creating series returned a { response.status_code } http response")
             identifier = response.json()['identifier']
-            return response.json()['identifier']
+            response = self._do_put(f"{ self.url }/series/{ identifier }/elements/ethterms", data={ "BODY": eth_dc })
+            self.logger.debug(f"Adding ethterms to { identifier } got a { response.status_code } response")
+            return identifier
         except Exception as e:
             raise OpencastException(e)
