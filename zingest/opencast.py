@@ -412,11 +412,12 @@ class Opencast:
 
 
     def _prep_eth_dublincore(self, **kwargs):
+        prefix = "eth-"
         dc = {"ethterms": {"@xmlns": "http://ethz.ch/video/opencast", "@xmlns:ethterms": "http://ethz.ch/video/metadata"}}
         for name, value in kwargs.items():
-            if not name.startswith('eth'):
+            if not name.startswith(prefix):
                 continue
-            element_name = f"ethterms:{ name }"
+            element_name = f"ethterms:{ name[len(prefix):] }"
             element_value = value
             dc['ethterms'][element_name] = element_value
         return xmltodict.unparse(dc)
@@ -520,7 +521,7 @@ class Opencast:
             if 201 != response.status_code:
                 raise OpencastException(f"Creating series returned a { response.status_code } http response")
             identifier = response.json()['identifier']
-            response = self._do_put(f"{ self.url }/series/{ identifier }/elements/ethterms", data={ "BODY": eth_dc })
+            response = self._do_put(f"{ self.url }/series/{ identifier }/elements/ethterms", data=eth_dc)
             self.logger.debug(f"Adding ethterms to { identifier } got a { response.status_code } response")
             return identifier
         except Exception as e:
