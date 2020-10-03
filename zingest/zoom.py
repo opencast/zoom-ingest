@@ -215,7 +215,11 @@ class Zoom:
     def get_recording(self, recording_id):
         #RATELIMIT: 30/80 req/s
         self.logger.debug(f"Getting recording { recording_id }")
-        return self.zoom_client.recording.get(meeting_id=recording_id).json()
+        response = self.zoom_client.recording.get(meeting_id=recording_id)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return self.get_recording(recording_id)
 
 
     def get_renderable_recording(self, recording_id):

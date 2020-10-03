@@ -274,10 +274,15 @@ class Opencast:
             while attempts <= 5:
                 try:
                     self.logger.debug("Refreshing Opencast themes")
-                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-                    results = self._do_get(self.url + '/admin-ng/themes/themes.json').json()['results']
+                    #FIXME: There does not appear to *be* another endpoint to use, but the admin-ng namespace is a very bad idea long term.
+                    result = self._do_get(f'{ self.url }/admin-ng/themes/themes.json?limit=100').json()
                     self.themes_updated = datetime.utcnow()
-                    self.themes = { result['id']: result['name'] for result in results }
+                    self.themes = { theme['id']: theme['name'] for theme in result['results'] }
+                    counter = 1
+                    while len(self.themes.keys()) < int(result['total']):
+                        result = self._do_get(f'{ self.url }/admin-ng/themes/themes.json?limit=100&offset={ counter * 100 + 1}').json()
+                        self.themes.update({ theme['id']: theme['name'] for theme in result['results'] })
+                        counter += 1
                     self.logger.debug(f"Found { len(self.themes) } themes")
                     successful = True
                     break
@@ -296,8 +301,8 @@ class Opencast:
             while attempts <= 5:
                 try:
                     self.logger.debug("Refreshing Opencast ACLs")
-                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-                    results = self._do_get(self.url + '/acl-manager/acl/acls.json').json()
+                    #NB: This endpoint doesn't support paging at all, so hopefully it returns the full set!
+                    results = self._do_get(f'{ self.url }/acl-manager/acl/acls.json').json()
                     self.acls_updated = datetime.utcnow()
                     self.acls = { str(result['id']): { 'name': result['name'], 'acl': result['acl']['ace'] } for result in results }
                     self.logger.debug(f"Found { len(self.acls) } ACLs")
@@ -325,8 +330,9 @@ class Opencast:
             while attempts <= 5:
                 try:
                     self.logger.debug("Refreshing Opencast workflows")
-                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-                    results = self._do_get(self.url + '/api/workflow-definitions?filter=tag:upload&filter=tag:schedule').json()
+                    #FIXME: This endpoint doesn't tell you how many total definitions there are matching your query
+                    # and the /workflow/definitions.(xml|json) endpoint does not support filtering
+                    results = self._do_get(f'{ self.url }/api/workflow-definitions?filter=tag:upload&filter=tag:schedule').json()
                     self.workflows_updated = datetime.utcnow()
                     self.workflows = { result['identifier']: result['title'] for result in results }
                     self.logger.debug(f"Found { len(self.workflows) } workflows")
@@ -350,10 +356,16 @@ class Opencast:
                     self.logger.debug("Refreshing Opencast series list")
                     #TODO: Handle paging.  I'm going to guess we don't need this for rev1
                     #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
-                    results = self._do_get(self.url + '/api/series').json()
+                    response = self._do_get(self.url + '/series/series.json?count=100').json()
+                    results = response['catalogs']
                     self.series_updated = datetime.utcnow()
-                    self.series_full = { result['identifier']: result for result in results }
-                    self.series = { result['identifier']: result['title'] for result in results }
+                    self.series = { result['http://purl.org/dc/terms/']['identifier'][0]['value']: result['http://purl.org/dc/terms/']['title'][0]['value'] for result in results }
+                    counter = 1
+                    while len(self.series.keys()) < int(response['totalCount']):
+                        response = self._do_get(f'{ self.url }/series/series.json?count=100&startPage={ counter }').json()
+                        results = response['catalogs']
+                        self.series.update({ result['http://purl.org/dc/terms/']['identifier'][0]['value']: result['http://purl.org/dc/terms/']['title'][0]['value'] for result in results })
+                        counter += 1
                     successful = True
                     break
                 except ConnectionError as e:
