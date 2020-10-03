@@ -13,6 +13,7 @@ from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 from zingest.opencast import Opencast
 import zingest.db
+import urllib.parse
 
 MIN_DURATION = 0
 
@@ -101,9 +102,12 @@ def single_recording(recording_id):
 
 def get_single_recording(recording_id, series_id = None, acl_id = None, workflow_id = None, query_string=None):
     renderable = z.get_renderable_recording(recording_id)
+    renderable['urlencoded'] = urllib.parse.quote_plus(recording_id)
     series = None
     if series_id:
-        series = o.get_single_series(series_id)
+        #The template partially supports autofilling most of the variables based on the series
+        # but it's not 100% working, so let's just ignore it completely!
+        series = {'identifier': series_id}
     acl = None
     if acl_id:
         acl = o.get_single_acl(acl_id)

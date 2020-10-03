@@ -357,19 +357,6 @@ class Opencast:
         return self.series
 
 
-    def get_single_series(self, series_id):
-        #If there's somehow no series list, fetch them all
-        if not self.series:
-            self.get_series()
-        #if the series is not in the cache, attempt to fetch it directly and add it
-        if not series_id in self.series_full:
-            series = self._do_get(self.url + f'/api/series/{ series_id }').json()
-            self.series_full[series_id] = series
-            self.series[series_id] = series['title']
-        #If it's still not found, return None, otherwise return the data
-        return self.series_full[series_id] if series_id in self.series_full else None
-
-
     def _ensure_list(self, value):
         if type(value) != list:
             return [ value ]
@@ -446,10 +433,6 @@ class Opencast:
         series_id = None
         if "isPartOf" in kwargs:
             series_id = kwargs['isPartOf']
-            if series_id and not self.get_single_series(series_id):
-                self.logger.error(f"Attempting to ingest { rec_id } with series { series_id } failed, series does not exist")
-                #TODO: Raise an exception here
-                return #for now
             series_dc = self._do_get(f'{ self.url }/series/{ series_id }.xml').text
             eth_series_dc = self._do_get(f'{ self.url }/series/{ series_id }/elements/ethterms.xml').text
             series_acl = self._do_get(f'{ self.url }/series/{ series_id }/acl.xml').text
