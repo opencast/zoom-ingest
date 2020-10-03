@@ -75,7 +75,8 @@ class Opencast:
                 self.logger.info("Consuming rabbits")
                 self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
             except Exception as e:
-                self.logger.exception("BUG: Should not happen")
+                self.logger.exception("Error connecting to rabbit!  Retry in 10 seconds...")
+                time.sleep(10)
 
 
     @db.with_session
@@ -84,19 +85,21 @@ class Opencast:
             try:
                 self.logger.info("Checking backlog")
                 hour_ago = datetime.utcnow() - timedelta(hours = 1)
+                session = db.get_session()
                 rec_list = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED, db.Recording.timestamp <= hour_ago).all()
+                session.close()
                 for rec in rec_list:
                     self._process(rec.get_data())
                 time.sleep(60)
             except Exception as e:
-                self.logger.exception("BUG: Should not happen")
+                self.logger.exception("Catchall while processing the backlog.  Please report this as a bug.")
+                time.sleep(10)
 
 
     def _do_download(self, url, output, expected_size):
         Path(f"{ self.IN_PROGRESS_ROOT }").mkdir(parents=True, exist_ok=True)
-        #TODO: unclear what expected_size is in, .getsize is in bytes
         if os.path.isfile(output) and expected_size == os.path.getsize(output):
-          self.logger.debug(f"{output} already exists and is the right size")
+          self.logger.debug(f"{ output } already exists and is the right size")
           return
         with requests.get(url, stream=True) as req:
             #Raises an exception if there is one
@@ -130,14 +133,18 @@ class Opencast:
         #TODO: Throwing an error from here appears to push the mesage back into Rabbit, this should be double checked
         j = json.loads(body)
         uuid = j['uuid']
+
+        #Check that this isn't a duplicate ingest
+        session = db.get_session()
         rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).all()
-        if 0 == len(rec):
-            self.logger.debug(f"{uuid} not found in db, creating new record")
-            #Create a database record so that we can recover if we're killed mid process
-            db.create_recording(j)
-        else:
-            self.logger.debug(f"{uuid} found in db")
+        session.close()
+        if 0 != len(rec):
+            self.logger.info(f"{ uuid } already in the database, refusing to double ingest")
             return
+
+        self.logger.debug(f"{uuid} not found in db, creating new record")
+        #Create a database record so that we can recover if we're killed mid process
+        db.create_recording(j)
 
         self._process(j)
 
@@ -145,16 +152,14 @@ class Opencast:
     @db.with_session
     def _process(dbs, self, json):
         uuid = json['uuid']
+        session = None
         try:
+            session = db.get_session()
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
-            if None == rec:
-                #Create a database record so that we can recover if we're killed mid process
-                rec = db.Recording(j)
-                rec.update_status(db.Status.IN_PROGRESS)
-                dbs.merge(rec)
-                dbs.commit()
-            else:
-                self.logger.debug(f"{uuid} found in db")
+            rec.update_status(db.Status.IN_PROGRESS)
+            dbs.merge(rec)
+            dbs.commit()
+            session.close()
 
             if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
@@ -162,27 +167,27 @@ class Opencast:
             self.logger.info(f"Fetching {uuid}")
             filename = self.fetch_file(json)
             self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
+            #Get the parameters specified by the user
             params = json['zingest_params']
-            return
 
-            workflow_id = self.oc_upload(uuid, filename, json['duration'], **params)
+            mp_id, workflow_id = self.oc_upload(uuid, filename, json['duration'], **params)
             self._rm(filename)
 
+            session = db.get_session()
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
-            if None == rec:
-                self.logger.error(f"BUG: {uuid} not found in db")
-                raise Exception(f"BUG: {uuid} not found in db")
-            else:
-                rec.update_status(db.Status.FINISHED)
-                rec.set_workflow_id(workflow_id)
-                dbs.merge(rec)
-                dbs.commit()
+            rec.update_status(db.Status.FINISHED)
+            rec.set_workflow_id(workflow_id)
+            rec.set_mediapackage_id(mp_id)
+            dbs.merge(rec)
+            dbs.commit()
         except HTTPError as er:
             self.logger.exception("Unable to fetch file, will retry later")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
         except Exception as e:
             self.logger.exception("General Exception")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
+        finally:
+            session.close()
 
 
     def _rm(self, path):
@@ -196,7 +201,6 @@ class Opencast:
 
 
     def fetch_file(self, data):
-        #NB: Previously decoded here, unsure if needed
         if "recording_files" not in data:
             self.logger.error("No recording found")
             raise NoMp4Files("No recording found")
@@ -214,11 +218,15 @@ class Opencast:
             elif key == "file_size":
                 expected_size = int(files[0][key])
                 self.logger.debug(f"Recording size found: {expected_size}")
+        #Output file lives in the in-progress directory
         filename = f"{self.IN_PROGRESS_ROOT}/{recording_id}.mp4"
+
+        #Zoom token gets calculated at download time, regardless of inclusion in the rabbit message
         token = self.zoom.get_download_token()
         url = f"{dl_url}/?access_token={ token }"
         self.logger.debug(f"Downloading from { url } to { filename }")
         self._do_download(f"{dl_url}/?access_token={ token }", filename, expected_size)
+
         return filename
 
 
@@ -469,7 +477,7 @@ class Opencast:
             mpid = wfdict['wf:workflow']['mp:mediapackage']['@id']
             workflow_instance_id = wfdict['wf:workflow']['@id']
             self.logger.info(f"Ingested { rec_id } as workflow { workflow_instance_id } on mediapackage { mpid }")
-        return mpid
+        return mpid, workflow_instance_id
 
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
