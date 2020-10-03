@@ -100,6 +100,7 @@ class Recording(Base):
                     default=Status.NEW)
     timestamp = Column('timestamp', DateTime(), nullable=False,
                     default=datetime.utcnow())
+    mediapackage_id = Column('mediapackage_id', String(length=36), nullable=True, default=None)
     workflow_id = Column('workflow_id', String(length=36), nullable=True, default=None)
 
     def __init__(self, data):
@@ -107,6 +108,7 @@ class Recording(Base):
         self.user_id = data['host_id']
         self.data = json.dumps(data).encode('utf-8')
         self.update_status(Status.NEW)
+        self.mediapackage_id = None
         self.workflow_id = None
 
     def get_data(self):
@@ -125,6 +127,9 @@ class Recording(Base):
     def update_status(self, new_status):
         self.status = new_status
         self.timestamp = datetime.utcnow()
+
+    def set_mediapackage_id(self, mediapackage_id):
+        self.mediapackage_id = mediapackage_id
 
     def set_workflow_id(self, workflow_id):
         self.workflow_id = workflow_id
