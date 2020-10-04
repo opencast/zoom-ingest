@@ -18,14 +18,14 @@
       <td>{{ recording.date }}</td>
       <td><a href="{{ recording.url }}">{{ recording.title }}</td>
       <td>{{ recording.status }}</td>
-      {% if recording.status | int != 2 %}
+      {% if recording.status != "finished" %}
       <td><a href="{{ recording.url }}">Select</a></td>
       {% endif %}
     </tr>
     {% endfor %}
   </table>
   <hr/>
-  <a href="/">Full user list</a>
+  <a href="/">Full user list</a> |
   <a href="/cancel">Cancellable ingests</a>
 </body>
 </html>

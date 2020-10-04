@@ -16,7 +16,7 @@ import zingest.logger
 from zingest.common import NoMp4Files
 from pathlib import Path
 import xmltodict
-from requests.exceptions import ConnectionError
+from math import floor
 
 
 class OpencastException(Exception):
@@ -84,10 +84,8 @@ class Opencast:
         while True:
             try:
                 self.logger.info("Checking backlog")
-                hour_ago = datetime.utcnow() - timedelta(hours = 1)
-                session = db.get_session()
+                hour_ago = datetime.utcnow() - timedelta(minutes = 1)
                 rec_list = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED, db.Recording.timestamp <= hour_ago).all()
-                session.close()
                 for rec in rec_list:
                     self._process(rec.get_data())
                 time.sleep(60)
@@ -115,8 +113,8 @@ class Opencast:
 
 
     def _do_get(self, url):
-        return requests.get(url, auth=HTTPDigestAuth(self.user, self.password),
-                                headers={'X-Requested-Auth': 'Digest'})
+        self.logger.debug(f"GETting { url }")
+        return requests.get(url, auth=self.auth, headers=Opencast.HEADERS)
 
 
     def _do_post(self, url, data, files=None):
@@ -130,14 +128,11 @@ class Opencast:
 
     @db.with_session
     def rabbit_callback(dbs, self, method, properties, body):
-        #TODO: Throwing an error from here appears to push the mesage back into Rabbit, this should be double checked
         j = json.loads(body)
         uuid = j['uuid']
 
         #Check that this isn't a duplicate ingest
-        session = db.get_session()
         rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).all()
-        session.close()
         if 0 != len(rec):
             self.logger.info(f"{ uuid } already in the database, refusing to double ingest")
             return
@@ -154,12 +149,10 @@ class Opencast:
         uuid = json['uuid']
         session = None
         try:
-            session = db.get_session()
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             rec.update_status(db.Status.IN_PROGRESS)
             dbs.merge(rec)
             dbs.commit()
-            session.close()
 
             if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
@@ -170,10 +163,9 @@ class Opencast:
             #Get the parameters specified by the user
             params = json['zingest_params']
 
-            mp_id, workflow_id = self.oc_upload(uuid, filename, json['duration'], **params)
-            self._rm(filename)
+            mp_id, workflow_id = self.oc_upload(uuid, filename, **params)
+            #self._rm(filename)
 
-            session = db.get_session()
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             rec.update_status(db.Status.FINISHED)
             rec.set_workflow_id(workflow_id)
@@ -186,8 +178,6 @@ class Opencast:
         except Exception as e:
             self.logger.exception("General Exception")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
-        finally:
-            session.close()
 
 
     def _rm(self, path):
@@ -251,7 +241,7 @@ class Opencast:
                 'title': data['topic'],
                 'date': data['start_time'],
                 'url': data['share_url'],
-                'host': self.zoom.get_user_email(result.get_user_id()),
+                'host': self.zoom.get_user_name(result.get_user_id()),
                 'status': result.status_str()
             }
             ip.append(item)
@@ -286,7 +276,7 @@ class Opencast:
                     self.logger.debug(f"Found { len(self.themes) } themes")
                     successful = True
                     break
-                except ConnectionError as e:
+                except Exception as e:
                     self.logger.error(f"Attempt { attempts } to fetch themes failed with a ConnectionError, retrying in { attempts * 5 }s")
                     attempts += 1
                     time.sleep(attempts * 5)
@@ -308,7 +298,7 @@ class Opencast:
                     self.logger.debug(f"Found { len(self.acls) } ACLs")
                     successful = True
                     break
-                except ConnectionError as e:
+                except Exception as e:
                     self.logger.error(f"Attempt { attempts } to fetch ACLs failed with a ConnectionError, retrying in { attempts * 5 }s")
                     attempts += 1
                     time.sleep(attempts * 5)
@@ -338,7 +328,7 @@ class Opencast:
                     self.logger.debug(f"Found { len(self.workflows) } workflows")
                     successful = True
                     break
-                except ConnectionError as e:
+                except Exception as e:
                     self.logger.error(f"Attempt { attempts } to fetch workflows failed with a ConnectionError, retrying in { attempts * 5 }s")
                     attempts += 1
                     time.sleep(attempts * 5)
@@ -356,7 +346,7 @@ class Opencast:
                     self.logger.debug("Refreshing Opencast series list")
                     #TODO: Handle paging.  I'm going to guess we don't need this for rev1
                     #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
-                    response = self._do_get(self.url + '/series/series.json?count=100').json()
+                    response = self._do_get(f'{ self.url }/series/series.json?count=100').json()
                     results = response['catalogs']
                     self.series_updated = datetime.utcnow()
                     self.series = { result['http://purl.org/dc/terms/']['identifier'][0]['value']: result['http://purl.org/dc/terms/']['title'][0]['value'] for result in results }
@@ -368,13 +358,29 @@ class Opencast:
                         counter += 1
                     successful = True
                     break
-                except ConnectionError as e:
+                except Exception as e:
                     self.logger.error(f"Attempt { attempts } to fetch series failed with a ConnectionError, retrying in { attempts * 5 }s")
                     attempts += 1
                     time.sleep(attempts * 5)
             if not successful:
                 self.logger.error("Unable to update series!  UI will still function but series data is missing!")
         return self.series
+
+
+    def get_single_series(self, series_id):
+        if not self.series:
+            self.get_series()
+        if series_id in self.series:
+            return series_id
+        response = self._do_get(f'{ self.url }/series/series.json?seriesId={ series_id }').json()
+        if len(response['catalogs']) == 0:
+            self.logger.debug(f"Series { series_id } not found")
+            return None
+        result = response['catalogs'][0]
+        sid = result['http://purl.org/dc/terms/']['identifier'][0]['value']
+        stitle = result['http://purl.org/dc/terms/']['title'][0]['value']
+        self.series[sid] = stitle
+        return stitle
 
 
     def _ensure_list(self, value):
@@ -389,8 +395,10 @@ class Opencast:
             #TODO: This logic is bad, the variables should be prefixed with dc- and everything else filtered out
             if name.startswith("origin") or name.startswith('eth'):
                 continue
-            if name in ("publisher", "contributor", "presenter", "creator", "subjects"):
+            if name in ("contributor", "presenter", "creator", "subjects"): #, "publisher"):
                 element = {'id': name , 'value': self._ensure_list(value.split(',')) }
+            elif name in ("publisher"):
+                element = {'id': name , 'value': self._ensure_list(value) }
             elif name == "date":
                 element = {'id': 'startDate' , 'value': value }
             else:
@@ -411,6 +419,12 @@ class Opencast:
             elif name == "date":
                 element_name = f"dcterms:startDate"
                 element_value = value
+            elif name == "duration":
+                element_name = f"dcterms:extent"
+                dur = int(value)
+                hours = floor( dur / 60)
+                minutes = dur - hours * 60
+                element_value = f"PT{ hours }H{ minutes }M0S"
             else:
                 element_name = f"dcterms:{ name }"
                 element_value = value
@@ -425,7 +439,13 @@ class Opencast:
             if not name.startswith(prefix):
                 continue
             element_name = f"ethterms:{ name[len(prefix):] }"
-            element_value = value
+            if "eth-advertised" == name:
+                if "on" == value:
+                    element_value = "true"
+                else:
+                    element_value = "false"
+            else:
+                element_value = value
             dc['ethterms'][element_name] = element_value
         return xmltodict.unparse(dc)
 
@@ -443,7 +463,7 @@ class Opencast:
       return xmltodict.unparse(xacml)
 
 
-    def oc_upload(self, rec_id, filename, duration, acl_id=None, workflow_id=None, **kwargs):
+    def oc_upload(self, rec_id, filename, acl_id=None, workflow_id=None, **kwargs):
 
         if not workflow_id:
             self.logger.error(f"Attempting to ingest { rec_id } with no workflow id!")

@@ -130,6 +130,11 @@ class Zoom:
         self.logger.debug(f"Fetching 300 users, page { page }")
         return self.zoom_client.user.list(page_size=300, page_number=page).json()
 
+    def get_user_name(self, user_id_or_email):
+        self.logger.debug(f"Looking up plaintext name for { user_id_or_email }")
+        user = self.get_user(user_id_or_email)
+        return f"{ user['first_name'] } { user['last_name'] }"
+
     def get_recording_creator(self, payload):
         return payload['host_id']
         #RATELIMIT: 30/80 req/s
@@ -141,11 +146,6 @@ class Zoom:
     def get_user(self, email_or_id):
         user = self.zoom_client.user.get(id=email_or_id).json()
         return user
-
-    def get_user_id(self, email):
-        self.logger.debug(f"Looking up user id for { email }")
-        user = self.get_user(email)
-        return user['id']
 
     def get_user_email(self, user_id):
         self.logger.debug(f"Looking up email for { user_id }")
@@ -199,12 +199,15 @@ class Zoom:
             rec_uuid = element['uuid']
             status = db.Status.str(existing_data[rec_uuid]['status']) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
             email = element['host_email'] if 'host_email' in element else self.get_user_email(element['host_id'])
+            host = self.get_user_name(email)
             item = {
                 'id': rec_uuid,
                 'title': element['topic'],
                 'date': element['start_time'],
+                'duration': element['duration'],
                 'url': element['share_url'],
-                'host': email,
+                'email': email,
+                'host': host,
                 'status': status
             }
             renderable.append(item)

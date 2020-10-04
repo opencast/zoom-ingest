@@ -5,7 +5,8 @@
 <body>
   <h1>Details for the new series</h1>
   <form action="./series">
-    <input type="hidden"  name="origin_epid" id="origin_epid" value="{{ origin_epid }}"/>
+    <input type="hidden"  name="origin_epid" id="origin_epid" value="{{ origin.epid }}"/>
+    <input type="hidden"  name="origin_query_string" id="origin_query_string" value="{{ origin.query_string }}"/>
     <table style="width:100%">
       <tr>
         <td><h3>Common Opencast Metadata</h3></td>
@@ -62,7 +63,7 @@
         <td><h3>ETH Extended Metadata</h3></td>
       </tr>
       <tr>
-        <td><label for="advertised">Advertised</label></td><td><input type="text" id="advertised" name="eth-advertised"></td>
+        <td><label for="advertised">Advertised</label></td><td><input type="checkbox" id="advertised" name="eth-advertised"></td>
       </tr>
       <tr>
         <td><label for="subtype">Subtype</label></td><td><input type="text" id="subtype" name="eth-subtype"></td>
@@ -77,10 +78,10 @@
         <td><label for="vp2">VP URL 2</label></td><td><input type="text" id="vp2" name="eth-vpUrl2"></td>
       </tr>
       <tr>
-        <td><label for="mmp2">MMP URL Old 2</label></td><td><input type="text" id="mmp2" name="eth-mmpUrlOld2"></td>
+        <td><label for="mmp1">MMP URL Old 1</label></td><td><input type="text" id="mmp1" name="eth-mmpUrlOld1"></td>
       </tr>
       <tr>
-        <td><label for="mmp1">MMP URL Old 1</label></td><td><input type="text" id="mmp1" name="eth-mmpUrlOld1"></td>
+        <td><label for="mmp2">MMP URL Old 2</label></td><td><input type="text" id="mmp2" name="eth-mmpUrlOld2"></td>
       </tr>
       <tr>
         <td><label for="doiprefix">DOI Prefix</label></td><td><input type="text" id="doiprefix" name="eth-doiPrefix"></td>

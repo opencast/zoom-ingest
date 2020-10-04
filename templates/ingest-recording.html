@@ -5,8 +5,8 @@
 <body>
   <h1>Details for <a href={{ recording.url }}>{{ recording.title }}</a></h1>
   <form action="../">
-    <input type="hidden"  name="origin_email" id="origin_email" value="{{ recording.host }}"/>
-    <input type="hidden"  name="origin_query_string" id="origin_query_string" value="{{ query_string }}"/>
+    <input type="hidden"  name="origin_email" id="origin_email" value="{{ recording.email }}"/>
+    <input type="hidden"  name="origin_query_string" id="origin_query_string" value="{{ url_query_string }}"/>
     <table style="width:100%">
       <tr><td><h3>Common Episode Metadata</h3></td><td/><td><h3>ETH Extended Metadata</h3></td><td/></tr>
       <tr>
@@ -14,7 +14,7 @@
         <td><label for="accessibility">Accessibility Description</label></td><td><input type="text" id="accessibility" name="eth-accessibility"></td>
       </tr>
       <tr>
-        <td><label for="duration">Duration</label>/td><td><input type="text" id="duration" name="duration" value="{{ recording.duration }}"></td>
+        <td><label for="duration">Duration (minutes)</label></td><td><input type="text" id="duration" name="duration" value="{{ recording.duration }}"></td>
         <td><label for="order">Order</label></td><td><input type="text" id="order" name="eth-order"></td>
       </tr>
       <tr>
@@ -61,7 +61,7 @@
             <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
-          <a href="../series?epid={{ recording.urlencoded }}">Create New Series</a>
+          <a href="../series?epid={{ recording.urlencoded }}&oem={{ recording.email }}&oqs={{ query_string }}">Create New Series</a>
         </td>
       </tr>
       <tr>
@@ -90,6 +90,7 @@
     </table>
     <br/>
     <button type="submit" formmethod="post" formaction="{{ recording.posturl }}">Submit</button>
+    <a href="/recordings/{{ recording.email }}?{{ query_string }}">Back to the recording list</a>
   </form>
 </body>
 </html>
