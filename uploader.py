@@ -7,6 +7,7 @@ from zingest.opencast import Opencast
 import zingest.logger
 import threading
 import zingest.db
+import os.path
 
 logger = logging.getLogger("main")
 logger.setLevel(logging.DEBUG)
@@ -14,7 +15,10 @@ logger.debug("Main init")
 
 try:
     config = configparser.ConfigParser()
-    config.read('settings.ini')
+    if os.path.isfile("etc/zoom-ingest/settings.ini"):
+        config.read("etc/zoom-ingest/settings.ini")
+    else:
+        config.read("/etc/zoom-ingest/settings.ini")
 except FileNotFoundError:
     sys.exit("No settings found")
 

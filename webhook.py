@@ -14,6 +14,7 @@ from zingest.zoom import Zoom
 from zingest.opencast import Opencast
 import zingest.db
 import urllib.parse
+import os.path
 
 MIN_DURATION = 0
 
@@ -22,7 +23,10 @@ logger.info("Startup")
 
 try:
     config = configparser.ConfigParser()
-    config.read('settings.ini')
+    if os.path.isfile("etc/zoom-ingest/settings.ini"):
+        config.read("etc/zoom-ingest/settings.ini")
+    else:
+        config.read("/etc/zoom-ingest/settings.ini")
 except FileNotFoundError:
     sys.exit("No settings found")
 

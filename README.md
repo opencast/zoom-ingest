@@ -16,6 +16,8 @@ Python packages:
 - `flask`
 - `gunicon`
 - `sqlalchemy`
+- `xmltodict`
+- `mysqlclient` (Optional)
 
 External dependencies:
 
@@ -36,16 +38,24 @@ This is the [JSON Web Token](https://jwt.io/) configuration data you get from Zo
 have to manually create their app at https://marketplace.zoom.us/develop/create from the main ETH account.
 Longer term the goal here would be to have this in the Zoom market, but that is still pending.
 
+To create the app:
+- Sign in as the root account at marketplace.zoom.us
+- Go to https://marketplace.zoom.us/develop/create
+- Create JWT credentials, you will need the API Key and Secret in the config file
+
 3. Webhook:
 
 This utilty supports event-driven ingestion.  When a meeting finishes it would be automatically ingested.
 This is *disabled* by default, so for now leave this section alone.  The URL and port are where the webhook
-should listen, and must match the settings in Zoom, were you to conigure webhooks.
+should listen, and must match the settings in Zoom, were you to conigure webhooks.  As of this writing (2020-10-04)
+this has not been tested with the latest code, but is a high priority community requirement for long term release.
 
 4. Opencast:
 
 This is the url, as well as user and password to use when ingesting to Opencast.  Note that this has only
-been tested with the digest user, although there is no reason it would not work with another user.
+been tested with the digest user, although there is no reason it would not work with another user.  Note that
+the code assumes the use of the digest user, so if non-digest users are required some minor modifications will be
+required.
 
 5. Rabbit:
 
@@ -56,7 +66,15 @@ require additional fiddling.
 **Installation**
 
 The packages above can all be installed via *pip*: `pip3 install -r requirements.txt`.  Note that depending
-on the target database you may need to install system packages, and/or additional pip packages.
+on the target database you may need to install system packages, and/or additional pip packages.  Notably, on my
+Debian system the mysql python bindings required the mysql client *development* package to provide the relevant
+headers.  For public release I plan to test against a wider variety of system so these instructions can be more
+complete.
+
+**Database Setup**
+
+A user with appropriate permissions for an existing (preferably blank) schema should exist.  SQLAlchemy will
+create the tables it requires at runtime.
 
 **Usage**
 
