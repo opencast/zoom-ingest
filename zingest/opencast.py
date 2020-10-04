@@ -467,8 +467,7 @@ class Opencast:
 
         if not workflow_id:
             self.logger.error(f"Attempting to ingest { rec_id } with no workflow id!")
-            #TODO: Raise an exception here
-            return #for now
+            raise Exception("Workflow ID is missing!")
 
         series_id = None
         if "isPartOf" in kwargs:
