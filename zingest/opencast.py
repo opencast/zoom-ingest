@@ -164,7 +164,7 @@ class Opencast:
             params = json['zingest_params']
 
             mp_id, workflow_id = self.oc_upload(uuid, filename, **params)
-            #self._rm(filename)
+            self._rm(filename)
 
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             rec.update_status(db.Status.FINISHED)
