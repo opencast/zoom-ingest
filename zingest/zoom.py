@@ -125,7 +125,6 @@ class Zoom:
 
 
     def list_available_users(self, page):
-        #TODO: This could get very large, implement paging
         #300 is the maximum page size per the docs
         self.logger.debug(f"Fetching 300 users, page { page }")
         return self.zoom_client.user.list(page_size=300, page_number=page).json()
@@ -138,9 +137,6 @@ class Zoom:
     def get_recording_creator(self, payload):
         return payload['host_id']
         #RATELIMIT: 30/80 req/s
-        #user_list_response = self.zoom_client.user.get(id=payload["object"]["host_id"])
-        #user_list = json.loads(user_list_response.content.decode("utf-8"))
-        #return user_list['email']
 
     @functools.lru_cache(maxsize=32)
     def get_user(self, email_or_id):
