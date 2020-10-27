@@ -132,6 +132,10 @@ class Opencast:
         uuid = json['uuid']
         try:
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+            if not rec:
+                # TODO why we are in this case?
+                self.logger.warn(f"Recording with the ID { uuid } does not exists in the database, skipping processing")
+                return
             rec.update_status(db.Status.IN_PROGRESS)
             dbs.merge(rec)
             dbs.commit()
