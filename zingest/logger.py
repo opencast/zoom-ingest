@@ -1,10 +1,15 @@
-import logging.handlers
+import logging
 import sys
+from logging.config import fileConfig
+from os.path import isfile
 
-LOGGING_FORMAT = "%Y-%m-%d %H:%M:%S %Z"
-
-out = logging.StreamHandler(sys.stderr)
-#10 MB default rollover size
-logfile = logging.handlers.RotatingFileHandler("uploader.log", encoding="UTF-8", maxBytes=10000000)
-logging.basicConfig(level=logging.ERROR, handlers=[out, logfile], format='%(asctime)s | %(name)s | %(levelname)s | %(message)s', datefmt=LOGGING_FORMAT)
-
+if isfile("etc/zoom-ingest/logger.ini"):
+    fileConfig('etc/zoom-ingest/logger.ini')
+if isfile("/etc/zoom-ingest/logger.ini"):
+    fileConfig('/etc/zoom-ingest/logger.ini')
+else:
+    out = logging.StreamHandler(sys.stderr)
+    logging.basicConfig(level=logging.ERROR,
+                        handlers=[out],
+                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                        datefmt="%Y-%m-%d %H:%M:%S %Z")
