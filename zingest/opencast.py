@@ -439,7 +439,7 @@ class Opencast:
         if "isPartOf" in kwargs:
             series_id = kwargs['isPartOf']
             series_dc = self._do_get(f'{ self.url }/series/{ series_id }.xml').text
-            eth_series_dc = self._do_get(f'{ self.url }/series/{ series_id }/elements/ethterms.xml').text
+            eth_series_dc = self._do_get(f'{ self.url }/series/{ series_id }/elements/ethterms').text
             series_acl = self._do_get(f'{ self.url }/series/{ series_id }/acl.xml').text
 
         selected_acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
