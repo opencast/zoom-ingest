@@ -39,7 +39,7 @@ try:
     HOST_NAME = config["Webhook"]["Url"]
     logger.debug(f"Hostname is {HOST_NAME}")
     MIN_DURATION = int(config["Webhook"]["Min_Duration"])
-    logger.debug(f"Minimum duration is is {MIN_DURATION}")
+    logger.debug(f"Minimum duration is {MIN_DURATION}")
 except KeyError as err:
     sys.exit("Key {0} was not found".format(err))
 except ValueError as err:

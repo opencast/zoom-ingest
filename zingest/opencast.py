@@ -3,8 +3,6 @@ import requests
 import os
 import os.path
 from requests.auth import HTTPDigestAuth
-import sys
-import configparser
 from datetime import datetime, timedelta
 from urllib.error import HTTPError
 from zingest.rabbit import Rabbit
@@ -22,12 +20,18 @@ from math import floor
 class OpencastException(Exception):
     pass
 
+
 class Opencast:
 
     IN_PROGRESS_ROOT = "in-progress"
     HEADERS = {'X-Requested-Auth': 'Digest'}
 
     def __init__(self, config, rabbit, zoom):
+        if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
+            raise TypeError("Rabbit is missing or the wrong type!")
+        if not zoom or type(zoom) != zingest.zoom.Zoom:
+            raise TypeError("Zoom is missing or the wrong type!")
+
         self.logger = logging.getLogger("opencast")
         self.logger.setLevel(logging.DEBUG)
 
@@ -37,8 +41,8 @@ class Opencast:
         self.logger.debug(f"Opencast user is {self.user}")
         self.password = config["Opencast"]["Password"]
         self.auth = HTTPDigestAuth(self.user, self.password)
-        self.set_rabbit(rabbit)
-        self.set_zoom(zoom)
+        self.rabbit = rabbit
+        self.zoom = zoom
         self.acls_updated = None
         self.acls = None
         self.themes_updated = None
@@ -54,20 +58,6 @@ class Opencast:
         self.get_series()
         self.logger.info("Setup complete")
 
-
-    def set_rabbit(self, rabbit):
-        if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
-            raise TypeError("Rabbit is missing or the wrong type!")
-        else:
-            self.rabbit = rabbit
-
-    def set_zoom(self, zoom):
-        if not zoom or type(zoom) != zingest.zoom.Zoom:
-            raise TypeError("Zoom is missing or the wrong type!")
-        else:
-            self.zoom = zoom
-
-
     def run(self):
         while True:
             try:
@@ -77,21 +67,19 @@ class Opencast:
                 self.logger.exception("Error connecting to rabbit!  Retry in 10 seconds...")
                 time.sleep(10)
 
-
     @db.with_session
     def process_backlog(dbs, self):
         while True:
             try:
                 self.logger.info("Checking backlog")
-                hour_ago = datetime.utcnow() - timedelta(minutes = 1)
+                hour_ago = datetime.utcnow() - timedelta(minutes=1)
                 rec_list = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED, db.Recording.timestamp <= hour_ago).all()
                 for rec in rec_list:
                     self._process(rec.get_data())
                 time.sleep(60)
             except Exception as e:
-                self.logger.exception("Catchall while processing the backlog.  Please report this as a bug.")
+                self.logger.exception("Catchall while processing the backlog. Please report this as a bug.")
                 time.sleep(10)
-
 
     def _do_download(self, url, output, expected_size):
         Path(f"{ self.IN_PROGRESS_ROOT }").mkdir(parents=True, exist_ok=True)
@@ -110,11 +98,9 @@ class Opencast:
                 f.close()
             req.close()
 
-
     def _do_get(self, url):
         self.logger.debug(f"GETting { url }")
         return requests.get(url, auth=self.auth, headers=Opencast.HEADERS)
-
 
     def _do_post(self, url, data, files=None):
         self.logger.debug(f"POSTing { data } to { url }")
@@ -123,7 +109,6 @@ class Opencast:
     def _do_put(self, url, data):
         self.logger.debug(f"PUTing { data } to { url }")
         return requests.put(url, auth=self.auth, headers=Opencast.HEADERS, data=data)
-
 
     @db.with_session
     def rabbit_callback(dbs, self, method, properties, body):
@@ -142,11 +127,9 @@ class Opencast:
 
         self._process(j)
 
-
     @db.with_session
     def _process(dbs, self, json):
         uuid = json['uuid']
-        session = None
         try:
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             rec.update_status(db.Status.IN_PROGRESS)
@@ -178,7 +161,6 @@ class Opencast:
             self.logger.exception("General Exception")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
 
-
     def _rm(self, path):
         self.logger.debug(f"Removing {path}")
         try:
@@ -187,7 +169,6 @@ class Opencast:
         except Exception as e:
             if os.path.isfile(path):
                 self.logger.exception("Exception removing {path}.  File will need to be manually removed.")
-
 
     def fetch_file(self, data):
         if "recording_files" not in data:
@@ -218,18 +199,15 @@ class Opencast:
 
         return filename
 
-
     @db.with_session
     def get_in_progress(dbs, self):
         results = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED).all()
         return self._build_ingest_renderable(results)
 
-
     @db.with_session
     def get_finished(dbs, self):
         results = dbs.query(db.Recording).filter(db.Recording.status == db.Status.FINISHED).all()
         return self._build_ingest_renderable(results)
-
 
     def _build_ingest_renderable(self, results):
         ip = []
@@ -246,15 +224,14 @@ class Opencast:
             ip.append(item)
         return ip
 
-
     @db.with_session
     def cancel_ingest(dbs, self, ingest_id):
         try:
-            ingest = dbs.query(db.Recording).filter(db.Recording.rec_id == ingest_id).delete(synchronize_session=False)
+            self.logger.info(f"Canceled ingest { ingest_id }")
+            dbs.query(db.Recording).filter(db.Recording.rec_id == ingest_id).delete(synchronize_session=False)
             dbs.commit()
         except Exception as e:
             self.logger.exception(f"Unable to delete { ingest_id }")
-
 
     def get_themes(self):
         if not self.themes or self.themes_updated <= datetime.utcnow() - timedelta(hours = 1):
@@ -305,12 +282,10 @@ class Opencast:
                 self.logger.error("Unable to update ACLs!  UI will still function but ACL data is missing!")
         return self.acls
 
-
     def get_single_acl(self, acl_id):
         if not self.acls:
             self.get_acls()
         return self.acls[acl_id]['acl'] if acl_id in self.acls else None
-
 
     def get_workflows(self):
         if not self.workflows or self.workflows_updated <= datetime.utcnow() - timedelta(hours = 1):
@@ -334,7 +309,6 @@ class Opencast:
             if not successful:
                 self.logger.error("Unable to update workflows!  UI will still function but workflow data is missing!")
         return self.workflows
-
 
     def get_series(self):
         if not self.series or self.series_updated <= datetime.utcnow() - timedelta(hours = 1):
@@ -365,7 +339,6 @@ class Opencast:
                 self.logger.error("Unable to update series!  UI will still function but series data is missing!")
         return self.series
 
-
     def get_single_series(self, series_id):
         if not self.series:
             self.get_series()
@@ -381,12 +354,10 @@ class Opencast:
         self.series[sid] = stitle
         return stitle
 
-
     def _ensure_list(self, value):
         if type(value) != list:
             return [ value ]
         return value
-
 
     def _prep_metadata_fields(self, **kwargs):
         fields = []
@@ -404,7 +375,6 @@ class Opencast:
                 element = {'id': name , 'value': value }
             fields.append(element)
         return fields
-
 
     def _prep_dublincore(self, **kwargs):
         dc = {"dublincore": {"@xmlns": "http://www.opencastproject.org/xsd/1.0/dublincore/", "@xmlns:dcterms": "http://purl.org/dc/terms/", "@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance"}}
@@ -430,7 +400,6 @@ class Opencast:
             dc['dublincore'][element_name] = element_value
         return xmltodict.unparse(dc)
 
-
     def _prep_eth_dublincore(self, **kwargs):
         prefix = "eth-"
         dc = {"ethterms": {"@xmlns": "http://ethz.ch/video/opencast", "@xmlns:ethterms": "http://ethz.ch/video/metadata"}}
@@ -448,7 +417,6 @@ class Opencast:
             dc['ethterms'][element_name] = element_value
         return xmltodict.unparse(dc)
 
-
     def _prep_episode_xacml(self, episode_id, acl):
       xacml = {"Policy": {"@PolicyId": episode_id, "@Version": "2.0", "@RuleCombiningAlgId": "urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:permit-overrides", "@xmlns": "urn:oasis:names:tc:xacml:2.0:policy:schema:os"}}
       xacml['Policy']['Target'] = {"Resources": {"Resource": {"ResourceMatch": {"@MatchId": "urn:oasis:names:tc:xacml:1.0:function:string-equal", "AttributeValue": {"@DataType": "http://www.w3.org/2001/XMLSchema#string", "#text": episode_id}, "ResourceAttributeDesignator": {"@AttributeId": "urn:oasis:names:tc:xacml:1.0:resource:resource-id", "@DataType": "http://www.w3.org/2001/XMLSchema#string"}}}}},
@@ -460,7 +428,6 @@ class Opencast:
       rules.append({"@RuleId": "DenyRule", "@Effect": "Deny"})
       xacml['Policy']['Rule'] = rules
       return xmltodict.unparse(xacml)
-
 
     def oc_upload(self, rec_id, filename, acl_id=None, workflow_id=None, **kwargs):
 
@@ -508,7 +475,6 @@ class Opencast:
             workflow_instance_id = wfdict['wf:workflow']['@id']
             self.logger.info(f"Ingested { rec_id } as workflow { workflow_instance_id } on mediapackage { mpid }")
         return mpid, workflow_instance_id
-
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
 

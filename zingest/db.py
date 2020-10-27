@@ -1,4 +1,5 @@
 import json
+import logging
 import string
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, \
@@ -7,32 +8,34 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from functools import wraps
 Base = declarative_base()
-import logging
 
 
 def init(config):
-    '''Initialize connection to database. Additionally the basic database
+    """
+    Initialize connection to database. Additionally the basic database
     structure will be created if nonexistent.
-    '''
+    :param config:
+    """
     global engine
     log = logging.getLogger("db")
     db = 'sqlite:///zoom.db'
     if "Database" in config and "database" in config['Database']:
         db = config['Database']['database']
         engine = create_engine(db)
-        log.info(f"Database connection string loaded from config file")
+        log.info("Database connection string loaded from config file")
     else:
-        log.warn(f"Using default SQLite database, this is probably not what you want!")
+        log.warn("Using default SQLite database, this is probably not what you want!")
         engine = create_engine(db)
     Base.metadata.create_all(engine)
 
 
 def get_session():
-    '''Get a session for database communication. If necessary a new connection
+    """
+    Get a session for database communication. If necessary a new connection
     to the database will be established.
 
     :return:  Database session
-    '''
+    """
     if 'engine' not in globals():
         init()
     Session = sessionmaker(bind=engine)
@@ -40,7 +43,8 @@ def get_session():
 
 
 def with_session(f):
-    """Wrapper for f to make a SQLAlchemy session present within the function
+    """
+    Wrapper for f to make a SQLAlchemy session present within the function
 
     :param f: Function to call
     :type f: Function
@@ -68,19 +72,19 @@ def create_recording(dbs, j):
     dbs.merge(rec)
     dbs.commit()
 
-class Constants():
+
+class Constants:
 
     @classmethod
     def str(cls, value):
-        '''Convert status (id) to its string name.'''
+        """Convert status (id) to its string name."""
         for k, v in cls.__dict__.items():
             if k[0] in string.ascii_uppercase and v == value:
                 return k.lower().replace('_', ' ')
 
 
 class Status(Constants):
-    '''Event status definitions
-    '''
+    """Event status definitions"""
     NEW = 0
     IN_PROGRESS = 1
     FINISHED = 2
@@ -88,7 +92,7 @@ class Status(Constants):
 
 # Database Schema Definition
 class Recording(Base):
-    '''Database definition of a recording.'''
+    """Database definition of a recording."""
 
     __tablename__ = 'recording'
 
@@ -112,16 +116,14 @@ class Recording(Base):
         self.workflow_id = None
 
     def get_data(self):
-        '''Load JSON data from event.
-        '''
+        """Load JSON data from event."""
         return json.loads(self.data.decode('utf-8'))
 
     def get_user_id(self):
         return self.user_id
 
     def status_str(self):
-        '''Return status as string.
-        '''
+        """Return status as string."""
         return Status.str(self.status)
 
     def update_status(self, new_status):
@@ -135,17 +137,19 @@ class Recording(Base):
         self.workflow_id = workflow_id
 
     def __repr__(self):
-        '''Return a string representation of an artist object.
+        """
+        Return a string representation of an artist object.
 
         :return: String representation of object.
-        '''
+        """
         return f'<Recording(uuid={self.uuid}, status={self.status})>'
 
     def serialize(self):
-        '''Serialize this object as dictionary usable for conversion to JSON.
+        """
+        Serialize this object as dictionary usable for conversion to JSON.
 
         :return: Dictionary representing this object.
-        '''
+        """
         return {
             'uuid': self.uid,
             'user_id': self.user_id,
@@ -157,7 +161,7 @@ class Recording(Base):
 
 
 class User(Base):
-    '''Database definition of a Zoom user.'''
+    """Database definition of a Zoom user."""
 
     __tablename__ = 'user'
 
