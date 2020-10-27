@@ -19,9 +19,14 @@ class Zoom:
 
         self.api_key = config['JWT']['Key']
         self.api_secret = config['JWT']['Secret']
+        if self.api_key:
+            self.logger.debug(f"Init with  Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
+        else:
+            raise ValueError("Zoom API key not set")
+        if not self.api_secret:
+            raise ValueError("Zoom API secrete not set")
         self.zoom_client = ZoomClient(self.api_key, self.api_secret)
         self.logger.info("Setup complete")
-        self.logger.debug(f"Init with {self.api_key}:{self.api_secret}")
         #Ensure this is a datetime, but also that the expirey has already happened
         self.expirey = datetime.utcnow() - timedelta(seconds=30)
 

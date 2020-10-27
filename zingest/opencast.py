@@ -36,7 +36,6 @@ class Opencast:
         self.user = config["Opencast"]["User"]
         self.logger.debug(f"Opencast user is {self.user}")
         self.password = config["Opencast"]["Password"]
-        self.logger.debug(f"Opencast password is {self.password}")
         self.auth = HTTPDigestAuth(self.user, self.password)
         self.set_rabbit(rabbit)
         self.set_zoom(zoom)

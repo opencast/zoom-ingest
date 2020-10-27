@@ -8,21 +8,17 @@ import logging
 class Rabbit():
 
     def __init__(self, config, zoom):
+        if not zoom or type(zoom) != zingest.zoom.Zoom:
+            raise TypeError("Zoom is missing or the wrong type!")
         self.logger = logging.getLogger("rabbit")
         self.logger.setLevel(logging.DEBUG)
 
         self.rabbit_url = config["Rabbit"]["host"]
         self.rabbit_user = config["Rabbit"]["user"]
         self.rabbit_pass = config["Rabbit"]["password"]
-        self.set_zoom(zoom)
-        self.logger.info("Setup complete")
-        self.logger.debug(f"Init with {self.rabbit_user}:{self.rabbit_pass} attached to {self.rabbit_url}")
-
-    def set_zoom(self, zoom):
-        if not zoom or type(zoom) != zingest.zoom.Zoom:
-            raise TypeError("Zoom is missing or the wrong type!")
         self.zoom = zoom
-
+        self.logger.info("Setup complete")
+        self.logger.debug(f"Init rabbitmq connection to {self.rabbit_url} with user {self.rabbit_user}")
 
     def send_rabbit_msg(self, payload, token):
         self.logger.debug("Prepping message")
