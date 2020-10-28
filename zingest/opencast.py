@@ -72,7 +72,7 @@ class Opencast:
         while True:
             try:
                 self.logger.info("Checking backlog")
-                hour_ago = datetime.utcnow() - timedelta(minutes=1)
+                hour_ago = datetime.utcnow() - timedelta(hours=1)
                 rec_list = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED, db.Recording.timestamp <= hour_ago).all()
                 for rec in rec_list:
                     self._process(rec.get_data())
