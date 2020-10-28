@@ -23,10 +23,10 @@ class Zoom:
             raise ValueError("Zoom API key not set")
         if not self.api_secret:
             raise ValueError("Zoom API secrete not set")
-        self.zoom_client = ZoomClient(self.api_key, self.api_secret)
-        self.logger.info("Setup complete")
-        #Ensure this is a datetime, but also that the expirey has already happened
-        self.expirey = datetime.utcnow() - timedelta(seconds=30)
+        self.zoom_client = None
+        self.zoom_client_exp = None
+        self.jwt_token = None
+        self.jwt_token_exp = None
 
     def validate_payload(self, payload):
 
@@ -108,11 +108,10 @@ class Zoom:
         return recording_files
 
     def get_download_token(self):
-        self.jwt_token = ""
-        if datetime.utcnow() + timedelta(seconds=1) > self.expirey:
+        if not self.jwt_token or datetime.utcnow() + timedelta(seconds=1) > self.expirey:
             #Expires after 5 minutes
-            self.expirey = datetime.utcnow() + timedelta(minutes=5)
-            payload = { "iss": self.api_key, "exp": self.expirey }
+            self.jwt_token_exp = datetime.utcnow() + timedelta(minutes=5)
+            payload = {"iss": self.api_key, "exp": self.jwt_token_exp}
             self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS).decode("utf-8")
         return self.jwt_token
 
@@ -121,10 +120,19 @@ class Zoom:
         jwt_header = { "Authorization": f"Bearer { jwt_token }" }
         return jwt_header
 
+    def _get_zoom_client(self):
+        if not self.zoom_client:
+            # zoom client library set this interval, so we
+            self.zoom_client_exp = datetime.utcnow() + timedelta(hours=1)
+            self.zoom_client = ZoomClient(self.api_key, self.api_secret)
+        if datetime.utcnow() + timedelta(seconds=1) > self.zoom_client_exp:
+            self.zoom_client.refresh_token()
+        return self.zoom_client
+
     def list_available_users(self, page):
         #300 is the maximum page size per the docs
         self.logger.debug(f"Fetching 300 users, page { page }")
-        return self.zoom_client.user.list(page_size=300, page_number=page).json()
+        return self._get_zoom_client().user.list(page_size=300, page_number=page).json()
 
     def get_user_name(self, user_id_or_email):
         self.logger.debug(f"Looking up plaintext name for { user_id_or_email }")
@@ -137,7 +145,7 @@ class Zoom:
 
     @functools.lru_cache(maxsize=32)
     def get_user(self, email_or_id):
-        user = self.zoom_client.user.get(id=email_or_id).json()
+        user = self._get_zoom_client().user.get(id=email_or_id).json()
         return user
 
     def get_user_email(self, user_id):
@@ -163,7 +171,7 @@ class Zoom:
             'trash_type': 'meeting_recordings',
             'mc': 'false'
         }
-        recordings_response = self.zoom_client.recording.list(**params)
+        recordings_response = self._get_zoom_client().recording.list(**params)
         recordings = recordings_response.json()
         return recordings
 
@@ -208,7 +216,7 @@ class Zoom:
     def get_recording(self, recording_id):
         #RATELIMIT: 30/80 req/s
         self.logger.debug(f"Getting recording { recording_id }")
-        response = self.zoom_client.recording.get(meeting_id=recording_id)
+        response = self._get_zoom_client().recording.get(meeting_id=recording_id)
         if response.status_code == 200:
             return response.json()
         else:
