@@ -1,18 +1,17 @@
 import pika
 import time
 import json
-from time import sleep
 import zingest.logger
 import logging
 
-class Rabbit():
+
+class Rabbit:
 
     def __init__(self, config, zoom):
         if not zoom or type(zoom) != zingest.zoom.Zoom:
             raise TypeError("Zoom is missing or the wrong type!")
         self.logger = logging.getLogger("rabbit")
         self.logger.setLevel(logging.DEBUG)
-
         self.rabbit_url = config["Rabbit"]["host"]
         self.rabbit_user = config["Rabbit"]["user"]
         self.rabbit_pass = config["Rabbit"]["password"]
@@ -71,8 +70,8 @@ class Rabbit():
             self.logger.debug(f"Message {method_frame.delivery_tag}, running callback")
             callback(method_frame, properties, body)
             rcv_channel.basic_ack(method_frame.delivery_tag)
-        requeued_messages = channel.cancel()
+        requeued_messages = rcv_channel.cancel()
         self.logger.debug('Requeued %i messages' % requeued_messages)
         rcv_channel.close()
         self.logger.debug("Closing rabbit connection")
-        rcv_connection.close()
+        connection.close()

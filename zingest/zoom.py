@@ -1,13 +1,11 @@
 from zoomus import ZoomClient
 import jwt
-import json
-import zingest.logger
 import logging
 import functools
 from zingest.common import BadWebhookData, NoMp4Files
 from zingest import db
-from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+
 
 class Zoom:
 
@@ -30,7 +28,6 @@ class Zoom:
         #Ensure this is a datetime, but also that the expirey has already happened
         self.expirey = datetime.utcnow() - timedelta(seconds=30)
 
-
     def validate_payload(self, payload):
 
         required_payload_fields = [
@@ -42,7 +39,6 @@ class Zoom:
                     raise BadWebhookData(f"Missing required payload field '{field}'. Keys found: {payload.keys()}")
         except Exception as e:
             raise BadWebhookData("Unrecognized payload format. {}".format(e))
-
 
     def validate_object(self, obj):
         required_object_fields = [
@@ -96,7 +92,6 @@ class Zoom:
         except Exception as e:
             raise BadWebhookData("Unrecognized object format. {}".format(e))
 
-
     def parse_recording_files(self, payload):
         recording_files = []
         for file in payload["recording_files"]:
@@ -115,19 +110,16 @@ class Zoom:
     def get_download_token(self):
         self.jwt_token = ""
         if datetime.utcnow() + timedelta(seconds=1) > self.expirey:
-            #Expires after 30 seconds
+            #Expires after 5 minutes
             self.expirey = datetime.utcnow() + timedelta(minutes=5)
-            #self.expirey = datetime(year=2020, month=10, day=1, hour=0, minute=0, second=0, tzinfo=timezone.utc)
             payload = { "iss": self.api_key, "exp": self.expirey }
             self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS).decode("utf-8")
         return self.jwt_token
-
 
     def get_download_header(self):
         jwt_token = self.get_download_token()
         jwt_header = { "Authorization": f"Bearer { jwt_token }" }
         return jwt_header
-
 
     def list_available_users(self, page):
         #300 is the maximum page size per the docs
@@ -175,7 +167,6 @@ class Zoom:
         recordings = recordings_response.json()
         return recordings
 
-
     def get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None):
         #Get the list of recordings from Zoom
         zoom_results = self._get_user_recordings(user_id, from_date, to_date, page_size)
@@ -186,7 +177,6 @@ class Zoom:
         zoom_meetings = zoom_results['meetings']
         self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
         return self._build_renderable_event_list(zoom_meetings)
-
 
     @db.with_session
     def _build_renderable_event_list(dbs, self, zoom_meetings):
@@ -214,7 +204,6 @@ class Zoom:
             renderable.append(item)
         return renderable
 
-
     @functools.lru_cache(maxsize=32)
     def get_recording(self, recording_id):
         #RATELIMIT: 30/80 req/s
@@ -224,7 +213,6 @@ class Zoom:
             return response.json()
         else:
             return self.get_recording(recording_id)
-
 
     def get_renderable_recording(self, recording_id):
         recording = self.get_recording(recording_id)
