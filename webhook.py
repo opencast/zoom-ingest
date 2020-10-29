@@ -37,6 +37,18 @@ try:
         logger.debug("Debug logging enabled")
     MIN_DURATION = int(config["Webhook"]["Min_Duration"])
     logger.debug(f"Minimum duration is {MIN_DURATION}")
+    WEBHOOK_SERIES = config['Webhook']['default_series_id']
+    WEBHOOK_ACL = config['Webhook']['default_acl_id']
+    WEBHOOK_WORKFLOW = config['Webhook']['default_workflow_id']
+    if len(WEBHOOK_ACL) == 0 or len(WEBHOOK_SERIES) == 0 or len(WEBHOOK_WORKFLOW) == 0:
+        WEBHOOK_ENABLE = False
+        logger.info("Webhook is not completely configured and is not functional!")
+    else:
+        WEBHOOK_ENABLE = True
+        logger.info("Webhook is enabled")
+        logger.debug(f"Webhook events will be ingested to series ID '{WEBHOOK_SERIES}'")
+        logger.debug(f"Webhook events will be ingested with ACL ID '{WEBHOOK_ACL}'")
+        logger.debug(f"Webhook events will be ingested with workflow ID '{WEBHOOK_WORKFLOW}'")
 except KeyError as err:
     sys.exit("Key {0} was not found".format(err))
 except ValueError as err:
@@ -121,6 +133,8 @@ def single_recording(recording_id):
         query_string = build_query_string()
         return render_single_recording(recording_id, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
+        if not WEBHOOK_ENABLE:
+            return render_template_string("Webhook disabled!"), 405
         return ingest_single_recording(recording_id)
 
 
@@ -235,8 +249,13 @@ def do_POST():
         token = None
         logger.debug("Token missing, using None")
 
-    #Blank zingest_params since the user doesn't actually see this
-    payload['object']['zingest_params'] = {'is_webhook': True}
+    zingest_params = {
+        'is_webhook': True,
+        'isPartOf': WEBHOOK_SERIES,
+        'acl_id': WEBHOOK_ACL,
+        'workflow_id': WEBHOOK_WORKFLOW
+    }
+    payload['object']['zingest_params'] = zingest_params
     return _queue_recording(payload['object'], token)
 
 ## Actually ingesting the recording (validating things, creating the rabbit message)
