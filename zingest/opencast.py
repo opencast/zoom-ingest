@@ -417,6 +417,9 @@ class Opencast:
                 element_name = f"dcterms:{ name }"
                 element_value = value
             dc['dublincore'][element_name] = element_value
+        if 'dublincore' in dc and not 'dcterms:spatial' in dc['dublincore']:
+            # set Zoom as location
+            dc['dublincore']['dcterms:spatial'] = "Zoom"
         return xmltodict.unparse(dc)
 
     def _prep_eth_dublincore(self, **kwargs):
