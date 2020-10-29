@@ -111,17 +111,17 @@ def do_list_recordings(user_id):
     query_params = get_query_params()
     query_string = build_query_string(query_params)
 
-    from_date = query_params['from'] if query_params['from'] != None else date.today() - timedelta(days = 7)
+    from_date = query_params['from'] if query_params['from'] != None else date.today() - timedelta(days = 30)
     to_date = query_params['to'] if query_params['to'] != None else date.today()
-    week_back = from_date - timedelta(days = 7)
-    week_forward = to_date + timedelta(days = 7)
+    month_back = from_date - timedelta(days = 30)
+    month_forward = to_date + timedelta(days = 30)
 
     renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'])
     user = z.get_user_name(user_id)
 
     for item in renderable:
         item['url'] = f'/recording/{ item["id"] }?{ query_string }'
-    return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, week_back=week_back, week_forward=week_forward)
+    return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward)
 
 ## Handling of a single recording
 
