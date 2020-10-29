@@ -133,8 +133,6 @@ def single_recording(recording_id):
         query_string = build_query_string()
         return render_single_recording(recording_id, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
-        if not WEBHOOK_ENABLE:
-            return render_template_string("Webhook disabled!"), 405
         return ingest_single_recording(recording_id)
 
 
@@ -223,6 +221,9 @@ def do_deletes():
 @app.errorhandler(400)
 def do_POST():
     """Respond to Webhook"""
+    if not WEBHOOK_ENABLE:
+        return render_template_string("Webhook disabled!"), 405
+
     logger.debug("POST recieved")
     content_length = int(request.headers.get('Content-Length'))
     if content_length < 5:
