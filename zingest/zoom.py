@@ -1,10 +1,12 @@
-from zoomus import ZoomClient
-import jwt
-import logging
 import functools
-from zingest.common import BadWebhookData, NoMp4Files
-from zingest import db
+import logging
 from datetime import datetime, timedelta
+
+import jwt
+from zoomus import ZoomClient
+
+from zingest import db
+from zingest.common import BadWebhookData, NoMp4Files
 
 
 class Zoom:
@@ -12,8 +14,7 @@ class Zoom:
     JWT_HEADERS = { "alg": "HS256", "typ": "JWT" }
 
     def __init__(self, config):
-        self.logger = logging.getLogger("zoom")
-        self.logger.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger(__name__)
 
         self.api_key = config['JWT']['Key']
         self.api_secret = config['JWT']['Secret']

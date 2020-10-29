@@ -1,20 +1,20 @@
 import json
-import requests
+import logging
 import os
 import os.path
-from requests.auth import HTTPDigestAuth
-from datetime import datetime, timedelta
-from urllib.error import HTTPError
-from zingest.rabbit import Rabbit
-from zingest.zoom import Zoom
-from zingest import db
 import time
-import logging
-import zingest.logger
-from zingest.common import NoMp4Files
-from pathlib import Path
-import xmltodict
+from datetime import datetime, timedelta
 from math import floor
+from pathlib import Path
+from urllib.error import HTTPError
+
+import requests
+import xmltodict
+from requests.auth import HTTPDigestAuth
+
+import zingest
+from zingest import db
+from zingest.common import NoMp4Files
 
 
 class OpencastException(Exception):
@@ -32,9 +32,7 @@ class Opencast:
         if not zoom or type(zoom) != zingest.zoom.Zoom:
             raise TypeError("Zoom is missing or the wrong type!")
 
-        self.logger = logging.getLogger("opencast")
-        self.logger.setLevel(logging.DEBUG)
-
+        self.logger = logging.getLogger(__name__)
         self.url = config["Opencast"]["Url"]
         self.logger.debug(f"Opencast url is {self.url}")
         self.user = config["Opencast"]["User"]

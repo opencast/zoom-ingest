@@ -1,12 +1,14 @@
 import json
 import logging
 import string
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, \
-    create_engine
-from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from functools import wraps
+
+from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, \
+    create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
 Base = declarative_base()
 
 
@@ -17,7 +19,7 @@ def init(config):
     :param config:
     """
     global engine
-    log = logging.getLogger("db")
+    log = logging.getLogger(__name__)
     db = 'sqlite:///zoom.db'
     if "Database" in config and "database" in config['Database']:
         db = config['Database']['database']

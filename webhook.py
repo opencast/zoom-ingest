@@ -1,40 +1,39 @@
-import json
 import configparser
-import sys
-from urllib.parse import urlencode
-from pprint import pformat
-
-from markupsafe import escape
-from flask import Flask, request, render_template, render_template_string, redirect, url_for
 import logging
+import os.path
+import sys
+import urllib.parse
 from datetime import datetime, date, timedelta
-import zingest.logger
+from urllib.parse import urlencode
+
+from flask import Flask, request, render_template, render_template_string, redirect
+
+import zingest.db
+from logger import init_logger
+from zingest.common import BadWebhookData, NoMp4Files
+from zingest.filter import RegexFilter
+from zingest.opencast import Opencast
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
-from zingest.opencast import Opencast
-from zingest.filter import RegexFilter
-import zingest.db
-import urllib.parse
-import os.path
 
 MIN_DURATION = 0
 
-logger = logging.getLogger("webhook")
+init_logger()
+logger = logging.getLogger(__name__)
 logger.info("Startup")
 
 try:
     config = configparser.ConfigParser()
     if os.path.isfile("etc/zoom-ingest/settings.ini"):
         config.read("etc/zoom-ingest/settings.ini")
+        logger.debug("Configuration read from etc/zoom-ingest/settings.ini")
     else:
         config.read("/etc/zoom-ingest/settings.ini")
+        logger.debug("Configuration read from /etc/zoom-ingest/settings.ini")
 except FileNotFoundError:
     sys.exit("No settings found")
 
 try:
-    if bool(config['logging']['debug']):
-        logger.setLevel(logging.DEBUG)
-        logger.debug("Debug logging enabled")
     MIN_DURATION = int(config["Webhook"]["Min_Duration"])
     logger.debug(f"Minimum duration is {MIN_DURATION}")
     WEBHOOK_SERIES = config['Webhook']['default_series_id']
