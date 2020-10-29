@@ -12,6 +12,7 @@ import zingest.logger
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 from zingest.opencast import Opencast
+from zingest.filter import RegexFilter
 import zingest.db
 import urllib.parse
 import os.path
@@ -45,6 +46,8 @@ zingest.db.init(config)
 z = Zoom(config)
 r = Rabbit(config, z)
 o = Opencast(config, r, z)
+
+f = RegexFilter(config)
 
 app = Flask(__name__)
 
@@ -144,6 +147,7 @@ def ingest_single_recording(recording_id):
     #TODO: Handle upload failure
     recording_json = z.get_recording(recording_id)
     params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not '' == value }
+    params['is_webhook'] = False
     recording_json['zingest_params'] = params
     _queue_recording(recording_json)
     return redirect(f'/recordings/{ user_id }?{ query_string }')
@@ -232,7 +236,7 @@ def do_POST():
         logger.debug("Token missing, using None")
 
     #Blank zingest_params since the user doesn't actually see this
-    payload['object']['zingest_params'] = {}
+    payload['object']['zingest_params'] = {'is_webhook': True}
     return _queue_recording(payload['object'], token)
 
 ## Actually ingesting the recording (validating things, creating the rabbit message)
@@ -250,7 +254,7 @@ def _queue_recording(obj, token=None):
     if obj["duration"] < MIN_DURATION:
         logger.error("Recording is too short")
         return render_template_string("Recording is too short", ""), 400
-    elif not f.matches(obj):
+    elif not f.matches(obj) and obj['zingest_params']['is_webhook']: #Only filter on webhook events
         logger.info(f"Recording {obj['uuid']} does not match the configured filter")
         return render_template_string(f"Recording {obj['uuid']} did not match configured filter(s) and has been dropped"), 200
 
