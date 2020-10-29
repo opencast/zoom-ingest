@@ -40,7 +40,7 @@ try:
     WEBHOOK_SERIES = config['Webhook']['default_series_id']
     WEBHOOK_ACL = config['Webhook']['default_acl_id']
     WEBHOOK_WORKFLOW = config['Webhook']['default_workflow_id']
-    if len(WEBHOOK_ACL) == 0 or len(WEBHOOK_SERIES) == 0 or len(WEBHOOK_WORKFLOW) == 0:
+    if len(WEBHOOK_WORKFLOW) == 0 and not (len(WEBHOOK_SERIES) > 0 or len(WEBHOOK_ACL) > 0):
         WEBHOOK_ENABLE = False
         logger.info("Webhook is not completely configured and is not functional!")
     else:
@@ -237,11 +237,17 @@ def do_POST():
         return render_template_string("Missing payload field in webhook body", ""), 400
 
     payload = body["payload"]
+    obj = None
     try:
         z.validate_payload(payload)
+        obj = payload['object']
+        z.validate_object(obj)
     except BadWebhookData as e:
         logger.error("Payload failed validation")
-        return render_template_string("Payload failed validation", ""), 400
+        return render_template_string("Payload failed validation"), 400
+    except NoMp4Files as e:
+        logger.error("No mp4 files found!")
+        return render_template_string("No mp4 files found!"), 400
 
     if "download_token" in body:
         token = body["download_token"]
@@ -252,12 +258,17 @@ def do_POST():
 
     zingest_params = {
         'is_webhook': True,
-        'isPartOf': WEBHOOK_SERIES,
-        'acl_id': WEBHOOK_ACL,
-        'workflow_id': WEBHOOK_WORKFLOW
+        'workflow_id': WEBHOOK_WORKFLOW,
+        'title': obj['topic']
     }
+    #At startup we've checked that at least one of these is set already
+    if len(WEBHOOK_SERIES) > 0:
+        zingest_params['isPartOf'] = WEBHOOK_SERIES
+    if len(WEBHOOK_ACL) > 0:
+        zingest_params['acl_id'] = WEBHOOK_ACL
+
     payload['object']['zingest_params'] = zingest_params
-    return _queue_recording(payload['object'], token)
+    return _queue_recording(obj, token)
 
 ## Actually ingesting the recording (validating things, creating the rabbit message)
 
