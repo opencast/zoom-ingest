@@ -228,13 +228,13 @@ def do_POST():
     content_length = int(request.headers.get('Content-Length'))
     if content_length < 5:
         logger.error("Content too short")
-        return render_template_string("No data received", ""), 400
+        return render_template_string("No data received"), 400
 
     #Check UTF8 safeness of this
     body = request.get_json(force=True)
     if "payload" not in body:
         logger.error("Payload is missing")
-        return render_template_string("Missing payload field in webhook body", ""), 400
+        return render_template_string("Missing payload field in webhook body"), 400
 
     payload = body["payload"]
     obj = None
@@ -277,14 +277,14 @@ def _queue_recording(obj, token=None):
         z.validate_object(obj)
     except BadWebhookData as e:
         logger.error("Object failed validation")
-        return render_template_string("Object failed validation", ""), 400
+        return render_template_string("Object failed validation"), 400
     except NoMp4Files as e:
         logger.error("No mp4 files found!")
-        return render_template_string("No mp4 files found!", ""), 400
+        return render_template_string("No mp4 files found!"), 400
 
     if obj["duration"] < MIN_DURATION:
         logger.error("Recording is too short")
-        return render_template_string("Recording is too short", ""), 400
+        return render_template_string("Recording is too short"), 400
     elif not f.matches(obj) and obj['zingest_params']['is_webhook']: #Only filter on webhook events
         logger.info(f"Recording {obj['uuid']} does not match the configured filter")
         return render_template_string(f"Recording {obj['uuid']} did not match configured filter(s) and has been dropped"), 200
