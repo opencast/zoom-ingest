@@ -5,7 +5,7 @@ from urllib.parse import urlencode
 from pprint import pformat
 
 from markupsafe import escape
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, render_template_string, redirect, url_for
 import logging
 from datetime import datetime, date, timedelta
 import zingest.logger
@@ -34,10 +34,6 @@ try:
     if bool(config['logging']['debug']):
         logger.setLevel(logging.DEBUG)
         logger.debug("Debug logging enabled")
-    PORT_NUMBER = int(config["Webhook"]["Port"])
-    logger.debug(f"Webhook port is {PORT_NUMBER}")
-    HOST_NAME = config["Webhook"]["Url"]
-    logger.debug(f"Hostname is {HOST_NAME}")
     MIN_DURATION = int(config["Webhook"]["Min_Duration"])
     logger.debug(f"Minimum duration is {MIN_DURATION}")
 except KeyError as err:
@@ -205,7 +201,7 @@ def do_deletes():
 
 ## Webhook support
 
-@app.route('/', methods=['POST'])
+@app.route('/webhook', methods=['POST'])
 @app.errorhandler(400)
 def do_POST():
     """Respond to Webhook"""
@@ -235,6 +231,8 @@ def do_POST():
         token = None
         logger.debug("Token missing, using None")
 
+    #Blank zingest_params since the user doesn't actually see this
+    payload['object']['zingest_params'] = {}
     return _queue_recording(payload['object'], token)
 
 ## Actually ingesting the recording (validating things, creating the rabbit message)
@@ -252,6 +250,9 @@ def _queue_recording(obj, token=None):
     if obj["duration"] < MIN_DURATION:
         logger.error("Recording is too short")
         return render_template_string("Recording is too short", ""), 400
+    elif not f.matches(obj):
+        logger.info(f"Recording {obj['uuid']} does not match the configured filter")
+        return render_template_string(f"Recording {obj['uuid']} did not match configured filter(s) and has been dropped"), 200
 
     logger.debug("Sending rabbit message")
     r.send_rabbit_msg(obj, token)
