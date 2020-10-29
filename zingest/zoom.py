@@ -108,7 +108,7 @@ class Zoom:
         return recording_files
 
     def get_download_token(self):
-        if not self.jwt_token or datetime.utcnow() + timedelta(seconds=1) > self.expirey:
+        if not self.jwt_token or datetime.utcnow() + timedelta(seconds=1) > self.jwt_token_exp:
             #Expires after 5 minutes
             self.jwt_token_exp = datetime.utcnow() + timedelta(minutes=5)
             payload = {"iss": self.api_key, "exp": self.jwt_token_exp}
