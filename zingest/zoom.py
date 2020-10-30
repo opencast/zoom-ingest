@@ -134,6 +134,9 @@ class Zoom:
                 resp = function(**args)
                 if resp.status_code not in accept:
                     self.logger.debug(f"Attempt { counter + 1 } Call to { function } failed with http code { resp.response_code }, retrying { count - counter } more times")
+                elif resp.status_code >=400 and resp.status_code < 500:
+                    self.logger.debug(f"Attempt { counter + 1 } Call to { function } failed with http code { resp.response_code }, *NOT* retrying")
+                    return {}
                 else:
                     return resp.json()
             except Exception as e:
