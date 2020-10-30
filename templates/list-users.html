@@ -14,7 +14,7 @@
     </tr>
     {% for user in users %}
     <tr>
-      <td>{{ user.first_name }} {{ user.last_name }}</td>
+      <td>{{ user.last_name }}, {{ user.first_name }}</td>
       <td>{{ user.email }}</td>
       <td><a href="/recordings/{{ user.email }}">List</a></td>
     </tr>

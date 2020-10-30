@@ -138,7 +138,7 @@ class Zoom:
     def get_user_name(self, user_id_or_email):
         self.logger.debug(f"Looking up plaintext name for { user_id_or_email }")
         user = self.get_user(user_id_or_email)
-        return f"{ user['first_name'] } { user['last_name'] }"
+        return f"{ user['last_name'] }, { user['first_name'] }"
 
     def get_recording_creator(self, payload):
         return payload['host_id']
