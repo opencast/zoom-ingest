@@ -385,7 +385,7 @@ class Opencast:
             if name.startswith("origin") or name.startswith('eth'):
                 continue
             if name in ("contributor", "presenter", "creator", "subjects"): #, "publisher"):
-                element = {'id': name , 'value': self._ensure_list(value.split(',')) }
+                element = {'id': name , 'value': self._ensure_list(value.split(';')) }
             elif name in ("publisher"):
                 element = {'id': name , 'value': self._ensure_list(value) }
             elif name == "date":
@@ -403,7 +403,7 @@ class Opencast:
                 continue
             if name in ("publisher", "contributor", "presenter", "creator", "subjects"):
                 element_name = f"dcterms:{ name }"
-                element_value = self._ensure_list(value.split(','))
+                element_value = self._ensure_list(value.split(';'))
             elif name == "date":
                 element_name = f"dcterms:startDate"
                 element_value = value
