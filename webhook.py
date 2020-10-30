@@ -258,7 +258,10 @@ def do_POST():
     zingest_params = {
         'is_webhook': True,
         'workflow_id': WEBHOOK_WORKFLOW,
-        'title': obj['topic']
+        'title': obj['topic'],
+        'creator': z.get_user_name(obj['host_id']),
+        'date': obj['start_time'],
+        'duration': obj['duration']
     }
     #At startup we've checked that at least one of these is set already
     if len(WEBHOOK_SERIES) > 0:
