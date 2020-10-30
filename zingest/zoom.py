@@ -116,11 +116,6 @@ class Zoom:
             self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS).decode("utf-8")
         return self.jwt_token
 
-    def get_download_header(self):
-        jwt_token = self.get_download_token()
-        jwt_header = { "Authorization": f"Bearer { jwt_token }" }
-        return jwt_header
-
     def _get_zoom_client(self):
         #Note: There is a ZoomClient.refresh_tokens(), but this appears to be *broken* somehow.  Creating a new client works though...
         if not self.zoom_client or datetime.utcnow() + timedelta(seconds=1) > self.zoom_client_exp:
