@@ -119,20 +119,21 @@ def do_list_recordings(user_id):
     user = z.get_user_name(user_id)
 
     for item in renderable:
-        item['url'] = f'/recording/{ item["id"] }?{ query_string }'
+        item['url'] = f'/recording/{ urllib.parse.quote_plus(item["id"]) }?{ query_string }'
     return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward)
 
 ## Handling of a single recording
 
 @app.route('/recording/<recording_id>', methods=['GET', 'POST'])
 def single_recording(recording_id):
+    decoded = urllib.parse.unquote_plus(recording_id)
     if request.method == "GET":
         series_id = request.args.get("sid", None)
         acl_id = request.args.get("acl", None)
         query_string = build_query_string()
-        return render_single_recording(recording_id, series_id = series_id, query_string = query_string)
+        return render_single_recording(decoded, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
-        return ingest_single_recording(recording_id)
+        return ingest_single_recording(decoded)
 
 
 def render_single_recording(recording_id, series_id = None, acl_id = None, workflow_id = None, query_string=None):
