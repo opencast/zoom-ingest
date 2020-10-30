@@ -25,7 +25,14 @@ class Opencast:
 
     IN_PROGRESS_ROOT = "in-progress"
     HEADERS = {'X-Requested-Auth': 'Digest'}
-    RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen_with_gallery_view','shared_screen' ,'active_speaker' ]
+    """
+    Available recording file types are:
+      - shared_screen_with_speaker_view
+      - shared_screen_with_gallery_view
+      - shared_screen
+      - active_speaker
+    """
+    RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen' ,'active_speaker' ]
 
     def __init__(self, config, rabbit, zoom):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
