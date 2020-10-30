@@ -19,7 +19,7 @@ class Zoom:
         self.api_key = config['JWT']['Key']
         self.api_secret = config['JWT']['Secret']
         if self.api_key:
-            self.logger.debug(f"Init with  Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
+            self.logger.debug(f"Init with Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
         else:
             raise ValueError("Zoom API key not set")
         if not self.api_secret:
@@ -122,12 +122,12 @@ class Zoom:
         return jwt_header
 
     def _get_zoom_client(self):
-        if not self.zoom_client:
+        #Note: There is a ZoomClient.refresh_tokens(), but this appears to be *broken* somehow.  Creating a new client works though...
+        if not self.zoom_client or datetime.utcnow() + timedelta(seconds=1) > self.zoom_client_exp:
+            self.logger.debug("Creating new zoom client")
             # zoom client library set this interval, so we
             self.zoom_client_exp = datetime.utcnow() + timedelta(hours=1)
             self.zoom_client = ZoomClient(self.api_key, self.api_secret)
-        if datetime.utcnow() + timedelta(seconds=1) > self.zoom_client_exp:
-            self.zoom_client.refresh_token()
         return self.zoom_client
 
     def list_available_users(self, page):
