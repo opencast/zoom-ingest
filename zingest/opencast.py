@@ -25,7 +25,14 @@ class Opencast:
 
     IN_PROGRESS_ROOT = "in-progress"
     HEADERS = {'X-Requested-Auth': 'Digest'}
-    RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen_with_gallery_view','shared_screen' ,'active_speaker' ]
+    """
+    Available recording file types are:
+      - shared_screen_with_speaker_view
+      - shared_screen_with_gallery_view
+      - shared_screen
+      - active_speaker
+    """
+    RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen' ,'active_speaker' ]
 
     def __init__(self, config, rabbit, zoom):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
@@ -417,6 +424,9 @@ class Opencast:
                 element_name = f"dcterms:{ name }"
                 element_value = value
             dc['dublincore'][element_name] = element_value
+        if 'dublincore' in dc and not 'dcterms:spatial' in dc['dublincore']:
+            # set Zoom as location
+            dc['dublincore']['dcterms:spatial'] = "Zoom"
         return xmltodict.unparse(dc)
 
     def _prep_eth_dublincore(self, **kwargs):
