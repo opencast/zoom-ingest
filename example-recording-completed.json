@@ -1,66 +1,47 @@
 {
-  "event": "recording.completed",
-  "download_token": "my_fake_token",
-  "payload": {
-    "account_id": "lAAAAAAAAAAAAA",
-    "object": {
-      "uuid": "dj12vck6sdTn6yy7qdy3dQg==",
-      "id": 150000008,
-      "host_id": "uLobbbbbbbbbb_qQsQ",
-      "topic": "A test meeting",
-      "type": 2,
-      "start_time": "2019-07-11T20:00:00Z",
-      "duration": 1,
-      "timezone": "America/Los_Angeles",
-      "host_email": "somemeail@someemailservice.fjdjf",
-      "total_size": 529758,
-      "recording_count": 4,
-      "share_url": "https://zoom.us/recording/share/aaaaaannnnnldglrkgmrmhh",
-      "recording_files": [
-        {
-          "id": "8f88599d-19ca-4d2b-a965-1196e777cb3c",
-          "meeting_id": "bpKUheqtRLifLBcIYVJLZw==",
-          "recording_start": "2019-07-23T22:14:57Z",
-          "recording_end": "2019-07-23T22:15:41Z",
-          "file_type": "MP4",
-          "file_size": 282825,
-          "play_url": "https://zoom.us/recording/play/80ebRwsfjskf2H3vlSigX0gNlBBBBBBBBBBBBBB",
-          "download_url": "https://zoom.us/recording/download/80ebRwsfjskf2H3vlSigX0gNlBBBBBBBBBBBBBB",
-          "status": "completed",
-          "recording_type": "shared_screen_with_speaker_view"
-        },
-        {
-          "id": "a6b332f9-2246-49e5-913e-588adc7f0f5f",
-          "meeting_id": "bpKUheqtRLifLBcIYVJLZw==",
-          "recording_start": "2019-07-23T22:14:57Z",
-          "recording_end": "2019-07-23T22:15:41Z",
-          "file_type": "M4A",
-          "file_size": 246560,
-          "play_url": "https://zoom.us/recording/play/Oaevut8LSACCCCCCCCnnnnnnnnbbbb",
-          "download_url": "https://zoom.us/recording/download/Oaevut8LSACCCCCCCCnnnnnnnnbbbb",
-          "status": "completed",
-          "recording_type": "audio_only"
-        },
-        {
-          "meeting_id": "bpKUheqtRLifLBcIYVJLZw==",
-          "recording_start": "2019-07-23T22:14:57Z",
-          "recording_end": "2019-07-23T22:15:41Z",
-          "file_type": "TIMELINE",
-          "download_url": "https://zoom.us/recording/download/2dBBBBBccccDDDDeeee"
-        },
-        {
-          "id": "97a4f7ca-e7e8-4e3b-b28a-27b42cd33c09",
-          "meeting_id": "bpKUheqtRLifLBcIYVJLZw==",
-          "recording_start": "2019-07-23T22:14:57Z",
-          "recording_end": "2019-07-23T22:15:41Z",
-          "file_type": "TRANSCRIPT",
-          "file_size": 373,
-          "play_url": "https://zoom.us/recording/play/7h0BBBBBBBchfhfhffh_0AAAAbbbbbeeSFcf209m",
-          "download_url": "https://zoom.us/recording/play/7h0BBBBBBBchfhfhffh_0AAAAbbbbbeeSFcf209m",
-          "status": "completed",
-          "recording_type": "audio_transcript"
-        }
-      ]
-    }
-  }
+   "payload" : {
+      "account_id" : "lAAAAAAAAAAAAA",
+      "object" : {
+         "share_url" : "https://us02web.zoom.us/rec/share/YLWpOxL0bBgoQhVwk1lbY4F6LWlg0SQSzL-H7QeB55QiJ5ASJJCfmS6BA8IstKge.B1pYR6iVQeJnj6q_",
+         "topic" : "Greg Logan's Zoom Meeting",
+         "id" : 88403473300,
+         "host_id" : "2rckNdRpQ-qyGSspp66ByQ",
+         "account_id" : "ceSnBBwNTmG-6bGoJ7e7Ug",
+         "type" : 1,
+         "total_size" : 5024900,
+         "recording_files" : [
+            {
+               "id" : "1dd24ca9-5f02-483c-94d7-c23f52845df9",
+               "play_url" : "https://us02web.zoom.us/rec/play/WVzHeBbDW7SBxPZaqRo6dekeSL97l-6THpc3mOsCPH3T3_qWRePs6pHJHpqFWKQVD8_PfYoZ7FkabBN3.9grtuWpTw4JHqVwQ",
+               "recording_start" : "2020-09-24T20:58:24Z",
+               "file_size" : 844852,
+               "file_type" : "M4A",
+               "recording_type" : "audio_only",
+               "meeting_id" : "lT5wG9ZIT5qI2WNrj+h4MA==",
+               "recording_end" : "2020-09-24T21:00:28Z",
+               "status" : "completed",
+               "download_url" : "https://us02web.zoom.us/rec/download/WVzHeBbDW7SBxPZaqRo6dekeSL97l-6THpc3mOsCPH3T3_qWRePs6pHJHpqFWKQVD8_PfYoZ7FkabBN3.9grtuWpTw4JHqVwQ"
+            },
+            {
+               "id" : "80a30ef9-69f0-4ba9-97df-6e0f32a556f0",
+               "recording_start" : "2020-09-24T20:58:24Z",
+               "file_size" : 4180048,
+               "play_url" : "https://us02web.zoom.us/rec/play/2CHzo1rj1oP5vZc4iEi3X80NxduHVfeV-zWSAjHo5-xxskMLbhIgCZjK1-HCG64Ic9TfBhkHq1I-Ko5A.Fa5xWkpG8XNXr2F9",
+               "recording_end" : "2020-09-24T21:00:28Z",
+               "file_type" : "MP4",
+               "meeting_id" : "lT5wG9ZIT5qI2WNrj+h4MA==",
+               "recording_type" : "shared_screen_with_speaker_view",
+               "status" : "completed",
+               "download_url" : "https://us02web.zoom.us/rec/download/2CHzo1rj1oP5vZc4iEi3X80NxduHVfeV-zWSAjHo5-xxskMLbhIgCZjK1-HCG64Ic9TfBhkHq1I-Ko5A.Fa5xWkpG8XNXr2F9"
+            }
+         ],
+         "recording_count" : 2,
+         "timezone" : "",
+         "duration" : 2,
+         "start_time" : "2020-09-24T20:57:12Z",
+         "uuid" : "lT5wG9ZIT5qI2WNrj+h4MA=="
+      }
+   },
+   "event" : "recording.completed",
+   "download_token" : "my_fake_token"
 }
