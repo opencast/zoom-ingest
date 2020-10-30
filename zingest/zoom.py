@@ -1,6 +1,7 @@
 import functools
 import logging
 from datetime import datetime, timedelta
+import time
 
 import jwt
 from zoomus import ZoomClient
@@ -125,10 +126,30 @@ class Zoom:
             self.zoom_client = ZoomClient(self.api_key, self.api_secret)
         return self.zoom_client
 
+    def _make_zoom_request(self, function, args, count=5, accept=[200]):
+        self.logger.debug(f"Making zoom call to { function } with { args }")
+        counter = 0
+        while counter < count:
+            try:
+                resp = function(**args)
+                if resp.status_code not in accept:
+                    self.logger.debug(f"Attempt { counter + 1 } Call to { function } failed with http code { resp.response_code }, retrying { count - counter } more times")
+                else:
+                    return resp.json()
+            except Exception as e:
+                self.logger.exception(f"Attempt { counter + 1 } Call to { function } threw this exception, retrying { count - counter } more times")
+            finally:
+                counter += 1
+                time.sleep(counter * 2)
+        self.logger.error(f"Giving up calling { function }, failed 5 times")
+        return {}
+
     def list_available_users(self, page):
         #300 is the maximum page size per the docs
         self.logger.debug(f"Fetching 300 users, page { page }")
-        return self._get_zoom_client().user.list(page_size=300, page_number=page).json()
+        fn = self._get_zoom_client().user.list
+        args = {'page_size': 300, 'page_number': page}
+        return self._make_zoom_request(fn, args)
 
     def get_user_name(self, user_id_or_email):
         self.logger.debug(f"Looking up plaintext name for { user_id_or_email }")
@@ -141,8 +162,9 @@ class Zoom:
 
     @functools.lru_cache(maxsize=32)
     def get_user(self, email_or_id):
-        user = self._get_zoom_client().user.get(id=email_or_id).json()
-        return user
+        fn = self._get_zoom_client().user.get
+        args = {'id': email_or_id}
+        return self._make_zoom_request(fn, args)
 
     def get_user_email(self, user_id):
         self.logger.debug(f"Looking up email for { user_id }")
@@ -167,9 +189,8 @@ class Zoom:
             'trash_type': 'meeting_recordings',
             'mc': 'false'
         }
-        recordings_response = self._get_zoom_client().recording.list(**params)
-        recordings = recordings_response.json()
-        return recordings
+        fn = self._get_zoom_client().recording.list
+        return self._make_zoom_request(fn, params)
 
     def get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None):
         #Get the list of recordings from Zoom
@@ -212,11 +233,9 @@ class Zoom:
     def get_recording(self, recording_id):
         #RATELIMIT: 30/80 req/s
         self.logger.debug(f"Getting recording { recording_id }")
-        response = self._get_zoom_client().recording.get(meeting_id=recording_id)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return self.get_recording(recording_id)
+        fn = self._get_zoom_client().recording.get
+        args = { 'meeting_id': recording_id }
+        return self._make_zoom_request(fn, args)
 
     def get_renderable_recording(self, recording_id):
         recording = self.get_recording(recording_id)
