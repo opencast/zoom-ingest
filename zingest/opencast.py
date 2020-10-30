@@ -454,13 +454,6 @@ class Opencast:
             self.logger.error(f"Attempting to ingest { rec_id } with no workflow id!")
             raise Exception("Workflow ID is missing!")
 
-        series_id = None
-        if "isPartOf" in kwargs:
-            series_id = kwargs['isPartOf']
-            series_dc = self._do_get(f'{ self.url }/series/{ series_id }.xml').text
-            eth_series_dc = self._do_get(f'{ self.url }/series/{ series_id }/elements/ethterms').text
-            series_acl = self._do_get(f'{ self.url }/series/{ series_id }/acl.xml').text
-
         selected_acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
         ep_dc = self._prep_dublincore(**kwargs)
         eth_dc = self._prep_eth_dublincore(**kwargs)
@@ -479,20 +472,6 @@ class Opencast:
             if eth_dc:
                 self.logger.debug(f"Ingesting episode ethterms for { rec_id }")
                 mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/episode', 'mediaPackage': mp, 'dublinCore': eth_dc}).text
-            if series_id:
-                if series_acl:
-                    self.logger.debug(f"Ingesting series security settings for { rec_id }")
-                    mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+series', 'mediaPackage': mp}, files={ "BODY": series_acl }).text
-                else:
-                    self.logger.warn(f"Series ACL not found for series ID { series_id }")
-                if series_dc:
-                    self.logger.debug(f"Ingesting series dublin core settings for { rec_id }")
-                    mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/series', 'mediaPackage': mp, 'dublinCore': series_dc}).text
-                else:
-                    self.logger.warn(f"Series Dublincore catalog not found for series ID {series_id}")
-                if eth_series_dc:
-                    self.logger.debug(f"Ingesting series ethterms for { rec_id }")
-                    mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/series', 'mediaPackage': mp, 'dublinCore': eth_series_dc}).text
             self.logger.info(f"Ingesting zoom video for { rec_id }")
             mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": fobj }).text
             self.logger.info(f"Triggering processing for { rec_id }")
