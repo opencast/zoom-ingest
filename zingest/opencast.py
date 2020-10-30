@@ -11,7 +11,7 @@ from zingest import db
 import time
 import logging
 import zingest.logger
-from zingest.common import NoMp4Files
+from zingest.common import NoMp4Files, BadWebhookData
 from pathlib import Path
 import xmltodict
 from math import floor
@@ -25,6 +25,7 @@ class Opencast:
 
     IN_PROGRESS_ROOT = "in-progress"
     HEADERS = {'X-Requested-Auth': 'Digest'}
+    RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen_with_gallery_view','shared_screen' ,'active_speaker' ]
 
     def __init__(self, config, rabbit, zoom):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
@@ -182,6 +183,22 @@ class Opencast:
 
         dl_url = ''
         recording_id = ''
+        recording_file = None
+        for preference in self.RECORDING_TYPE_PREFERENCE:
+            self.logger.debug(f"Checking if recording contains a file of type {preference}")
+            for candidate in files:
+                if preference == candidate['recording_type']:
+                    recording_file = candidate
+                    break
+            if recording_file:
+                self.logger.debug(f"Recording contains a file of type {preference}!")
+                #We've found one, quit
+                break
+
+        #If we've somehow cycled through all the candidates and nothing matches, fail
+        if not recording_file:
+            raise BadWebhookData("No acceptable filetype found!")
+
         for key in files[0].keys():
             if key == "download_url":
                 dl_url = files[0][key]
