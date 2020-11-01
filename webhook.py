@@ -124,9 +124,10 @@ def do_list_recordings(user_id):
 
 ## Handling of a single recording
 
-@app.route('/recording/<recording_id>', methods=['GET', 'POST'])
+@app.route('/recording/<path:recording_id>', methods=['GET', 'POST'])
 def single_recording(recording_id):
     decoded = urllib.parse.unquote_plus(recording_id)
+    logger.debug(f'GETting recording with ID { decoded }')
     if request.method == "GET":
         series_id = request.args.get("sid", None)
         acl_id = request.args.get("acl", None)
