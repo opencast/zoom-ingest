@@ -16,10 +16,10 @@
     {% for recording in recordings %}
     <tr>
       <td>{{ recording.date }}</td>
-      <td><a href="{{ recording.url }}">{{ recording.title }}</td>
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}">{{ recording.title }}</a></td>
       <td>{{ recording.status }}</td>
       {% if recording.status != "finished" %}
-      <td><a href="{{ recording.url }}">Select</a></td>
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}">Select</a></td>
       {% endif %}
     </tr>
     {% endfor %}
