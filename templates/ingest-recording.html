@@ -61,7 +61,7 @@
             <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
-          <a href="../series?epid={{ recording.urlencoded }}&oem={{ recording.email }}&oqs={{ query_string }}">Create New Series</a>
+          <a href="../series?epid={{ recording.id | urlencode }}&oem={{ recording.email }}&oqs={{ query_string }}">Create New Series</a>
         </td>
       </tr>
       <tr>

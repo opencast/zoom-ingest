@@ -119,27 +119,25 @@ def do_list_recordings(user_id):
     user = z.get_user_name(user_id)
 
     for item in renderable:
-        item['url'] = f'/recording/{ urllib.parse.quote_plus(item["id"]) }?{ query_string }'
+        item['url'] = f'/recording/{ urllib.parse.quote(item["id"], safe="") }?{ query_string }'
     return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward)
 
 ## Handling of a single recording
 
 @app.route('/recording/<path:recording_id>', methods=['GET', 'POST'])
 def single_recording(recording_id):
-    decoded = urllib.parse.unquote_plus(recording_id)
-    logger.debug(f'GETting recording with ID { decoded }')
+    logger.debug(f'GETting recording with ID { recording_id }')
     if request.method == "GET":
         series_id = request.args.get("sid", None)
         acl_id = request.args.get("acl", None)
         query_string = build_query_string()
-        return render_single_recording(decoded, series_id = series_id, query_string = query_string)
+        return render_single_recording(recording_id, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
-        return ingest_single_recording(decoded)
+        return ingest_single_recording(recording_id)
 
 
 def render_single_recording(recording_id, series_id = None, acl_id = None, workflow_id = None, query_string=None):
     renderable = z.get_renderable_recording(recording_id)
-    renderable['urlencoded'] = urllib.parse.quote_plus(recording_id)
     series = None
     if series_id:
         #The template partially supports autofilling most of the variables based on the series
