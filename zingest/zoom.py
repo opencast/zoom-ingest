@@ -235,10 +235,19 @@ class Zoom:
 
     @functools.lru_cache(maxsize=32)
     def get_recording(self, recording_id):
+        if not recording_id:
+            raise ValueError('Recording ID not set or is empty.')
         #RATELIMIT: 30/80 req/s
         self.logger.debug(f"Getting recording { recording_id }")
         fn = self._get_zoom_client().recording.get
-        args = { 'meeting_id': recording_id }
+        # If recording_id starts with / or contains //, we must **double encode** the recording_id
+        # before making an API request.
+        # See https://marketplace.zoom.us/docs/api-reference/zoom-api/cloud-recording/recordingget
+        if recording_id.startswith('/') or '//' in recording_id:
+            import urllib
+            args = { 'meeting_id': urllib.parse.quote(urllib.parse.quote(recording_id, safe=''), safe='') }
+        else:
+            args = { 'meeting_id': recording_id }
         return self._make_zoom_request(fn, args)
 
     def get_renderable_recording(self, recording_id):
