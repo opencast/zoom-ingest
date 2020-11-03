@@ -128,22 +128,28 @@ class Zoom:
         return self.zoom_client
 
     def _make_zoom_request(self, function, args, count=5, accept=[200]):
-        self.logger.debug(f"Making zoom call to { function } with { args }")
+        self.logger.debug(f"Making zoom call to { function.__qualname__ } with { args }")
         counter = 0
         while counter < count:
             try:
                 resp = function(**args)
                 if resp.status_code not in accept:
-                    self.logger.debug(f"Attempt { counter + 1 } Call to { function } failed with http code { resp.response_code }, retrying { count - counter } more times")
+                    self.logger.debug(
+                        f"Attempt { counter + 1 } Call to { function.__qualname__ } failed with "
+                        f"http code { resp.status_code }, retrying { count - counter } more times")
                     counter += 1
                     time.sleep(counter * 2)
-                elif resp.status_code >=400 and resp.status_code < 500:
-                    self.logger.debug(f"Attempt { counter + 1 } Call to { function } failed with http code { resp.response_code }, *NOT* retrying")
+                elif 400 <= resp.status_code < 500:
+                    self.logger.debug(
+                        f"Attempt { counter + 1 } Call to { function.__qualname__ } failed with "
+                        f"http code { resp.status_code }, *NOT* retrying")
                     return {}
                 else:
                     return resp.json()
             except Exception as e:
-                self.logger.exception(f"Attempt { counter + 1 } Call to { function } threw this exception, retrying { count - counter } more times")
+                self.logger.exception(
+                    f"Attempt { counter + 1 } Call to { function.__qualname__ } threw this exception, "
+                    f"retrying { count - counter } more times")
                 counter += 1
                 time.sleep(counter * 2)
         self.logger.error(f"Giving up calling { function }, failed 5 times")
