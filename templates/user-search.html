@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Zoom user</title>
+</head>
+<body>
+  <h1>Search Zoom User</h1>
+  <form action="/user/search" method="get">
+    <fieldset>
+      <label for="q">
+        User name or Email:
+        <input type="search" id="q" placeholder="Zoom user fist name, last name or email" value="{{ q | default('') }}">
+      </label>
+      <div>{{ error_msg }}</div>
+      <input type="hidden" id="next_page_token" value="{{ next_page_token | default(None) }}">
+      <input type="hidden" id="num" value="{{ num | default(25) }}">
+    </fieldset>
+    <input type="submit" value="Search">
+  </form>
+  {% if next_page_token %}
+  <a href="/user/search?q={{ q | default('') }}&next_page_token={{ next_page_token }}&num={{ num | default(25) }}">Show more results</a>
+  {% endif %}
+
+  {% if users %}
+  <table style="width:100%">
+    <tr>
+      <th style="text-align:left">Name</td>
+      <th style="text-align:left">Eamil</td>
+      <th style="text-align:left">Recordings</td>
+    </tr>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.last_name }}, {{ user.first_name }}</td>
+      <td>{{ user.email }}</td>
+      <td><a href="/recordings/{{ user.id }}">List</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <hr/>
+  <a href="/">Full user list</a> |
+  <a href="/cancel">Cancellable ingests</a>
+</body>
+</html>

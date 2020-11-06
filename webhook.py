@@ -120,6 +120,37 @@ def do_list_recordings(user_id):
 
     return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward)
 
+# Query Zoom user
+
+@app.route('/user/search', methods=['GET'])
+def do_search_user(q, next_page_token=None, num=25):
+    if not q:
+        return render_template("user-search.html")
+    if num:
+        try:
+            page_size = min(1, int(num))
+            if page_size > 25:
+                logger.debug(f'Zoom allow to query maximum 25 contacts per page but the value is { page_size }')
+                page_size = 25
+        except ValueError:
+            logger.debug(f'User search request param num should be an integer but is { num }')
+            page_size = 25
+    try:
+        response = z.search_user(search_key=q, page_size=page_size, next_page_token=next_page_token)
+        if response and 'contacts' in response:
+            token = response.get('next_page_token', None)
+            users = [{
+                'id': item.get('id'),
+                'email': item.get('email'),
+                'first_name': item.get('first_name'),
+                'last_name': item.get('first_name'),
+            } for item in response.get('contacts')]
+
+        return render_template("user-search.html", q=q, next_page_token=token, num=num, users=users)
+    except:
+        return render_template("user-search.html", error_msg=f'Failed to query user { q }', q=q)
+
+
 ## Handling of a single recording
 
 @app.route('/recording/<path:recording_id>', methods=['GET', 'POST'])
