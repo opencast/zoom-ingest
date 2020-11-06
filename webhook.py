@@ -123,7 +123,14 @@ def do_list_recordings(user_id):
 # Query Zoom user
 
 @app.route('/user/search', methods=['GET'])
-def do_search_user(q, next_page_token=None, num=25):
+def do_user_search():
+    q = request.args.get('q', None)
+    next_page_token = request.args.get('next_page_token', None)
+    num = request.args.get('num', 25)
+    return render_user_search(q=q, next_page_token=next_page_token, num=num)
+
+
+def render_user_search(q=None, next_page_token=None, num=25):
     if not q:
         return render_template("user-search.html")
     if num:
