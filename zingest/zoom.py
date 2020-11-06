@@ -251,7 +251,7 @@ class Zoom:
         # before making an API request.
         # See https://marketplace.zoom.us/docs/api-reference/zoom-api/cloud-recording/recordingget
         if recording_id.startswith('/') or '//' in recording_id:
-            args = { 'meeting_id': quote(urllib.parse.quote(recording_id, safe=''), safe='') }
+            args = { 'meeting_id': quote(quote(recording_id, safe=''), safe='') }
         else:
             args = { 'meeting_id': recording_id }
         return self._make_zoom_request(fn, args)
