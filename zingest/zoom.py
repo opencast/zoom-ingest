@@ -261,7 +261,7 @@ class Zoom:
         #We pass in a list of one, so we know that the returned list is of size 1
         return self._build_renderable_event_list([ recording ])[0]
 
-    @functools.lru_cache(maxsize=32)
+    # Do not cache result as the next_page_token expire after 15 minutes
     def search_user(self, search_key, page_size=25, next_page_token=None):
         # TODO: use zoom client implementation
         #       see https://github.com/prschmid/zoomus/pull/146
