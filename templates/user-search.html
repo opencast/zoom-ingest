@@ -7,21 +7,21 @@
 <body>
   <h1>Search Zoom User</h1>
   <form action="/user/search" method="get">
-    <fieldset>
-      <label for="q">
-        User name or Email:
-        <input type="search" id="q" placeholder="Zoom user fist name, last name or email" value="{{ q | default('') }}">
-      </label>
-      <div>{{ error_msg }}</div>
-      <input type="hidden" id="next_page_token" value="{{ next_page_token | default(None) }}">
-      <input type="hidden" id="num" value="{{ num | default(25) }}">
-    </fieldset>
+    <label for="q">
+      User name or email:
+      <input type="search" id="q" name="q" placeholder="Zoom user fist name, last name or email" value="{{ q | default('') }}" style="width:30%">
+    </label>
     <input type="submit" value="Search">
+    <div>{{ error_msg }}</div>
+    <input type="hidden" id="token" name="token" value="">
   </form>
-  {% if next_page_token %}
-  <a href="/user/search?q={{ q | default('') }}&next_page_token={{ next_page_token }}&num={{ num | default(25) }}">Show more results</a>
+  {% if info_msg %}
+  <div>{{ info_msg }}</div>
   {% endif %}
-
+  <br/>
+  {% if token %}
+  <a href="/user/search?q={{ q | default('') }}&token={{ token | default('') }}">Show more results</a>
+  {% endif %}
   {% if users %}
   <table style="width:100%">
     <tr>

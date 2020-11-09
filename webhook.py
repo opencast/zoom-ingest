@@ -125,36 +125,35 @@ def do_list_recordings(user_id):
 @app.route('/user/search', methods=['GET'])
 def do_user_search():
     q = request.args.get('q', None)
-    next_page_token = request.args.get('next_page_token', None)
-    num = request.args.get('num', 25)
-    return render_user_search(q=q, next_page_token=next_page_token, num=num)
+    token = request.args.get('token', '')
+    return render_user_search(q=q, token=token)
 
 
-def render_user_search(q=None, next_page_token=None, num=25):
+def render_user_search(q=None, token=''):
     if not q:
         return render_template("user-search.html")
-    if num:
-        try:
-            page_size = min(1, int(num))
-            if page_size > 25:
-                logger.debug(f'Zoom allow to query maximum 25 contacts per page but the value is { page_size }')
-                page_size = 25
-        except ValueError:
-            logger.debug(f'User search request param num should be an integer but is { num }')
-            page_size = 25
+    response = None
     try:
-        response = z.search_user(search_key=q, page_size=page_size, next_page_token=next_page_token)
-        if response and 'contacts' in response:
-            token = response.get('next_page_token', None)
+        next_page_token = None
+        if token and len(token) > 0:
+            next_page_token = urllib.parse.unquote(token)
+        response = z.search_user(search_key=q, next_page_token=next_page_token)
+        if response and 'contacts' in response.json():
+            token = response.json().get('next_page_token', None)
+            # double quote token
+            token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
             users = [{
                 'id': item.get('id'),
                 'email': item.get('email'),
                 'first_name': item.get('first_name'),
-                'last_name': item.get('first_name'),
-            } for item in response.get('contacts')]
-
-        return render_template("user-search.html", q=q, next_page_token=token, num=num, users=users)
-    except:
+                'last_name': item.get('last_name'),
+            } for item in response.json().get('contacts')]
+            return render_template("user-search.html", q=q, token=token_quoted, users=users)
+        return render_template("user-search.html", q=q, info_msg='No users found')
+    except Exception as e:
+        logger.debug(f"Zoom contact search response failed: { e }")
+        if response:
+            logger.debug(f"Zoom contact search response is { response }")
         return render_template("user-search.html", error_msg=f'Failed to query user { q }', q=q)
 
 

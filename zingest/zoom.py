@@ -270,6 +270,7 @@ class Zoom:
             'query_presence_status': 'false',
             'page_size': page_size,
         }
-        if next_page_token:
-            params['next_page_token'] = next_page_token;
+        if next_page_token and len(next_page_token) > 0:
+            params['next_page_token'] = next_page_token
+        self.logger.debug(f"Search zoom contacts with params: " + str(params))
         return self._get_zoom_client().get_request("/contacts", params=params)
