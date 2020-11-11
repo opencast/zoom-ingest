@@ -1,6 +1,7 @@
 import functools
 import logging
 from datetime import datetime, timedelta
+from random import random
 from urllib.parse import quote
 import time
 
@@ -127,33 +128,21 @@ class Zoom:
             self.zoom_client = ZoomClient(self.api_key, self.api_secret)
         return self.zoom_client
 
-    def _make_zoom_request(self, function, args, count=5, accept=[200]):
+    def _make_zoom_request(self, function, args, attempts=5):
         self.logger.debug(f"Making zoom call to { function.__qualname__ } with { args }")
-        counter = 0
-        while counter < count:
-            try:
-                resp = function(**args)
-                if resp.status_code not in accept:
-                    self.logger.debug(
-                        f"Attempt { counter + 1 } Call to { function.__qualname__ } failed with "
-                        f"http code { resp.status_code }, retrying { count - counter } more times")
-                    counter += 1
-                    time.sleep(counter * 2)
-                elif 400 <= resp.status_code < 500:
-                    self.logger.debug(
-                        f"Attempt { counter + 1 } Call to { function.__qualname__ } failed with "
-                        f"http code { resp.status_code }, *NOT* retrying")
-                    return {}
-                else:
-                    return resp.json()
-            except Exception as e:
-                self.logger.exception(
-                    f"Attempt { counter + 1 } Call to { function.__qualname__ } threw this exception, "
-                    f"retrying { count - counter } more times")
-                counter += 1
-                time.sleep(counter * 2)
-        self.logger.error(f"Giving up calling { function }, failed 5 times")
-        return {}
+        resp = function(**args)
+        if 400 <= resp.status_code < 500:
+            if resp.status_code == 429:
+                # we hit the Zoom API rate limit,
+                # see https://marketplace.zoom.us/docs/api-reference/rate-limits
+                if attempts > 0:
+                    self.logger.warning(
+                        f"Calling {function.__qualname__} failed due to Zoom API rate limitation. "
+                        f"Retry {attempts} more times.")
+                    time.sleep(random(1, 5))
+                    return self._make_zoom_request(self, function, args, attempts=(attempts - 1))
+            resp.raise_for_status()
+        return resp.json()
 
     def list_available_users(self, page):
         #300 is the maximum page size per the docs
