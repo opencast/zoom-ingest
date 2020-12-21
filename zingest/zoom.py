@@ -249,3 +249,17 @@ class Zoom:
         recording = self.get_recording(recording_id)
         #We pass in a list of one, so we know that the returned list is of size 1
         return self._build_renderable_event_list([ recording ])[0]
+
+    # Do not cache result as the next_page_token expire after 15 minutes
+    def search_user(self, search_key, page_size=25, next_page_token=None):
+        # TODO: use zoom client implementation
+        #       see https://github.com/prschmid/zoomus/pull/146
+        params = {
+            'search_key': search_key,
+            'query_presence_status': 'false',
+            'page_size': page_size,
+        }
+        if next_page_token and len(next_page_token) > 0:
+            params['next_page_token'] = next_page_token
+        self.logger.debug(f"Search zoom contacts with params: " + str(params))
+        return self._get_zoom_client().get_request("/contacts", params=params)

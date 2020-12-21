@@ -120,6 +120,43 @@ def do_list_recordings(user_id):
 
     return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward)
 
+# Query Zoom user
+
+@app.route('/user/search', methods=['GET'])
+def do_user_search():
+    q = request.args.get('q', None)
+    token = request.args.get('token', '')
+    return render_user_search(q=q, token=token)
+
+
+def render_user_search(q=None, token=''):
+    if not q:
+        return render_template("user-search.html")
+    response = None
+    try:
+        next_page_token = None
+        if token and len(token) > 0:
+            next_page_token = urllib.parse.unquote(token)
+        response = z.search_user(search_key=q, next_page_token=next_page_token)
+        if response and 'contacts' in response.json():
+            token = response.json().get('next_page_token', None)
+            # double quote token
+            token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
+            users = [{
+                'id': item.get('id'),
+                'email': item.get('email'),
+                'first_name': item.get('first_name'),
+                'last_name': item.get('last_name'),
+            } for item in response.json().get('contacts')]
+            return render_template("user-search.html", q=q, token=token_quoted, users=users)
+        return render_template("user-search.html", q=q, info_msg='No users found')
+    except Exception as e:
+        logger.debug(f"Zoom contact search response failed: { e }")
+        if response:
+            logger.debug(f"Zoom contact search response is { response }")
+        return render_template("user-search.html", error_msg=f'Failed to query user { q }', q=q)
+
+
 ## Handling of a single recording
 
 @app.route('/recording/<path:recording_id>', methods=['GET', 'POST'])

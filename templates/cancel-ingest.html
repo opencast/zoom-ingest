@@ -14,7 +14,7 @@
     {% for recording in recordings %}
     <tr>
       <td>{{ recording.date }}</td>
-      <td><a href="{{ recording.url }}">{{ recording.title }}</td>
+      <td><a href="{{ recording.url }}">{{ recording.title }}</a></td>
       <td>{{ recording.host }}</td>
       <td>
         <form action="/cancel" method="post">
