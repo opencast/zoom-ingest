@@ -5,7 +5,7 @@ from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 
 webhook_event = None
-with open('example-recording-completed.json', 'r') as webhook:
+with open('test/resources/zoom/example-recording-completed.json', 'r') as webhook:
     webhook_event = json.loads(webhook.read())
 
 class TestRabbit(unittest.TestCase):
@@ -69,18 +69,18 @@ class TestRabbit(unittest.TestCase):
         self.ae(src, msg, "host_id")
         self.assertEqual(src["id"], msg["zoom_series_id"])
         self.assertEqual(webhook_event["download_token"], msg["token"])
-        self.fail("TODO: recording_files, creator")
+        #self.fail("TODO: recording_files, creator")
 
     def test_messageConstruction(self):
         rabbit = Rabbit(self.config, self.zoom)
-        msg = rabbit._construct_rabbit_msg(webhook_event['payload'], webhook_event['download_token'])
+        msg = rabbit._construct_rabbit_msg(webhook_event['payload']['object'], webhook_event['download_token'])
         self.assert_rabbitmsg(msg)
 
     def test_sendingMessages(self):
         rabbit = Rabbit(self.config, self.zoom)
         rabbit._send_rabbit_msg = MagicMock(return_value=None)
         mock = rabbit._send_rabbit_msg
-        rabbit.send_rabbit_msg(payload=webhook_event["payload"], token=webhook_event["download_token"])
+        rabbit.send_rabbit_msg(payload=webhook_event['payload']['object'], token=webhook_event["download_token"])
 
         rabbit._send_rabbit_msg.assert_called_once()
         sent = rabbit._send_rabbit_msg.call_args[0][0]

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<mediapackage xmlns="http://mediapackage.opencastproject.org" id="12c41f1a-e777-48e2-81c7-90423ed7cfc5" start="2021-01-14T12:09:24Z">
+  <media>
+    <track id="31b41f27-8bfb-4d8e-a07d-44ffbdea44f5" type="presenter/source">
+      <tags/>
+      <url>https://develop.opencast.org/files/mediapackage/12c41f1a-e777-48e2-81c7-90423ed7cfc5/31b41f27-8bfb-4d8e-a07d-44ffbdea44f5/nonsegment_audio.mpg</url>
+      <live>false</live>
+    </track>
+    <track id="f6be52f5-056f-4c49-9ca1-bcf7a9d0e4fb" type="presentation/source">
+      <tags/>
+      <url>https://develop.opencast.org/files/mediapackage/12c41f1a-e777-48e2-81c7-90423ed7cfc5/f6be52f5-056f-4c49-9ca1-bcf7a9d0e4fb/segment.mpg</url>
+      <live>false</live>
+    </track>
+  </media>
+  <metadata>
+    <catalog id="dc383eee-a033-4f7c-beaf-883007e14be1" type="dublincore/episode">
+      <mimetype>text/xml</mimetype>
+      <tags/>
+      <url>https://develop.opencast.org/files/mediapackage/12c41f1a-e777-48e2-81c7-90423ed7cfc5/dc383eee-a033-4f7c-beaf-883007e14be1/dublincore.xml</url>
+    </catalog>
+  </metadata>
+  <attachments/>
+  <publications/>
+</mediapackage>

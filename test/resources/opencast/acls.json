@@ -1,0 +1,69 @@
+[
+   {
+      "organizationId" : "mh_default_org",
+      "name" : "authenticated",
+      "id" : 501,
+      "acl" : {
+         "ace" : [
+            {
+               "allow" : true,
+               "action" : "read",
+               "role" : "ROLE_ADMIN"
+            },
+            {
+               "action" : "read",
+               "allow" : true,
+               "role" : "ROLE_USER"
+            },
+            {
+               "action" : "write",
+               "allow" : true,
+               "role" : "ROLE_ADMIN"
+            }
+         ]
+      }
+   },
+   {
+      "id" : 502,
+      "acl" : {
+         "ace" : [
+            {
+               "allow" : true,
+               "action" : "read",
+               "role" : "ROLE_ADMIN"
+            },
+            {
+               "role" : "ROLE_ADMIN",
+               "action" : "write",
+               "allow" : true
+            }
+         ]
+      },
+      "organizationId" : "mh_default_org",
+      "name" : "private"
+   },
+   {
+      "name" : "public",
+      "organizationId" : "mh_default_org",
+      "id" : 503,
+      "acl" : {
+         "ace" : [
+            {
+               "allow" : true,
+               "action" : "read",
+               "role" : "ROLE_ADMIN"
+            },
+            {
+               "role" : "ROLE_ANONYMOUS",
+               "allow" : true,
+               "action" : "read"
+            },
+            {
+               "role" : "ROLE_ADMIN",
+               "action" : "write",
+               "allow" : true
+            }
+         ]
+      }
+   }
+]

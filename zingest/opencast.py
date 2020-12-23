@@ -268,6 +268,12 @@ class Opencast:
                     self.logger.debug("Refreshing Opencast themes")
                     #FIXME: There does not appear to *be* another endpoint to use, but the admin-ng namespace is a very bad idea long term.
                     result = self._do_get(f'{ self.url }/admin-ng/themes/themes.json?limit=100').json()
+                    if 'total' in result and str(result['total']) == 0:
+                        break
+                    #We need the total, count, and result fields.  If the count doesn't match the length of results, or any of the fields are missing
+                    if 'total' not in result or 'results' not in result or ('count' in result and len(result['results']) != result['count']):
+                        self.logger.warn("Bad data from Opencast when loading themes")
+                        raise Exception("Bad data from Opencast")
                     self.themes_updated = datetime.utcnow()
                     self.themes = { theme['id']: theme['name'] for theme in result['results'] }
                     counter = 1
@@ -275,7 +281,6 @@ class Opencast:
                         result = self._do_get(f'{ self.url }/admin-ng/themes/themes.json?limit=100&offset={ counter * 100 + 1}').json()
                         self.themes.update({ theme['id']: theme['name'] for theme in result['results'] })
                         counter += 1
-                    self.logger.debug(f"Found { len(self.themes) } themes")
                     successful = True
                     break
                 except Exception as e:
@@ -284,6 +289,8 @@ class Opencast:
                     time.sleep(attempts * 5)
             if not successful:
                 self.logger.error("Unable to update themes!  UI will still function but theme data is missing!")
+            else:
+                self.logger.info(f"Found { len(self.themes) } themes")
         return self.themes
 
     def get_acls(self):
@@ -297,7 +304,6 @@ class Opencast:
                     results = self._do_get(f'{ self.url }/acl-manager/acl/acls.json').json()
                     self.acls_updated = datetime.utcnow()
                     self.acls = { str(result['id']): { 'name': result['name'], 'acl': result['acl']['ace'] } for result in results }
-                    self.logger.debug(f"Found { len(self.acls) } ACLs")
                     successful = True
                     break
                 except Exception as e:
@@ -306,6 +312,8 @@ class Opencast:
                     time.sleep(attempts * 5)
             if not successful:
                 self.logger.error("Unable to update ACLs!  UI will still function but ACL data is missing!")
+            else:
+                self.logger.info(f"Found { len(self.acls) } ACLs")
         return self.acls
 
     def get_single_acl(self, acl_id):
@@ -325,7 +333,6 @@ class Opencast:
                     results = self._do_get(f'{ self.url }/api/workflow-definitions?filter=tag:upload&filter=tag:schedule').json()
                     self.workflows_updated = datetime.utcnow()
                     self.workflows = { result['identifier']: result['title'] for result in results }
-                    self.logger.debug(f"Found { len(self.workflows) } workflows")
                     successful = True
                     break
                 except Exception as e:
@@ -334,6 +341,8 @@ class Opencast:
                     time.sleep(attempts * 5)
             if not successful:
                 self.logger.error("Unable to update workflows!  UI will still function but workflow data is missing!")
+            else:
+                self.logger.info(f"Found { len(self.workflows) } workflows")
         return self.workflows
 
     def get_series(self):
@@ -346,14 +355,21 @@ class Opencast:
                     #TODO: Handle paging.  I'm going to guess we don't need this for rev1
                     #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
                     response = self._do_get(f'{ self.url }/series/series.json?count=100').json()
+                    if 'totalCount' in response and int(response['totalCount']) == 0:
+                        break
+                    #We need the total, count, and result fields.  If the count doesn't match the length of results, or any of the fields are missing
+                    if 'totalCount' not in response or 'catalogs' not in response:
+                        raise Exception("Bad data from Opencast")
                     results = response['catalogs']
                     self.series_updated = datetime.utcnow()
                     self.series = { result['http://purl.org/dc/terms/']['identifier'][0]['value']: result['http://purl.org/dc/terms/']['title'][0]['value'] for result in results }
+                    self.logger.debug(f"Loaded { len(self.series) } series out of { response['totalCount'] }")
                     counter = 1
                     while len(self.series.keys()) < int(response['totalCount']):
                         response = self._do_get(f'{ self.url }/series/series.json?count=100&startPage={ counter }').json()
                         results = response['catalogs']
                         self.series.update({ result['http://purl.org/dc/terms/']['identifier'][0]['value']: result['http://purl.org/dc/terms/']['title'][0]['value'] for result in results })
+                        self.logger.debug(f"Loaded { len(self.series) } series out of { response['totalCount'] }")
                         counter += 1
                     successful = True
                     break
@@ -363,6 +379,8 @@ class Opencast:
                     time.sleep(attempts * 5)
             if not successful:
                 self.logger.error("Unable to update series!  UI will still function but series data is missing!")
+            else:
+                self.logger.info(f"Found { len(self.series) } series")
         return self.series
 
     def get_single_series(self, series_id):

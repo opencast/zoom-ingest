@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<mediapackage xmlns="http://mediapackage.opencastproject.org" id="b1d7f8d2-91fd-4710-8c63-17e3e14749a9" start="2021-01-16T13:08:37Z">
+  <media/>
+  <metadata>
+    <catalog id="dad3ef32-a75d-481c-a48e-7a0d590c579e" type="dublincore/episode">
+      <mimetype>text/xml</mimetype>
+      <tags/>
+      <url>http://stable.loganite.ca/files/mediapackage/b1d7f8d2-91fd-4710-8c63-17e3e14749a9/dad3ef32-a75d-481c-a48e-7a0d590c579e/dublincore.xml</url>
+    </catalog>
+  </metadata>
+  <attachments>
+    <attachment id="61ecda78-7dd8-4b34-bc8e-a239fd10deb4" type="security/xacml+episode">
+      <tags/>
+      <url>http://stable.loganite.ca/files/mediapackage/b1d7f8d2-91fd-4710-8c63-17e3e14749a9/61ecda78-7dd8-4b34-bc8e-a239fd10deb4/BODY</url>
+      <size>0</size>
+    </attachment>
+  </attachments>
+  <publications/>
+</mediapackage>

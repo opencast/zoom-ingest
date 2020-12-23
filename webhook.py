@@ -321,7 +321,7 @@ def _queue_recording(obj, token=None):
         logger.error("No mp4 files found!")
         return render_template_string("No mp4 files found!"), 400
 
-    if obj["duration"] < MIN_DURATION:
+    if int(obj["duration"]) < MIN_DURATION:
         logger.error("Recording is too short")
         return render_template_string("Recording is too short"), 400
     elif not f.matches(obj) and obj['zingest_params']['is_webhook']: #Only filter on webhook events

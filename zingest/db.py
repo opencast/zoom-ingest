@@ -135,8 +135,14 @@ class Recording(Base):
     def set_mediapackage_id(self, mediapackage_id):
         self.mediapackage_id = mediapackage_id
 
+    def get_mediapackage_id(self):
+        return self.mediapackage_id
+
     def set_workflow_id(self, workflow_id):
         self.workflow_id = workflow_id
+
+    def get_workflow_id(self):
+        return self.workflow_id
 
     def __repr__(self):
         """

@@ -1,0 +1,31 @@
+{
+   "totalCount" : "1",
+   "catalogs" : [
+      {
+         "http://purl.org/dc/terms/" : {
+            "created" : [
+               {
+                  "value" : "2020-12-28T01:04Z",
+                  "type" : "dcterms:W3CDTF"
+               }
+            ],
+            "title" : [
+               {
+                  "lang" : "en",
+                  "value" : "Blender Foundation Productions"
+               }
+            ],
+            "publisher" : [
+               {
+                  "value" : "Blender Foundation"
+               }
+            ],
+            "identifier" : [
+               {
+                  "value" : "ID-blender-foundation"
+               }
+            ]
+         }
+      }
+   ]
+}

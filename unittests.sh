@@ -1,4 +1,5 @@
 #!/bin/bash
 
-
-python3 -m unittest discover test -v
+coverage run --omit=lib/* -m unittest discover test -v
+coverage report
+coverage html

@@ -1,13 +1,14 @@
 import json
 import unittest
 from unittest.mock import MagicMock, patch
-from zingest.zoom import Zoom, BadWebhookData, NoMp4Files
+from zingest.common import BadWebhookData, NoMp4Files
+from zingest.zoom import Zoom
 
 class TestZoom(unittest.TestCase):
 
     def setUp(self):
         self.config={"JWT": {"Key": "test_key", "Secret": "test_secret" }}
-        with open('example-recording-completed.json', 'r') as webhook:
+        with open('test/resources/zoom/example-recording-completed.json', 'r') as webhook:
             self.event = json.loads(webhook.read())['payload']
 
     def tearDown(self):
@@ -32,6 +33,16 @@ class TestZoom(unittest.TestCase):
         with self.assertRaises(KeyError):
           Zoom(self.config)
 
+    def test_badKeyConfig(self):
+        self.config["JWT"]["Key"] = None
+        with self.assertRaises(ValueError):
+          Zoom(self.config)
+
+    def test_badSecretConfig(self):
+        self.config["JWT"]["Secret"] = None
+        with self.assertRaises(ValueError):
+          Zoom(self.config)
+
     def test_goodConfig(self):
         zoom = Zoom(self.config)
         self.assertEqual(self.config["JWT"]["Key"], zoom.api_key)
@@ -41,11 +52,13 @@ class TestZoom(unittest.TestCase):
         zoom = Zoom(self.config)
         with self.assertRaises(BadWebhookData):
             zoom.validate_payload(payload)
+            zoom.validate_object(payload['object'])
 
     def validate_no_mp4(self, payload):
         zoom = Zoom(self.config)
         with self.assertRaises(NoMp4Files):
             zoom.validate_payload(payload)
+            zoom.validate_object(payload['object'])
 
     def test_validate_mising_object(self):
         del self.event['object']
@@ -84,12 +97,13 @@ class TestZoom(unittest.TestCase):
         self.validate_no_mp4(self.event)
 
     def test_validate_no_mp4_files(self):
-        #Take a look at the example file, only the first file is an MP4
+        #Take a look at the example file, only the second file is an MP4
         del self.event['object']['recording_files'][0]
         self.validate_no_mp4(self.event)
 
     def test_validate_missing_file_type(self):
-        del self.event['object']['recording_files'][0]['file_type']
+        #We're removing the filetype from the *non mp4* file since the presence of an mp4 is checked elsewhere
+        del self.event['object']['recording_files'][1]['file_type']
         self.validate_bad_data(self.event)
 
     def test_validate_missing_file_id(self):
@@ -123,6 +137,7 @@ class TestZoom(unittest.TestCase):
     def test_valid_data(self):
         zoom = Zoom(self.config)
         zoom.validate_payload(self.event)
+        zoom.validate_object(self.event['object'])
 
     def test_parse_recordings(self):
         zoom = Zoom(self.config)
@@ -143,7 +158,7 @@ class TestZoom(unittest.TestCase):
         recordings = zoom.parse_recording_files(self.event)
         self.assertEqual(0, len(recordings))
 
-    @unittest.skip("FIXME: This is hardcoded in the zoom lib!")
+    @unittest.skip("FIXME: Zoom library users requests in the backend, we should mock the responses and test zoom.py better")
     def test_parse_recordings(self):
         zoom = Zoom(self.config)
         creator = zoom.get_recording_creator(self.event)

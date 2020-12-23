@@ -26,7 +26,7 @@ class Zoom:
         else:
             raise ValueError("Zoom API key not set")
         if not self.api_secret:
-            raise ValueError("Zoom API secrete not set")
+            raise ValueError("Zoom API secret not set")
         self.zoom_client = None
         self.zoom_client_exp = None
         self.jwt_token = None
@@ -74,20 +74,20 @@ class Zoom:
             self.logger.debug(f"Found {len(files)} potential files")
 
             # make sure there's some mp4 files in here somewhere
-            mp4_files = any(x["file_type"].lower() == "mp4" for x in files)
-            if not mp4_files:
-                raise NoMp4Files("No mp4 files in recording data")
-
+            found_mp4 = False
             for file in files:
                 if "file_type" not in file:
                     raise BadWebhookData("Missing required file field 'file_type'")
                 if file["file_type"].lower() != "mp4":
                     continue
+                found_mp4 = True
                 for field in required_file_fields:
                     if field not in file.keys():
                         raise BadWebhookData(f"Missing required file field '{field}'")
                 if file["status"].lower() != "completed":
                     raise BadWebhookData(f"File with incomplete status {file['status']}")
+            if not found_mp4:
+                raise NoMp4Files("No mp4 files in recording data")
             self.logger.debug(f"Event {obj['uuid']} passed validation!")
         except NoMp4Files:
             # let these bubble up as we handle them differently depending
@@ -247,6 +247,7 @@ class Zoom:
 
     def get_renderable_recording(self, recording_id):
         recording = self.get_recording(recording_id)
+        self.logger.debug(f"Recording json looks like: { recording }")
         #We pass in a list of one, so we know that the returned list is of size 1
         return self._build_renderable_event_list([ recording ])[0]
 

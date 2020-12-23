@@ -1,0 +1,49 @@
+{
+   "download_token" : "my_fake_token",
+   "event" : "recording.completed",
+   "payload" : {
+      "object" : {
+         "host_id" : "2rckNdRpQ-qyGSspp66ByQ",
+         "timezone" : "",
+         "duration" : 2,
+         "id" : 88133603998,
+         "uuid" : "Yaxg95jbQyiQbTYP57GqSg==",
+         "start_time" : "2020-10-29T20:07:38Z",
+         "recording_count" : 2,
+         "account_id" : "ceSnBBwNTmG-6bGoJ7e7Ug",
+         "topic" : "Greg Logan''s Zoom Meeting",
+         "recording_files" : [
+            {
+               "meeting_id" : "Yaxg95jbQyiQbTYP57GqSg==",
+               "recording_type" : "shared_screen_with_speaker_view",
+               "recording_start" : "2020-10-29T20:08:33Z",
+               "file_type" : "MP4",
+               "id" : "1344d9e4-781a-46e7-9589-b14c84b3dec9",
+               "file_size" : 6532378,
+               "status" : "completed",
+               "recording_end" : "2020-10-29T20:11:02Z",
+               "play_url" : "https://us02web.zoom.us/rec/play/sxXwkt8NOXQnTuEMrS4rB8PG-9jN6SZdq-SAjfL3EVStz8XTvULoXrONPdkLr9bVywOd7ZIod3D1Jk-A.AP3kGZPtE5HnAChr",
+               "download_url" : "https://us02web.zoom.us/rec/download/sxXwkt8NOXQnTuEMrS4rB8PG-9jN6SZdq-SAjfL3EVStz8XTvULoXrONPdkLr9bVywOd7ZIod3D1Jk-A.AP3kGZPtE5HnAChr",
+               "file_extension" : "MP4"
+            },
+            {
+               "meeting_id" : "Yaxg95jbQyiQbTYP57GqSg==",
+               "recording_type" : "audio_only",
+               "id" : "f55894e2-27d3-453f-bf13-f9d712fe93cd",
+               "file_size" : 2368261,
+               "recording_end" : "2020-10-29T20:11:02Z",
+               "status" : "completed",
+               "file_type" : "M4A",
+               "file_extension" : "M4A",
+               "play_url" : "https://us02web.zoom.us/rec/play/bZF0RMZbk17qKZ5XDn6DTXIYwalOThs3gveyJoihrs5h-oIeDzWbU2WHFDlzBIFu0jaNpFiKCUkUitab.svBl8lBVRdcJ3m2B",
+               "recording_start" : "2020-10-29T20:08:33Z",
+               "download_url" : "https://us02web.zoom.us/rec/download/bZF0RMZbk17qKZ5XDn6DTXIYwalOThs3gveyJoihrs5h-oIeDzWbU2WHFDlzBIFu0jaNpFiKCUkUitab.svBl8lBVRdcJ3m2B"
+            }
+         ],
+         "total_size" : 8900639,
+         "type" : 1,
+         "share_url" : "https://us02web.zoom.us/rec/share/aIzz9uM1wZC2LafxaNsPGW8dAFnQMu3i80dDFSmiTE4XcxVNThYu765sdLJg2c2d.3mBu05sX5kxVLpXQ"
+      },
+      "account_id" : "lAAAAAAAAAAAAA"
+   }
+}
