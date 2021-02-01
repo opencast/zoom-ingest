@@ -420,7 +420,7 @@ class Opencast:
                 element_name = f"dcterms:{ name }"
                 element_value = self._ensure_list(value.split(';'))
             elif name == "date":
-                element_name = f"dcterms:startDate"
+                element_name = f"dcterms:created"
                 element_value = value
             elif name == "duration":
                 element_name = f"dcterms:extent"
