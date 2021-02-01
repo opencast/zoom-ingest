@@ -356,6 +356,9 @@ class Opencast:
                     #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
                     response = self._do_get(f'{ self.url }/series/series.json?count=100').json()
                     if 'totalCount' in response and int(response['totalCount']) == 0:
+                        self.series_updated = datetime.utcnow()
+                        self.series = {}
+                        successful = True
                         break
                     #We need the total, count, and result fields.  If the count doesn't match the length of results, or any of the fields are missing
                     if 'totalCount' not in response or 'catalogs' not in response:
