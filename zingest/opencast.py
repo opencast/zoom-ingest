@@ -219,9 +219,9 @@ class Opencast:
 
         #Zoom token gets calculated at download time, regardless of inclusion in the rabbit message
         token = self.zoom.get_download_token()
-        url = f"{dl_url}/?access_token={ token }"
+        url = f"{dl_url}?access_token={ token }"
         self.logger.debug(f"Downloading from { url } to { filename }")
-        self._do_download(f"{dl_url}/?access_token={ token }", filename, expected_size)
+        self._do_download(f"{ url }", filename, expected_size)
 
         return filename
 
