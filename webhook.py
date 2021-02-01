@@ -17,6 +17,7 @@ from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 
 MIN_DURATION = 0
+WEBHOOK_SECRET = None
 
 init_logger()
 logger = logging.getLogger(__name__)
@@ -48,6 +49,12 @@ try:
         logger.debug(f"Webhook events will be ingested to series ID '{WEBHOOK_SERIES}'")
         logger.debug(f"Webhook events will be ingested with ACL ID '{WEBHOOK_ACL}'")
         logger.debug(f"Webhook events will be ingested with workflow ID '{WEBHOOK_WORKFLOW}'")
+        WEBHOOK_SECRET = (config['Webhook']['secret']).strip()
+        if len(WEBHOOK_SECRET) != 0:
+            logger.debug(f"Webhook pre-shared secret configured: { WEBHOOK_SECRET[0:3] }XXX{ WEBHOOK_SECRET[-3:] }")
+        else:
+            logger.debug(f"Webhook pre-shared secre not configured")
+            WEBHOOK_SECRET = None
 except KeyError as err:
     sys.exit("Key {0} was not found".format(err))
 except ValueError as err:
@@ -261,6 +268,7 @@ def do_POST():
         return render_template_string("Webhook disabled!"), 405
 
     logger.debug("POST recieved")
+    #If this header is missing this will throw a 400 automatically
     content_length = int(request.headers.get('Content-Length'))
     if content_length < 5:
         logger.error("Content too short")
@@ -268,7 +276,10 @@ def do_POST():
 
     #Check UTF8 safeness of this
     body = request.get_json(force=True)
-    if "payload" not in body:
+    if WEBHOOK_SECRET and -1 != request.headers.find('authorization') and WEBHOOK_SECRET != request.headers.get('authorization'):
+        logger.error("Request pre-shared secret is incorrect")
+        return render_template_string("Request pre-shared secret is incorrect"), 400
+    elif "payload" not in body:
         logger.error("Payload is missing")
         return render_template_string("Missing payload field in webhook body"), 400
 
