@@ -13,9 +13,9 @@ class Rabbit:
         if not zoom or type(zoom) != zingest.zoom.Zoom:
             raise TypeError("Zoom is missing or the wrong type!")
         self.logger = logging.getLogger(__name__)
-        self.rabbit_url = config["Rabbit"]["host"]
-        self.rabbit_user = config["Rabbit"]["user"]
-        self.rabbit_pass = config["Rabbit"]["password"]
+        self.rabbit_url = (config["Rabbit"]["host"]).strip()
+        self.rabbit_user = (config["Rabbit"]["user"]).strip()
+        self.rabbit_pass = (config["Rabbit"]["password"]).strip()
         self.zoom = zoom
         self.logger.info("Setup complete")
         self.logger.debug(f"Init rabbitmq connection to {self.rabbit_url} with user {self.rabbit_user}")

@@ -37,9 +37,9 @@ except FileNotFoundError:
 try:
     MIN_DURATION = int(config["Webhook"]["Min_Duration"])
     logger.debug(f"Minimum duration is {MIN_DURATION}")
-    WEBHOOK_SERIES = config['Webhook']['default_series_id']
-    WEBHOOK_ACL = config['Webhook']['default_acl_id']
-    WEBHOOK_WORKFLOW = config['Webhook']['default_workflow_id']
+    WEBHOOK_SERIES = (config['Webhook']['default_series_id']).strip()
+    WEBHOOK_ACL = (config['Webhook']['default_acl_id']).strip()
+    WEBHOOK_WORKFLOW = (config['Webhook']['default_workflow_id']).strip()
     if len(WEBHOOK_WORKFLOW) == 0 and not (len(WEBHOOK_SERIES) > 0 or len(WEBHOOK_ACL) > 0):
         WEBHOOK_ENABLE = False
         logger.info("Webhook is not completely configured and is not functional!")

@@ -22,7 +22,7 @@ def init(config):
     log = logging.getLogger(__name__)
     db = 'sqlite:///zoom.db'
     if "Database" in config and "database" in config['Database']:
-        db = config['Database']['database']
+        db = (config['Database']['database']).strip()
         engine = create_engine(db)
         log.info("Database connection string loaded from config file")
     else:
