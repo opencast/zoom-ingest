@@ -67,8 +67,8 @@
       <tr>
         <td><label for="acl_id">ACL</label></td>
         <td>
-          <select id="acl_id" name="acl_id" required>
-            <option value="" {% if acl == None %}selected="true"{% endif %} disabled="disabled">--Blank ACL--</option>
+          <select id="acl_id" name="acl_id">
+            <option value="" {% if acl == None %}selected="true"{% endif %}>--Blank ACL--</option>
             {% for key, value in acl_list.items() %}
             <option value="{{ key }}" {% if acl['identifier'] == key %}selected="true"{% endif %}>{{ value['name'] }}</option>
             {% endfor %}
