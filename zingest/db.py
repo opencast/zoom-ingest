@@ -70,9 +70,12 @@ def with_session(f):
 @with_session
 def create_recording(dbs, j):
     rec = Recording(j)
+    dbs.add(rec)
     rec.update_status(Status.NEW)
     dbs.merge(rec)
     dbs.commit()
+    dbs.refresh(rec)
+    return rec.get_id()
 
 
 class Constants:
@@ -116,6 +119,9 @@ class Recording(Base):
         self.update_status(Status.NEW)
         self.mediapackage_id = None
         self.workflow_id = None
+
+    def get_id(self):
+        return self.rec_id
 
     def get_data(self):
         """Load JSON data from event."""

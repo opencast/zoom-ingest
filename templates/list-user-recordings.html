@@ -18,9 +18,9 @@
       <td>{{ recording.date }}</td>
       <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}">{{ recording.title }}</a></td>
       <td>{{ recording.status }}</td>
-      {% if recording.status != "finished" %}
+      {# {% if recording.status != "finished" %} #}
       <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}">Select</a></td>
-      {% endif %}
+      {# {% endif %} #}
     </tr>
     {% endfor %}
   </table>

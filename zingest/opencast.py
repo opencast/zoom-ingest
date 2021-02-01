@@ -119,29 +119,16 @@ class Opencast:
     @db.with_session
     def rabbit_callback(dbs, self, method, properties, body):
         j = json.loads(body)
-        uuid = j['uuid']
-
-        #Check that this isn't a duplicate ingest
-        rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).all()
-        if 0 != len(rec):
-            self.logger.info(f"{ uuid } already in the database, refusing to double ingest")
-            return
-
-        self.logger.debug(f"{uuid} not found in db, creating new record")
-        #Create a database record so that we can recover if we're killed mid process
-        db.create_recording(j)
-
         self._process(j)
 
     @db.with_session
     def _process(dbs, self, json):
         uuid = json['uuid']
         try:
-            rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
-            if not rec:
-                # TODO why we are in this case?
-                self.logger.warn(f"Recording with the ID { uuid } does not exists in the database, skipping processing")
-                return
+            self.logger.debug(f"Creating new record for {uuid}")
+            rec_id = db.create_recording(json)
+            self.logger.debug(f"Record ID { rec_id } for { uuid } created")
+            rec = dbs.query(db.Recording).filter(db.Recording.rec_id == rec_id).one_or_none()
             rec.update_status(db.Status.IN_PROGRESS)
             dbs.merge(rec)
             dbs.commit()
@@ -158,7 +145,7 @@ class Opencast:
             mp_id, workflow_id = self.oc_upload(uuid, filename, **params)
             self._rm(filename)
 
-            rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+            rec = dbs.query(db.Recording).filter(db.Recording.rec_id == rec_id).one_or_none()
             rec.update_status(db.Status.FINISHED)
             rec.set_workflow_id(workflow_id)
             rec.set_mediapackage_id(mp_id)
