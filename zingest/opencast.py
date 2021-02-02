@@ -46,6 +46,12 @@ class Opencast:
         self.user = config["Opencast"]["User"]
         self.logger.debug(f"Opencast user is {self.user}")
         self.password = config["Opencast"]["Password"]
+        filter_config = (config["Filter"]["workflow_filter"]).strip()
+        if len(filter_config) > 0:
+            self.workflow_filter = filter_config.split(" ")
+        else:
+            self.workflow_filter = None
+        self.logger.debug(f"Workflow filter configured as { self.workflow_filter }")
         self.auth = HTTPDigestAuth(self.user, self.password)
         self.rabbit = rabbit
         self.zoom = zoom
@@ -319,7 +325,10 @@ class Opencast:
                     # and the /workflow/definitions.(xml|json) endpoint does not support filtering
                     results = self._do_get(f'{ self.url }/api/workflow-definitions?filter=tag:upload&filter=tag:schedule').json()
                     self.workflows_updated = datetime.utcnow()
-                    self.workflows = { result['identifier']: result['title'] for result in results }
+                    if self.workflow_filter:
+                        self.workflows = { result['identifier']: result['title'] for result in results if self.workflow_filter and result['identifier'] in self.workflow_filter }
+                    else:
+                        self.workflows = { result['identifier']: result['title'] for result in results }
                     successful = True
                     break
                 except Exception as e:
