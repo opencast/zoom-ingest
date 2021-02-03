@@ -10,6 +10,8 @@ from logger import init_logger
 from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 from zingest.opencast import Opencast
+import tempfile
+import shutil
 import zingest.db
 
 webhook_event = None
@@ -39,9 +41,12 @@ for event in ("add-dc", "add-ethterms", "add-security", "add-track", "create-mp"
 class TestOpencast(unittest.TestCase):
 
     def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
         self.config = {"Opencast": {"Url": "http://localhost", "User": "test_user", "Password": "test_password" },
                        "Rabbit": {"host": "http://localhost", "user": "test_user", "password": "test_password" },
-                       "JWT": {"Key": "test_key", "Secret": "test_secret" }}
+                       "JWT": {"Key": "test_key", "Secret": "test_secret" },
+                       "Filter": {'workflow_filter': None },
+                       "TESTING": {"IN_PROGRESS_ROOT": self.tempdir}}
         self.zoom = Zoom(self.config)
         self.rabbit = Rabbit(self.config, self.zoom)
         self.rabbit.start_consuming_rabbitmsg = MagicMock(return_value=None)
@@ -54,6 +59,7 @@ class TestOpencast(unittest.TestCase):
     def tearDown(self):
         os.close(self.fd)
         os.remove(self.dbfile)
+        shutil.rmtree(self.tempdir)
 
     def test_noConfig(self):
         with self.assertRaises(TypeError):

@@ -40,6 +40,13 @@ class Opencast:
         if not zoom or type(zoom) != zingest.zoom.Zoom:
             raise TypeError("Zoom is missing or the wrong type!")
 
+        try:
+            #Allow testing to override this via an undocumented key
+            self.IN_PROGRESS_ROOT = get_config_ignore(config, "TESTING", "IN_PROGRESS_ROOT", True)
+        except KeyError:
+            #This is undocumented, so it's not something we need to tell anyone about
+            pass
+
         self.logger = logging.getLogger(__name__)
         self.url = config["Opencast"]["Url"]
         self.logger.debug(f"Opencast url is {self.url}")
