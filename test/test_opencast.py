@@ -119,7 +119,6 @@ class TestOpencast(unittest.TestCase):
         regex = webhook_event['payload']['object']['recording_files'][0]['download_url'][8:] + "\?access_token=.*"
         download = m.get(re.compile(regex), body="")
 
-
         opencast = Opencast(self.config, self.rabbit, self.zoom)
 
         return opencast, [ acls, themes, wfs, series ] , {'create': create, 'attach': attach, 'catalog': catalog, 'track': track, 'start': start, 'download': download }
@@ -139,6 +138,26 @@ class TestOpencast(unittest.TestCase):
         self.assertTrue(startups[1].called) #themes
         self.assertTrue(startups[2].called) #workflows
         self.assertTrue(startups[3].called) #series
+
+    @requests_mock.Mocker()
+    def test_workflow_filter(self, mocker):
+        opencast, _, _ = self.create_mock_opencast(mocker)
+        workflows = opencast.get_workflows()
+        self.assertTrue(4, len(workflows))
+
+        self.config["Filter"]["workflow_filter"] = "schedule-and-upload fasthls"
+        opencast = Opencast(self.config, self.rabbit, self.zoom)
+        workflows = opencast.get_workflows()
+        self.assertTrue(2, len(workflows))
+        self.assertTrue("schedule-and-upload" in workflows.keys())
+        self.assertTrue("fasthls" in workflows.keys())
+
+        self.config["Filter"]["workflow_filter"] = "schedule-and-upload"
+        opencast = Opencast(self.config, self.rabbit, self.zoom)
+        workflows = opencast.get_workflows()
+        self.assertTrue(1, len(workflows))
+        self.assertTrue("schedule-and-upload" in workflows.keys())
+
 
     @requests_mock.Mocker()
     def test_callback(self, mocker):
