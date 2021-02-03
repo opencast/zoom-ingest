@@ -62,7 +62,7 @@ class TestOpencast(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_noConfig(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(KeyError):
             Opencast(None, self.rabbit, self.zoom)
 
     def test_missingOpencastConfig(self):
@@ -116,7 +116,7 @@ class TestOpencast(unittest.TestCase):
         #This is faking *most* zoom downloads
         m.get(re.compile("us02web.zoom.us/rec/download"), body="")
         #This is faking a specific file (ie, the one in resources/rabbit_msg.json
-        regex = webhook_event['payload']['object']['recording_files'][0]['download_url'][8:] + "\/\?access_token=.*"
+        regex = webhook_event['payload']['object']['recording_files'][0]['download_url'][8:] + "\?access_token=.*"
         download = m.get(re.compile(regex), body="")
 
 

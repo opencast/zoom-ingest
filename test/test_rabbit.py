@@ -19,7 +19,7 @@ class TestRabbit(unittest.TestCase):
         pass
 
     def test_noConfig(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(KeyError):
           Rabbit(None, self.zoom)
 
     def test_missingRabbitConfig(self):

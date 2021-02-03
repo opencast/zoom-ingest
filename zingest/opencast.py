@@ -14,7 +14,7 @@ from requests.auth import HTTPDigestAuth
 
 import zingest
 from zingest import db
-from zingest.common import NoMp4Files, BadWebhookData
+from zingest.common import NoMp4Files, BadWebhookData, get_config, get_config_ignore
 
 
 class OpencastException(Exception):
@@ -48,13 +48,13 @@ class Opencast:
             pass
 
         self.logger = logging.getLogger(__name__)
-        self.url = config["Opencast"]["Url"]
+        self.url = get_config(config, "Opencast", "Url")
         self.logger.debug(f"Opencast url is {self.url}")
-        self.user = config["Opencast"]["User"]
+        self.user = get_config(config, "Opencast", "User")
         self.logger.debug(f"Opencast user is {self.user}")
-        self.password = config["Opencast"]["Password"]
-        filter_config = (config["Filter"]["workflow_filter"]).strip()
-        if len(filter_config) > 0:
+        self.password = get_config(config, "Opencast", "Password")
+        filter_config = get_config_ignore(config, "Filter", "workflow_filter", True)
+        if filter_config and len(filter_config) > 0:
             self.workflow_filter = filter_config.split(" ")
         else:
             self.workflow_filter = None

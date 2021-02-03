@@ -9,7 +9,7 @@ import jwt
 from zoomus import ZoomClient
 
 from zingest import db
-from zingest.common import BadWebhookData, NoMp4Files
+from zingest.common import BadWebhookData, NoMp4Files, get_config
 
 
 class Zoom:
@@ -19,8 +19,8 @@ class Zoom:
     def __init__(self, config):
         self.logger = logging.getLogger(__name__)
 
-        self.api_key = (config['JWT']['Key']).strip()
-        self.api_secret = (config['JWT']['Secret']).strip()
+        self.api_key = get_config(config, 'JWT', 'Key')
+        self.api_secret = get_config(config, 'JWT', 'Secret')
         if self.api_key:
             self.logger.debug(f"Init with Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
         else:

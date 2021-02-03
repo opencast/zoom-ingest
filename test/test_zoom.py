@@ -15,7 +15,7 @@ class TestZoom(unittest.TestCase):
         pass
 
     def test_noConfig(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(KeyError):
           Zoom(None)
 
     def test_missingZoomConfig(self):
