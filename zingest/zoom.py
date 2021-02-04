@@ -219,7 +219,8 @@ class Zoom:
             item = {
                 'id': rec_uuid,
                 'title': element['topic'],
-                'date': element['start_time'],
+                'date': element['start_time'][:10],
+                'time': element['start_time'][11:-1],
                 'duration': element['duration'],
                 'url': element['share_url'],
                 'email': email,

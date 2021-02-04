@@ -203,6 +203,11 @@ def ingest_single_recording(recording_id):
     recording_json = z.get_recording(recording_id)
     params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not '' == value }
     params['is_webhook'] = False
+    date = params['date']
+    time = params['time']
+    expected_format = "%Y-%m-%dT%H:%M:%SZ"
+    #Ensure this parses correctly, then set the date param with the combination of date and time
+    params['date'] = datetime.strptime(f"{ date }T{ time }Z", expected_format).strftime(expected_format)
     recording_json['zingest_params'] = params
     _queue_recording(recording_json)
     return redirect(f'/recordings/{ user_id }?{ query_string }')

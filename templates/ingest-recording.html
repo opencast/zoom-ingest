@@ -21,7 +21,10 @@
         <td>
           <label for="date">Date</label>
           </td><td>
-          <input type="text" id="date" name="date" value="{{ recording.date }}"></td>
+          <input type="date" id="date" name="date" value="{{ recording.date }}">
+          <label for="time">Time (UTC)</label>
+          <input type="text" id="time" name="time" value="{{ recording.time }}">
+        </td>
         <td>
           <label for="accessibility">Accessibility Description</label>
           </td><td>
