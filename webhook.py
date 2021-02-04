@@ -82,7 +82,8 @@ def get_query_params():
     from_date = validate_date(request.args.get('from', None))
     to_date = validate_date(request.args.get('to', None))
     page_size = request.args.get('page_size', None)
-    return { 'from': from_date, 'to': to_date, 'page_size': page_size }
+    dur_check = request.args.get('dur_check', "true", str)
+    return { 'from': from_date, 'to': to_date, 'page_size': page_size, 'dur_check': dur_check}
 
 
 def build_query_string(param_dict = None):
@@ -121,11 +122,14 @@ def do_list_recordings(user_id):
     to_date = query_params['to'] if query_params['to'] != None else date.today()
     month_back = from_date - timedelta(days = 30)
     month_forward = to_date + timedelta(days = 30)
+    #NB: dur_check needs to be lower case here because Jinja doesn't handle Mixed case
+    dur_check = query_params['dur_check'] if query_params['dur_check'] != None else "true"
+    min_duration = int(MIN_DURATION) if dur_check == "true" else 0
 
-    renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'])
+    renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'], min_duration=min_duration)
     user = z.get_user_name(user_id)
 
-    return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward)
+    return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check)
 
 # Query Zoom user
 
