@@ -4,7 +4,7 @@ import os.path
 import sys
 import urllib.parse
 from datetime import datetime, date, timedelta
-from urllib.parse import urlencode
+from urllib.parse import urlencode, parse_qs
 
 from flask import Flask, request, render_template, render_template_string, redirect
 
@@ -82,7 +82,7 @@ def get_query_params():
     from_date = validate_date(request.args.get('from', None))
     to_date = validate_date(request.args.get('to', None))
     page_size = request.args.get('page_size', None)
-    dur_check = request.args.get('dur_check', "true", str)
+    dur_check = request.args.get('dur_check', None)
     return { 'from': from_date, 'to': to_date, 'page_size': page_size, 'dur_check': dur_check}
 
 
@@ -178,6 +178,7 @@ def single_recording(recording_id):
     if request.method == "GET":
         series_id = request.args.get("sid", None)
         acl_id = request.args.get("acl", None)
+        query_params = get_query_params()
         query_string = build_query_string()
         return render_single_recording(recording_id_decoded, series_id = series_id, query_string = query_string)
     elif request.method == "POST":
@@ -202,11 +203,16 @@ def ingest_single_recording(recording_id):
     logger.info(f"Ingesting for { recording_id }")
     user_id = request.form['origin_email']
     query_string = urllib.parse.unquote_plus(request.form['origin_query_string'])
+    qs = urllib.parse.parse_qs(query_string)
+    dur_check = True
+    if 'dur_check' in qs and qs['dur_check'][0] == 'false':
+        dur_check = False
     #TODO: Validate required terms are present
     #TODO: Handle upload failure
     recording_json = z.get_recording(recording_id)
     params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not '' == value }
     params['is_webhook'] = False
+    params['dur_check'] = dur_check
     date = params['date']
     time = params['time']
     expected_format = "%Y-%m-%dT%H:%M:%SZ"
@@ -341,7 +347,15 @@ def _queue_recording(obj, token=None):
         logger.error("No mp4 files found!")
         return render_template_string("No mp4 files found!"), 400
 
-    if int(obj["duration"]) < MIN_DURATION:
+    zingest = obj['zingest_params']
+    check_duration = zingest['dur_check'] if 'dur_check' in zingest else True
+    is_webhook = zingest['is_webhook'] if 'is_webhook' in zingest else False
+
+    logger.debug(f"Checking duration: { check_duration }")
+    logger.debug(f"Is a webhook event: { is_webhook }")
+
+    #Check the duration if the event is a webhook event, or we've told it to for manual events
+    if int(obj["duration"]) < MIN_DURATION and (is_webhook or check_duration):
         logger.error("Recording is too short")
         return render_template_string("Recording is too short"), 400
     elif not f.matches(obj) and obj['zingest_params']['is_webhook']: #Only filter on webhook events
