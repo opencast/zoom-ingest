@@ -2,13 +2,20 @@
 <head>
   <title>Recording {{ recording.title }}</title>
   <style>
-  input.wide {
+  input {
     width: 400px;
   }
-  input.extrawide {
+  input.wide {
     width: 800px;
   }
   </style>
+{% macro textField(name, label, value='', type='text', class='') -%}
+<td>
+  <label for="{{ name }}">{{ label }}</label>
+  </td><td>
+  <input type="{{ type }}" name="{{ name }}" value="{{ value }}" class="{{ class }}">
+</td>
+{%- endmacro %}
 </head>
 <body>
   <h1>Details for <a href={{ recording.url }}>{{ recording.title }}</a></h1>
@@ -25,114 +32,51 @@
           <label for="time">Time (UTC)</label>
           <input type="text" id="time" name="time" value="{{ recording.time }}">
         </td>
-        <td>
-          <label for="accessibility">Accessibility Description</label>
-          </td><td>
-          <input type="text" id="accessibility" name="eth-accessibility" class="wide">
-        </td>
+        {{ textField('eth-accessibility', 'Accessibility Description') }}
       </tr>
       <tr>
-        <td>
-          <label for="duration">Duration (minutes)</label>
-          </td><td>
-          <input type="text" id="duration" name="duration" class="wide" value="{{ recording.duration }}">
-        </td>
-        <td>
-          <label for="order">Order</label>
-          </td><td>
-          <input type="text" id="order" name="eth-order" class="wide">
-        </td>
+        {{ textField('duration', 'Duration (minutes)', value=recording.duration) }}
+        {{ textField('eth-order', 'Order') }}
       </tr>
       <tr>
-        <td>
-          <label for="title">Title</label>
-          </td><td>
-          <input type="text" id="title" name="title" class="extrawide" value="{{ recording.title }}" required>
-        </td>
-        <td>
-          <label for="owner">Owner</label>
-          </td><td>
-          <input type="text" id="owner" name="eth-owner" class="wide">
-        </td>
+        {{ textField('title', 'Title', value=recording.title, class='wide') }}
+        {{ textField('eth-owner', 'Owner') }}
       </tr>
       <tr>
         <td>
           <label for="description">Description</label>
           </td><td>
-          <input type="textarea" id="description" name="description" rows="4" cols="50" class="extrawide"{% if series != None %} value="{{ series['description'] }}"{% endif %}>
+          <input type="textarea" id="description" name="description" rows="4" cols="50" class="wide"{% if series != None %} value="{{ series['description'] }}"{% endif %}>
         </td>
-        <td>
-          <label for="notes">Notes</label>
-          </td><td>
-          <input type="text" id="notes" name="eth-notes" class="wide">
-        </td>
+        {{ textField('eth-notes', 'Notes') }}
       </tr>
       <tr>
-        <td>
-          <label for="creator">Presenter(s)</label>
-          </td><td>
-          <input type="text" id="creator" name="creator" class="extrawide" value="{{ recording.host }}">
-        </td>
-        <td>
-          <label for="legacy">Legacy ID</label>
-          </td><td>
-          <input type="text" id="legacy" name="eth-legacyid" class="wide">
-        </td>
+        {{ textField('creator', 'Presenter(s)', value=recording.host, class='wide') }}
+        {{ textField('eth-legacyid', 'Legacy ID') }}
       </tr>
       <tr>
-        <td>
-          <label for="contributor">Contributor(s)</label>
-          </td><td>
-          <input type="text" id="contributor" name="contributor" class="wide"{% if series != None %} value="{{ series['contributor'] | join(', ') }}"{% endif %}>
-        </td>
+        {{ textField('contributor', 'Contributor(s)', value=series['contributor'] | default('') | join (', ')) }}
       </tr>
       <tr>
-        <td>
-          <label for="publisher">Publisher(s)</label>
-          </td><td>
-          <input type="text" id="publisher" name="publisher" class="wide"{% if series != None %} value="{{ series['publisher'] | join(', ') }}"{% else %} value="ETH Zürich, ID MMS; Schweiz"{% endif %}>
-        </td>
+        {{ textField('publisher', 'Publisher(s)', value=series['publisher'] | default('') | join (', ')) }}
       </tr>
       <tr>
-        <td>
-          <label for="language">Language</label>
-          </td><td><input type="text" id="language" name="language" class="wide"{% if series != None %} value="{{ series['language'] }}"{% endif %}>
-        </td>
+        {{ textField('language', 'Language', value=series['language'] | default('') | join (', ')) }}
       </tr>
       <tr>
-        <td>
-          <label for="license">License</label>
-          </td><td>
-          <input type="text" id="license" name="license" class="wide"{% if series != None %} value="{{ series['license'] }}"{% endif %}>
-        </td>
+        {{ textField('license', 'License', value=series['license'] | default('') | join (', ')) }}
       </tr>
       <tr>
-        <td>
-          <label for="location">Location</label>
-          </td><td>
-          <input type="text" id="location" name="location" class="wide"{% if series != None %} value="{{ series['location'] }}"{% endif %}>
-        </td>
+        {{ textField('location', 'Location', value=series['location'] | default('') | join (', ')) }}
       </tr>
       <tr>
-        <td>
-          <label for="rightsHolder">Rights Holder</label>
-          </td><td>
-          <input type="text" id="rightsHolder" name="rightsHolder" class="wide"{% if series != None %} value="{{ series['rightsholder'] }}"{% endif %}>
-        </td>
+        {{ textField('rightsHolder', 'Rights Holder', value=series['rightsholder'] | default('') | join (', ')) }}
       </tr>
       <tr>
-        <td>
-          <label for="subject">Subject(s)</label>
-          </td><td>
-          <input type="text" id="subjects" name="subjects" class="wide"{% if series != None %} value="{{ series['subjects'] | join(', ')}}"{% endif %}>
-        </td>
+        {{ textField('subject', 'Subject(s)', value=series['subjects'] | default('') | join (', ')) }}
       </tr>
       <tr>
-        <td>
-          <label for="source">Source</label>
-          </td><td>
-          <input type="text" id="source" name="source" class="wide"{% if series != None %} value="{{ series['source'] }}"{% endif %}>
-        </td>
+        {{ textField('source', 'Source', value=series['source'] | default('') | join (', ')) }}
       <tr>
         <td><label for="isPartOf">Series</label></td>
         <td>
