@@ -10,7 +10,7 @@ from flask import Flask, request, render_template, render_template_string, redir
 
 import zingest.db
 from logger import init_logger
-from zingest.common import BadWebhookData, NoMp4Files
+from zingest.common import BadWebhookData, NoMp4Files, get_config_ignore
 from zingest.filter import RegexFilter
 from zingest.opencast import Opencast
 from zingest.rabbit import Rabbit
@@ -37,6 +37,20 @@ except FileNotFoundError:
 try:
     MIN_DURATION = int(config["Webhook"]["Min_Duration"])
     logger.debug(f"Minimum duration is {MIN_DURATION}")
+
+    EPISODE_FIELDS = get_config_ignore(config, 'Visibility', 'episode', True).split(" ")
+    if "" != EPISODE_FIELDS[0]:
+        logger.debug(f"Visible episode metadata fields configured to be { EPISODE_FIELDS }")
+    else:
+        EPISODE_FIELDS = None
+        logger.debug("All episode metadata fields are visible")
+    SERIES_FIELDS = get_config_ignore(config, 'Visibility', 'series', True).split(" ")
+    if "" != SERIES_FIELDS[0]:
+        logger.debug(f"Visible series metadata fields configured to be { SERIES_FIELDS }")
+    else:
+        SERIES_FIELDS = None
+        logger.debug("All series metadata fields are visible")
+
     WEBHOOK_SERIES = (config['Webhook']['default_series_id']).strip()
     WEBHOOK_ACL = (config['Webhook']['default_acl_id']).strip()
     WEBHOOK_WORKFLOW = (config['Webhook']['default_workflow_id']).strip()
@@ -196,7 +210,7 @@ def render_single_recording(recording_id, series_id = None, acl_id = None, workf
     acl = None
     if acl_id:
         acl = o.get_single_acl(acl_id)
-    return render_template("ingest-recording.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string))
+    return render_template("ingest-recording.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS)
 
 
 def ingest_single_recording(recording_id):
@@ -236,7 +250,7 @@ def get_series_list(series_id=None):
         origin_email = request.args.get('oem', "")
         origin_query_string = request.args.get('oqs', "")
         origin = { "email": origin_email, "query_string": urllib.parse.quote_plus(origin_query_string), "epid": urllib.parse.quote_plus(epId) }
-        return render_template("create-series.html", series = series, acl_list = o.get_acls(), theme_list = o.get_themes(), origin = origin)
+        return render_template("create-series.html", series = series, acl_list = o.get_acls(), theme_list = o.get_themes(), origin = origin, visibility = SERIES_FIELDS)
     elif request.method == "POST":
         #TODO: Validate required terms are present
         epid = urllib.parse.unquote_plus(request.form['origin_epid'])

@@ -10,11 +10,13 @@
   }
   </style>
 {% macro textField(name, label, value='', type='text', class='') -%}
+{% if visibility != None and name in visibility %}
 <td>
   <label for="{{ name }}">{{ label }}</label>
   </td><td>
   <input type="{{ type }}" name="{{ name }}" value="{{ value }}" class="{{ class }}">
 </td>
+{% endif %}
 {%- endmacro %}
 </head>
 <body>
