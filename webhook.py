@@ -96,7 +96,7 @@ def get_query_params():
     from_date = validate_date(request.args.get('from', None))
     to_date = validate_date(request.args.get('to', None))
     page_size = request.args.get('page_size', None)
-    dur_check = request.args.get('dur_check', None)
+    dur_check = request.args.get('dur_check', "true").lower() == 'true'
     return { 'from': from_date, 'to': to_date, 'page_size': page_size, 'dur_check': dur_check}
 
 
@@ -136,9 +136,8 @@ def do_list_recordings(user_id):
     to_date = query_params['to'] if query_params['to'] != None else date.today()
     month_back = from_date - timedelta(days = 30)
     month_forward = to_date + timedelta(days = 30)
-    #NB: dur_check needs to be lower case here because Jinja doesn't handle Mixed case
-    dur_check = query_params['dur_check'] if query_params['dur_check'] != None else "true"
-    min_duration = int(MIN_DURATION) if dur_check == "true" else 0
+    dur_check = query_params['dur_check']
+    min_duration = int(MIN_DURATION) if dur_check else 0
 
     renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'], min_duration=min_duration)
     user = z.get_user_name(user_id)
@@ -194,12 +193,12 @@ def single_recording(recording_id):
         acl_id = request.args.get("acl", None)
         query_params = get_query_params()
         query_string = build_query_string()
-        return render_single_recording(recording_id_decoded, series_id = series_id, query_string = query_string)
+        return render_single_recording(recording_id_decoded, series_id = series_id, query_params = query_params)
     elif request.method == "POST":
         return ingest_single_recording(recording_id_decoded)
 
 
-def render_single_recording(recording_id, series_id = None, acl_id = None, workflow_id = None, query_string=None):
+def render_single_recording(recording_id, series_id = None, acl_id = None, workflow_id = None, query_params = {}):
     renderable = z.get_renderable_recording(recording_id)
     series = None
     if series_id:
@@ -210,7 +209,8 @@ def render_single_recording(recording_id, series_id = None, acl_id = None, workf
     acl = None
     if acl_id:
         acl = o.get_single_acl(acl_id)
-    return render_template("ingest-recording.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS)
+    query_string = build_query_string(query_params)
+    return render_template("ingest-recording.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS, dur_check = query_params['dur_check'])
 
 
 def ingest_single_recording(recording_id):
@@ -219,7 +219,7 @@ def ingest_single_recording(recording_id):
     query_string = urllib.parse.unquote_plus(request.form['origin_query_string'])
     qs = urllib.parse.parse_qs(query_string)
     dur_check = True
-    if 'dur_check' in qs and qs['dur_check'][0] == 'false':
+    if 'dur_check' in qs and qs['dur_check'][0].lower() == 'false':
         dur_check = False
     #TODO: Validate required terms are present
     #TODO: Handle upload failure

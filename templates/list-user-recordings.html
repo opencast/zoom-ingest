@@ -1,14 +1,22 @@
 <html>
 <head>
   <title>Recordings for {{ user }}</title>
+  <style>
+  .short {
+    color: gray;
+  }
+  .error {
+    color: red;
+  }
+  </style>
 </head>
 <body>
   <h1>Recordings for {{ user }}</h1>
   <h3>Displaying recordings from {{ from_date }} to {{ to_date }}</h3>
   <p>
-    <a href="?from={{ month_back }}&to={{ from_date }}&dur_check={{ dur_check }}">1 month earlier</a> |
-    <a href="?from={{ to_date }}&to={{ month_forward }}&dur_check={{ dur_check }}">1 month later</a> |
-    {% if dur_check == "true" %}
+    <a href="?from={{ month_back }}&to={{ from_date }}&dur_check={{ dur_check | string | lower }}">1 month earlier</a> |
+    <a href="?from={{ to_date }}&to={{ month_forward }}&dur_check={{ dur_check | string | lower }}">1 month later</a> |
+    {% if dur_check %}
     <a href="?from={{ from_date }}&to={{ to_date }}&dur_check=false">Disable duration checks</a>
     {% else %}
     <a href="?from={{ from_date }}&to={{ to_date }}&dur_check=true">Enable duration checks</a>
@@ -19,16 +27,19 @@
       <th style="text-align:left">Date</th>
       <th style="text-align:left">Title</th>
       <th style="text-align:left">Status</th>
+      <th style="text-align:left">Duration</th>
       <th style="text-align:left">Action</th>
     </tr>
     {% for recording in recordings %}
-    <tr>
+
+    <tr{% if dur_check and recording.too_short %} class="short"{% endif %}>
       <td>{{ recording.date }}</td>
       <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?from={{ from_date }}&to={{ to_date }}&dur_check={{ dur_check }}">{{ recording.title }}</a></td>
       <td>{{ recording.status }}</td>
-      {# {% if recording.status != "finished" %} #}
+      <td{% if dur_check and recording.too_short %} class="error"{% endif %}>{{ recording.duration }}</td>
+      {% if (dur_check and not recording.too_short) or not dur_check %}
       <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?from={{ from_date }}&to={{ to_date }}&dur_check={{ dur_check }}">Select</a></td>
-      {# {% endif %} #}
+      {% endif %}
     </tr>
     {% endfor %}
   </table>

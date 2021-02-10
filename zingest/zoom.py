@@ -192,7 +192,7 @@ class Zoom:
         fn = self._get_zoom_client().recording.list
         return self._make_zoom_request(fn, params)
 
-    def get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None, min_duration=None):
+    def get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None, min_duration=0):
         #Get the list of recordings from Zoom
         zoom_results = self._get_user_recordings(user_id, from_date, to_date, page_size)
         if 'meetings' not in zoom_results:
@@ -204,7 +204,7 @@ class Zoom:
         return self._build_renderable_event_list(zoom_meetings, min_duration)
 
     @db.with_session
-    def _build_renderable_event_list(dbs, self, zoom_meetings, min_duration=None):
+    def _build_renderable_event_list(dbs, self, zoom_meetings, min_duration=0):
         zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
         self.logger.debug(f"Building renderable objects for zoom meetings: { zoom_rec_meeting_ids }")
         existing_db_recordings = dbs.query(db.Recording).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids)).all()
@@ -213,9 +213,6 @@ class Zoom:
         renderable = []
         for element in zoom_meetings:
             rec_uuid = element['uuid']
-            if min_duration and int(element['duration']) < int(min_duration):
-                #A minimum duration filter has been applied, skip this one
-                continue
             status = db.Status.str(existing_data[rec_uuid]['status']) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
             email = element['host_email'] if 'host_email' in element else self.get_user_email(element['host_id'])
             host = self.get_user_name(email)
@@ -228,7 +225,8 @@ class Zoom:
                 'url': element['share_url'],
                 'email': email,
                 'host': host,
-                'status': status
+                'status': status,
+                'too_short': int(element['duration']) < int(min_duration)
             }
             renderable.append(item)
         return renderable
