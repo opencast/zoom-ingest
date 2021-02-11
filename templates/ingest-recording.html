@@ -10,7 +10,7 @@
   }
   </style>
 {% macro textField(name, label, value='', type='text', class='') -%}
-{% if visibility != None and name in visibility %}
+{% if visibility == None or (visibility != None and name in visibility) %}
 <td>
   <label for="{{ name }}">{{ label }}</label>
   </td><td>
@@ -28,13 +28,19 @@
     <table style="width:100%">
       <tr><td><h3>Common Episode Metadata</h3></td><td/><td><h3>ETH Extended Metadata</h3></td><td/></tr>
       <tr>
+        {% if visibility == None or (visibility != None and ('date' in visibility or 'time' in visibility)) %}
         <td>
+          {% if visibility == None or (visibility != None and 'date' in visibility) %}
           <label for="date">Date</label>
           </td><td>
           <input type="date" id="date" name="date" value="{{ recording.date }}">
+          {% endif %}
+          {% if visibility == None or (visibility != None and 'time' in visibility) %}
           <label for="time">Time (UTC)</label>
           <input type="text" id="time" name="time" value="{{ recording.time }}">
+          {% endif %}
         </td>
+        {% endif %}
         {{ textField('eth-accessibility', 'Accessibility Description') }}
       </tr>
       <tr>
@@ -46,11 +52,13 @@
         {{ textField('eth-owner', 'Owner') }}
       </tr>
       <tr>
+        {% if visibility == None or (visibility != None and 'description' in visibility) %}
         <td>
           <label for="description">Description</label>
           </td><td>
           <input type="textarea" id="description" name="description" rows="4" cols="50" class="wide"{% if series != None %} value="{{ series['description'] }}"{% endif %}>
         </td>
+        {% endif %}
         {{ textField('eth-notes', 'Notes') }}
       </tr>
       <tr>
