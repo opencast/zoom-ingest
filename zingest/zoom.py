@@ -207,13 +207,21 @@ class Zoom:
     def _build_renderable_event_list(dbs, self, zoom_meetings, min_duration=0):
         zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
         self.logger.debug(f"Building renderable objects for zoom meetings: { zoom_rec_meeting_ids }")
-        existing_db_recordings = dbs.query(db.Recording).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids)).all()
-        existing_data = { e.uuid: { 'status': e.status } for e in existing_db_recordings }
+        existing_db_recordings = dbs.query(db.Recording.uuid, db.Recording.status).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids)).distinct(db.Recording.uuid).all()
+        #Create a naive mapping of UUID: status pairs
+        existing_data = { row[0]: row[1] for row in existing_db_recordings }
+        #Go through the list again, and set UUIDs with non-identical statuses to in-progress
+        #NB: Events which have not started ingesting yet do not appear in the DB, so we're comparing in-progress events vs finished
+        for uuid, status in existing_db_recordings:
+            if status != existing_data[uuid]:
+                existing_data[uuid] = 1
+
+
         self.logger.debug(f"There are { len(existing_data) } db records matching those IDs")
         renderable = []
         for element in zoom_meetings:
             rec_uuid = element['uuid']
-            status = db.Status.str(existing_data[rec_uuid]['status']) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
+            status = db.Status.str(existing_data[rec_uuid]) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
             email = element['host_email'] if 'host_email' in element else self.get_user_email(element['host_id'])
             host = self.get_user_name(email)
             item = {
