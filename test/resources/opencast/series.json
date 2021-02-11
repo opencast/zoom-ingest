@@ -1,5 +1,5 @@
 {
-   "totalCount" : "1",
+   "totalCount" : "2",
    "catalogs" : [
       {
          "http://purl.org/dc/terms/" : {
@@ -23,6 +23,32 @@
             "identifier" : [
                {
                   "value" : "ID-blender-foundation"
+               }
+            ]
+         }
+      },
+      {
+         "http://purl.org/dc/terms/" : {
+            "created" : [
+               {
+                  "value" : "2020-12-29T01:04Z",
+                  "type" : "dcterms:W3CDTF"
+               }
+            ],
+            "title" : [
+               {
+                  "lang" : "en",
+                  "value" : "Blender Foundation Productions2"
+               }
+            ],
+            "publisher" : [
+               {
+                  "value" : "Blender Foundation"
+               }
+            ],
+            "identifier" : [
+               {
+                  "value" : "ID-blender-foundation2"
                }
             ]
          }

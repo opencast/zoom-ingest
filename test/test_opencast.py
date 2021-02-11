@@ -42,10 +42,9 @@ class TestOpencast(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
-        self.config = {"Opencast": {"Url": "http://localhost", "User": "test_user", "Password": "test_password" },
+        self.config = {"Opencast": {"Url": "http://localhost", "User": "test_user", "Password": "test_password", 'workflow_filter': None, 'series_filter': None},
                        "Rabbit": {"host": "http://localhost", "user": "test_user", "password": "test_password" },
                        "JWT": {"Key": "test_key", "Secret": "test_secret" },
-                       "Filter": {'workflow_filter': None },
                        "TESTING": {"IN_PROGRESS_ROOT": self.tempdir}}
         self.zoom = Zoom(self.config)
         self.rabbit = Rabbit(self.config, self.zoom)
@@ -145,18 +144,38 @@ class TestOpencast(unittest.TestCase):
         workflows = opencast.get_workflows()
         self.assertTrue(4, len(workflows))
 
-        self.config["Filter"]["workflow_filter"] = "schedule-and-upload fasthls"
+        self.config["Opencast"]["workflow_filter"] = "schedule-and-upload fasthls"
         opencast = Opencast(self.config, self.rabbit, self.zoom)
         workflows = opencast.get_workflows()
         self.assertTrue(2, len(workflows))
         self.assertTrue("schedule-and-upload" in workflows.keys())
         self.assertTrue("fasthls" in workflows.keys())
 
-        self.config["Filter"]["workflow_filter"] = "schedule-and-upload"
+        self.config["Opencast"]["workflow_filter"] = "schedule-and-upload"
         opencast = Opencast(self.config, self.rabbit, self.zoom)
         workflows = opencast.get_workflows()
         self.assertTrue(1, len(workflows))
         self.assertTrue("schedule-and-upload" in workflows.keys())
+
+
+    @requests_mock.Mocker()
+    def test_series_filter(self, mocker):
+        opencast, _, _ = self.create_mock_opencast(mocker)
+        workflows = opencast.get_series()
+        self.assertTrue(2, len(workflows))
+
+        self.config["Opencast"]["series_filter"] = ".*foundation.*"
+        opencast = Opencast(self.config, self.rabbit, self.zoom)
+        series = opencast.get_series()
+        self.assertTrue(2, len(series))
+        self.assertTrue("ID-blender-foundation" in workflows.keys())
+        self.assertTrue("ID-blender-foundation2" in workflows.keys())
+
+        self.config["Opencast"]["series_filter"] = ".*foundation2.*"
+        opencast = Opencast(self.config, self.rabbit, self.zoom)
+        series = opencast.get_series()
+        self.assertTrue(1, len(series))
+        self.assertTrue("ID-blender-foundation2" in workflows.keys())
 
 
     @requests_mock.Mocker()

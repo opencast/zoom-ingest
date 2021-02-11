@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from math import floor
 from pathlib import Path
 from urllib.error import HTTPError
+import re
 
 import requests
 import xmltodict
@@ -53,11 +54,19 @@ class Opencast:
         self.user = get_config(config, "Opencast", "User")
         self.logger.debug(f"Opencast user is {self.user}")
         self.password = get_config(config, "Opencast", "Password")
-        filter_config = get_config_ignore(config, "Filter", "workflow_filter", True)
+        filter_config = get_config_ignore(config, "Opencast", "workflow_filter", True)
         if filter_config and len(filter_config) > 0:
             self.workflow_filter = filter_config.split(" ")
         else:
             self.workflow_filter = None
+        self.logger.debug(f"Workflow filter configured as { self.workflow_filter }")
+        filter_config = get_config_ignore(config, "Opencast", "series_filter", True)
+        if filter_config and len(filter_config) > 0:
+            self.logger.info(f"Series filter configured to be { filter_config }")
+        else:
+            filter_config = ".*"
+            self.logger.warning(f"Using default filter config: \"{ filter_config }\" because user provided config is blank!")
+        self.series_filter = re.compile(filter_config)
         self.logger.debug(f"Workflow filter configured as { self.workflow_filter }")
         self.auth = HTTPDigestAuth(self.user, self.password)
         self.rabbit = rabbit
@@ -349,6 +358,7 @@ class Opencast:
         return self.workflows
 
     def get_series(self):
+        DCTERMS = 'http://purl.org/dc/terms/'
         if not self.series or self.series_updated <= datetime.utcnow() - timedelta(hours = 1):
             attempts = 1
             successful = False
@@ -367,20 +377,22 @@ class Opencast:
                     if 'totalCount' not in response or 'catalogs' not in response:
                         raise Exception("Bad data from Opencast")
                     results = response['catalogs']
+                    processed = len(results)
                     self.series_updated = datetime.utcnow()
-                    self.series = { result['http://purl.org/dc/terms/']['identifier'][0]['value']: result['http://purl.org/dc/terms/']['title'][0]['value'] for result in results }
-                    self.logger.debug(f"Loaded { len(self.series) } series out of { response['totalCount'] }")
+                    self.series = { result[DCTERMS]['identifier'][0]['value']: result[DCTERMS]['title'][0]['value'] for result in results if self.series_filter.match(result[DCTERMS]['title'][0]['value'])}
+                    self.logger.debug(f"Processed { processed } series out of { response['totalCount'] }, { len(self.series) } match the filtering requirements")
                     counter = 1
-                    while len(self.series.keys()) < int(response['totalCount']):
+                    while processed < int(response['totalCount']):
                         response = self._do_get(f'{ self.url }/series/series.json?count=100&startPage={ counter }').json()
                         results = response['catalogs']
-                        self.series.update({ result['http://purl.org/dc/terms/']['identifier'][0]['value']: result['http://purl.org/dc/terms/']['title'][0]['value'] for result in results })
-                        self.logger.debug(f"Loaded { len(self.series) } series out of { response['totalCount'] }")
+                        processed += len(results)
+                        self.series.update({ result[DCTERMS]['identifier'][0]['value']: result[DCTERMS]['title'][0]['value'] for result in results })
+                        self.logger.debug(f"Processed { processed } series out of { response['totalCount'] }, { len(self.series) } match the filtering requirements")
                         counter += 1
                     successful = True
                     break
                 except Exception as e:
-                    self.logger.error(f"Attempt { attempts } to fetch series failed with a ConnectionError, retrying in { attempts * 5 }s")
+                    self.logger.exception(f"Attempt { attempts } to fetch series failed with a ConnectionError, retrying in { attempts * 5 }s")
                     attempts += 1
                     time.sleep(attempts * 5)
             if not successful:
