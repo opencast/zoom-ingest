@@ -208,6 +208,12 @@ class Zoom:
         zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
         self.logger.debug(f"Building renderable objects for zoom meetings: { zoom_rec_meeting_ids }")
         existing_db_recordings = dbs.query(db.Recording.uuid, db.Recording.status).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids)).distinct(db.Recording.uuid).all()
+        existing_data = {}
+        for uuid, status in existing_db_recordings:
+            if existing_data.get(uuid) and (existing_data.get(uuid) != 2 or status != 2):
+                existing_data[uuid] = 1
+            else:
+                existing_data[uuid] = status
         #Create a naive mapping of UUID: status pairs
         existing_data = { row[0]: row[1] for row in existing_db_recordings }
         #Go through the list again, and set UUIDs with non-identical statuses to in-progress
