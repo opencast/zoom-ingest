@@ -141,9 +141,9 @@ class TestZoom(unittest.TestCase):
         zoom.validate_recording_payload(self.event)
         zoom.validate_recording_object(self.event['object'])
 
-    def test_parse_recordings(self):
+    def test_parse_recording_files(self):
         zoom = Zoom(self.config)
-        recordings = zoom.parse_recording_files(self.event)
+        recordings = zoom.parse_recording_files(self.event['object'])
         self.assertEqual(1, len(recordings))
 
         recording = recordings[0]
@@ -154,10 +154,10 @@ class TestZoom(unittest.TestCase):
         self.assertEqual(recording["file_type"], self.event["object"]["recording_files"][0]["file_type"])
         self.assertEqual(recording["recording_type"], self.event["object"]["recording_files"][0]["recording_type"])
 
-    def test_parse_recordings(self):
+    def test_parse_recordings_files_without_files(self):
         zoom = Zoom(self.config)
         del self.event['object']['recording_files'][0]
-        recordings = zoom.parse_recording_files(self.event)
+        recordings = zoom.parse_recording_files(self.event['object'])
         self.assertEqual(0, len(recordings))
 
     def test_parse_rename(self):
