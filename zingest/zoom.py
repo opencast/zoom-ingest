@@ -32,19 +32,35 @@ class Zoom:
         self.jwt_token = None
         self.jwt_token_exp = None
 
-    def validate_payload(self, payload):
+    def _validate_object_fields(self, required_object_fields, obj):
+        try:
+            for field in required_object_fields:
+                if field not in obj.keys():
+                    raise BadWebhookData(f"Missing required object field '{field}'. Keys found: {obj.keys()}")
+        except Exception as e:
+            raise BadWebhookData("Unrecognized object format. {}".format(e))
+
+    def validate_recording_renamed(self, payload):
+        required_payload_fields = [
+            "old_object",
+            "object"
+        ]
+        required_object_fields = [
+            "uuid",
+            "topic"
+        ]
+        self._validate_object_fields(required_payload_fields, payload)
+        self._validate_object_fields(required_object_fields, payload['old_object'])
+        self._validate_object_fields(required_object_fields, payload['object'])
+
+    def validate_recording_payload(self, payload):
 
         required_payload_fields = [
             "object"
         ]
-        try:
-            for field in required_payload_fields:
-                if field not in payload.keys():
-                    raise BadWebhookData(f"Missing required payload field '{field}'. Keys found: {payload.keys()}")
-        except Exception as e:
-            raise BadWebhookData("Unrecognized payload format. {}".format(e))
+        self._validate_object_fields(required_payload_fields, payload)
 
-    def validate_object(self, obj):
+    def validate_recording_object(self, obj):
         required_object_fields = [
             "id",  # zoom series id
             "uuid",  # unique id of the meeting instance,
@@ -66,9 +82,7 @@ class Zoom:
         ]
 
         try:
-            for field in required_object_fields:
-                if field not in obj.keys():
-                    raise BadWebhookData(f"Missing required object field '{field}'. Keys found: {obj.keys()}")
+            self._validate_object_fields(required_object_fields, obj)
 
             files = obj["recording_files"]
             self.logger.debug(f"Found {len(files)} potential files")
@@ -76,14 +90,10 @@ class Zoom:
             # make sure there's some mp4 files in here somewhere
             found_mp4 = False
             for file in files:
-                if "file_type" not in file:
-                    raise BadWebhookData("Missing required file field 'file_type'")
+                self._validate_object_fields(required_file_fields, file)
                 if file["file_type"].lower() != "mp4":
                     continue
                 found_mp4 = True
-                for field in required_file_fields:
-                    if field not in file.keys():
-                        raise BadWebhookData(f"Missing required file field '{field}'")
                 if file["status"].lower() != "completed":
                     raise BadWebhookData(f"File with incomplete status {file['status']}")
             if not found_mp4:

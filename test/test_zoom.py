@@ -10,6 +10,8 @@ class TestZoom(unittest.TestCase):
         self.config={"JWT": {"Key": "test_key", "Secret": "test_secret" }}
         with open('test/resources/zoom/example-recording-completed.json', 'r') as webhook:
             self.event = json.loads(webhook.read())['payload']
+        with open('test/resources/zoom/example-recording-renamed.json', 'r') as webhook:
+            self.rename = json.loads(webhook.read())['payload']
 
     def tearDown(self):
         pass
@@ -51,14 +53,14 @@ class TestZoom(unittest.TestCase):
     def validate_bad_data(self, payload):
         zoom = Zoom(self.config)
         with self.assertRaises(BadWebhookData):
-            zoom.validate_payload(payload)
-            zoom.validate_object(payload['object'])
+            zoom.validate_recording_payload(payload)
+            zoom.validate_recording_object(payload['object'])
 
     def validate_no_mp4(self, payload):
         zoom = Zoom(self.config)
         with self.assertRaises(NoMp4Files):
-            zoom.validate_payload(payload)
-            zoom.validate_object(payload['object'])
+            zoom.validate_recording_payload(payload)
+            zoom.validate_recording_object(payload['object'])
 
     def test_validate_mising_object(self):
         del self.event['object']
@@ -136,8 +138,8 @@ class TestZoom(unittest.TestCase):
 
     def test_valid_data(self):
         zoom = Zoom(self.config)
-        zoom.validate_payload(self.event)
-        zoom.validate_object(self.event['object'])
+        zoom.validate_recording_payload(self.event)
+        zoom.validate_recording_object(self.event['object'])
 
     def test_parse_recordings(self):
         zoom = Zoom(self.config)
@@ -157,6 +159,25 @@ class TestZoom(unittest.TestCase):
         del self.event['object']['recording_files'][0]
         recordings = zoom.parse_recording_files(self.event)
         self.assertEqual(0, len(recordings))
+
+    def test_parse_rename(self):
+        zoom = Zoom(self.config)
+        zoom.validate_recording_renamed(self.rename)
+
+    def test_rename_no_old(self):
+        zoom = Zoom(self.config)
+
+        del self.rename['old_object']
+        with self.assertRaises(BadWebhookData):
+            zoom.validate_recording_renamed(self.rename)
+
+    def test_rename_no_new(self):
+        zoom = Zoom(self.config)
+
+        del self.rename['object']
+        with self.assertRaises(BadWebhookData):
+            zoom.validate_recording_renamed(self.rename)
+
 
     @unittest.skip("FIXME: Zoom library users requests in the backend, we should mock the responses and test zoom.py better")
     def test_parse_recordings(self):

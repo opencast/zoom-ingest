@@ -8,7 +8,7 @@ from urllib.parse import urlencode, parse_qs
 
 from flask import Flask, request, render_template, render_template_string, redirect
 
-import zingest.db
+from zingest import db
 from logger import init_logger
 from zingest.common import BadWebhookData, NoMp4Files, get_config_ignore
 from zingest.filter import RegexFilter
@@ -74,7 +74,7 @@ except KeyError as err:
 except ValueError as err:
     sys.exit("Invalid value, integer expected : {0}".format(err))
 
-zingest.db.init(config)
+db.init(config)
 z = Zoom(config)
 r = Rabbit(config, z)
 o = Opencast(config, r, z)
@@ -291,7 +291,8 @@ def do_deletes():
 
 @app.route('/webhook', methods=['POST'])
 @app.errorhandler(400)
-def do_POST():
+@db.with_session
+def do_POST(dbs):
     """Respond to Webhook"""
     if not WEBHOOK_ENABLE:
         return render_template_string("Webhook disabled!"), 405
@@ -311,13 +312,38 @@ def do_POST():
     elif "payload" not in body:
         logger.error("Payload is missing")
         return render_template_string("Missing payload field in webhook body"), 400
+    elif "event" not in body:
+        logger.error("Event is missing")
+        return render_template_string("Missing payload field in webhook body"), 400
 
     payload = body["payload"]
+    event_type = body["event"]
     obj = None
     try:
-        z.validate_payload(payload)
+        z.validate_recording_payload(payload)
         obj = payload['object']
-        z.validate_object(obj)
+        if "recording.completed" == event_type:
+            logger.debug(f"Validating recording.completed event")
+            z.validate_recording_object(obj)
+            logger.debug(f"Validated recording.completed event for { obj['uuid'] }, processing.")
+        elif "recording.renamed" == event_type:
+            logger.debug(f"Validating recording.renamed event")
+            z.validate_recording_renamed(obj)
+            uuid = obj['uuid']
+            existing_db_recording = dbs.query(db.Recording.uuid).filter(db.Recording.uuid == uuid).all()
+            if len(existing_db_recording) > 0:
+                logger.debug(f"Recieved a rename event for event { uuid }, however it is already in the database.  Ignoring rename event.")
+                return f"Ignoring rename event for { uuid } because it already exists in the database"
+            else:
+                logger.debug(f"Recieved a rename event for event { uuid }, processing.")
+            #Swap out the contents of obj
+            #before this line it's a small blob giving you the uuid and new name
+            obj = z.get_recording(uuid)
+            #Validate it again, just in case Zoom changes something
+            z.validate_recording_object(obj)
+        else:
+            self.logger.info(f"Unknown event type { event_type }, but passing initial validations.  Unable to continue processing this event.")
+            return f"Unable to ingest, unkonwn event type { event_type }"
     except BadWebhookData as e:
         logger.error("Payload failed validation")
         return render_template_string("Payload failed validation"), 400
@@ -353,7 +379,7 @@ def do_POST():
 
 def _queue_recording(obj, token=None):
     try:
-        z.validate_object(obj)
+        z.validate_recording_object(obj)
     except BadWebhookData as e:
         logger.error("Object failed validation")
         return render_template_string("Object failed validation"), 400

@@ -1,0 +1,22 @@
+{
+  "event": "recording.renamed",
+  "event_ts": 1234566789900,
+  "payload": {
+    "account_id": "ceSnBBwNTmG-6bGoJ7e7Ug",
+    "operator": "gregorydlogan@gmail.com",
+    "operator_id": "ceSnBBwNTmG-6bGoJ7e7Ug",
+    "object": {
+      "uuid": "Yaxg95jbQyiQbTYP57GqSg==",
+      "id": 7000000,
+      "topic": "Edited Recording Title",
+      "type": 1
+    },
+    "old_object": {
+      "uuid": "Yaxg95jbQyiQbTYP57GqSg==",
+      "id": 7000000,
+      "topic": "Greg Logan''s Zoom Meeting",
+      "type": 1
+    },
+    "time_stamp": 1575500457395
+  }
+}
