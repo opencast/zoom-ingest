@@ -293,11 +293,8 @@ def do_deletes():
 @app.errorhandler(400)
 @db.with_session
 def do_POST(dbs):
-    """Respond to Webhook"""
-    if not WEBHOOK_ENABLE:
-        return render_template_string("Webhook disabled!"), 405
-
     logger.debug("POST recieved")
+
     #If this header is missing this will throw a 400 automatically
     content_length = int(request.headers.get('Content-Length'))
     if content_length < 5:
@@ -314,7 +311,7 @@ def do_POST(dbs):
         return render_template_string("Missing payload field in webhook body"), 400
     elif "event" not in body:
         logger.error("Event is missing")
-        return render_template_string("Missing payload field in webhook body"), 400
+        return render_template_string("Missing event field in webhook body"), 400
 
     payload = body["payload"]
     event_type = body["event"]
@@ -328,14 +325,19 @@ def do_POST(dbs):
             logger.debug(f"Validated recording.completed event for { obj['uuid'] }, processing.")
         elif "recording.renamed" == event_type:
             logger.debug(f"Validating recording.renamed event")
-            z.validate_recording_renamed(obj)
+            z.validate_recording_renamed(payload)
             uuid = obj['uuid']
-            existing_db_recording = dbs.query(db.Recording.uuid).filter(db.Recording.uuid == uuid).all()
-            if len(existing_db_recording) > 0:
-                logger.debug(f"Recieved a rename event for event { uuid }, however it is already in the database.  Ignoring rename event.")
-                return f"Ignoring rename event for { uuid } because it already exists in the database"
-            else:
-                logger.debug(f"Recieved a rename event for event { uuid }, processing.")
+            existing_db_recording = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+            if existing_db_recording:
+                existing_db_recording.set_title(obj['topic'])
+                dbs.merge(existing_db_recording)
+                dbs.commit()
+                logger.debug(f"Recieved a rename event for event { uuid }, renamed to { obj['topic'] }.  No further processing.")
+                return f"Recieved a rename event for event { uuid }, renamed to { obj['topic'] }.  No further processing."
+
+            #In this case, we've recieved a rename for something that's *not* in the database
+            #So we treat it as if it's a normal recording complete webhook event
+            logger.debug(f"Recieved a rename event for event { uuid }, processing.")
             #Swap out the contents of obj
             #before this line it's a small blob giving you the uuid and new name
             obj = z.get_recording(uuid)
@@ -345,7 +347,7 @@ def do_POST(dbs):
             self.logger.info(f"Unknown event type { event_type }, but passing initial validations.  Unable to continue processing this event.")
             return f"Unable to ingest, unkonwn event type { event_type }"
     except BadWebhookData as e:
-        logger.error("Payload failed validation")
+        logger.exception("Payload failed validation")
         return render_template_string("Payload failed validation"), 400
     except NoMp4Files as e:
         logger.error("No mp4 files found!")
@@ -372,12 +374,13 @@ def do_POST(dbs):
     if len(WEBHOOK_ACL) > 0:
         zingest_params['acl_id'] = WEBHOOK_ACL
 
-    payload['object']['zingest_params'] = zingest_params
+    obj['zingest_params'] = zingest_params
     return _queue_recording(obj, token)
 
 ## Actually ingesting the recording (validating things, creating the rabbit message)
 
-def _queue_recording(obj, token=None):
+@db.with_session
+def _queue_recording(dbs, obj, token=None):
     try:
         z.validate_recording_object(obj)
     except BadWebhookData as e:
@@ -387,6 +390,12 @@ def _queue_recording(obj, token=None):
         logger.error("No mp4 files found!")
         return render_template_string("No mp4 files found!"), 400
 
+    uuid = obj['uuid']
+    #Check if the recording exists, and create it if it does not
+    existing_rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+    if not existing_rec:
+        existing_rec = z.create_recording_from_uuid(uuid)
+
     zingest = obj['zingest_params']
     check_duration = zingest['dur_check'] if 'dur_check' in zingest else True
     is_webhook = zingest['is_webhook'] if 'is_webhook' in zingest else False
@@ -394,19 +403,29 @@ def _queue_recording(obj, token=None):
     logger.debug(f"Checking duration: { check_duration }")
     logger.debug(f"Is a webhook event: { is_webhook }")
 
+    if not WEBHOOK_ENABLE and is_webhook:
+        self.logger.debug("Incoming POST is a webhook event, and the webhook is disabled!")
+        return render_template_string("Webhook disabled!"), 405
+
     #Check the duration if the event is a webhook event, or we've told it to for manual events
     if int(obj["duration"]) < MIN_DURATION and (is_webhook or check_duration):
         logger.error("Recording is too short")
         return render_template_string("Recording is too short"), 400
     elif not f.matches(obj) and obj['zingest_params']['is_webhook']: #Only filter on webhook events
-        logger.info(f"Recording {obj['uuid']} does not match the configured filter")
-        return render_template_string(f"Recording {obj['uuid']} did not match configured filter(s) and has been dropped"), 200
+        logger.info(f"Recording { uuid } does not match the configured filter")
+        return render_template_string(f"Recording { uuid } did not match configured filter(s) and has been dropped"), 200
+    elif is_webhook and dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid, db.Ingest.webhook_ingest == True).one_or_none():
+        logger.info(f"Not creating a new ingest for { uuid } via webhook event because it has already created one")
+        return render_template_string(f"Not creating a new ingest for { uuid } via webhook event because it has already created one"), 200
+
+    #Create the ingest record
+    ingest_id = db.create_ingest(uuid, obj['zingest_params'])
 
     logger.debug("Sending rabbit message")
-    r.send_rabbit_msg(obj, token)
+    r.send_rabbit_msg(uuid, ingest_id)
 
     logger.debug("POST processed successfully")
-    return f"Successfully sent { obj['uuid'] } to rabbit"
+    return f"Successfully sent { uuid } to rabbit"
 
 
 if __name__ == "__main__":

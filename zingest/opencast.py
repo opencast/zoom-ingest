@@ -101,9 +101,9 @@ class Opencast:
             try:
                 self.logger.info("Checking backlog")
                 hour_ago = datetime.utcnow() - timedelta(hours=1)
-                rec_list = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED, db.Recording.timestamp <= hour_ago).all()
-                for rec in rec_list:
-                    self._process(rec.get_data())
+                ing_list = dbs.query(db.Ingest).filter(db.Ingest.status != db.Status.FINISHED, db.Ingest.timestamp <= hour_ago).all()
+                for ing in ing_list:
+                    self._process(ing)
                 time.sleep(60)
             except Exception as e:
                 self.logger.exception("Catchall while processing the backlog. Please report this as a bug.")
@@ -141,37 +141,44 @@ class Opencast:
     @db.with_session
     def rabbit_callback(dbs, self, method, properties, body):
         j = json.loads(body)
-        self._process(j)
+        rec_id = j['uuid']
+        ing_id = int(j['ingest_id'])
+        ingest = dbs.query(db.Ingest).filter(db.Ingest.ingest_id == ing_id).one_or_none()
+        if ingest:
+            self._process(ingest)
+        else:
+            self.logger.warn(f"Recieved rabbit message for { rec_id } with an invalid ingest id of { ing_id }.")
 
     @db.with_session
-    def _process(dbs, self, json):
-        uuid = json['uuid']
+    def _process(dbs, self, ingest):
+        uuid = ingest.get_recording_id()
+        params = json.loads(ingest.get_params().decode('utf-8'))
+
         try:
-            self.logger.debug(f"Creating new record for {uuid}")
-            rec_id = db.create_recording(json)
-            self.logger.debug(f"Record ID { rec_id } for { uuid } created")
-            rec = dbs.query(db.Recording).filter(db.Recording.rec_id == rec_id).one_or_none()
-            rec.update_status(db.Status.IN_PROGRESS)
-            dbs.merge(rec)
+            rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+            if not rec:
+                self.logger.error(f"Unable to find recording { uuid }, this is a bug.")
+                return
+
+            ingest.update_status(db.Status.IN_PROGRESS);
+            dbs.merge(ingest)
             dbs.commit()
 
             if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
 
             self.logger.info(f"Fetching {uuid}")
-            filename = self.fetch_file(json)
+            files = self.zoom.get_recording_files(uuid)
+            filename = self.fetch_file(uuid, files)
             self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
-            #Get the parameters specified by the user
-            params = json['zingest_params']
 
             mp_id, workflow_id = self.oc_upload(uuid, filename, **params)
             self._rm(filename)
 
-            rec = dbs.query(db.Recording).filter(db.Recording.rec_id == rec_id).one_or_none()
-            rec.update_status(db.Status.FINISHED)
-            rec.set_workflow_id(workflow_id)
-            rec.set_mediapackage_id(mp_id)
-            dbs.merge(rec)
+            ingest.update_status(db.Status.FINISHED)
+            ingest.set_workflow_id(workflow_id)
+            ingest.set_mediapackage_id(mp_id)
+            dbs.merge(ingest)
             dbs.commit()
         except HTTPError as er:
             self.logger.exception("Unable to fetch file, will retry later")
@@ -189,14 +196,8 @@ class Opencast:
             if os.path.isfile(path):
                 self.logger.exception("Exception removing {path}.  File will need to be manually removed.")
 
-    def fetch_file(self, data):
-        if "recording_files" not in data:
-            self.logger.error("No recording found")
-            raise NoMp4Files("No recording found")
-        files = data["recording_files"]
-
+    def fetch_file(self, recording_id, files):
         dl_url = ''
-        recording_id = ''
         recording_file = None
         for preference in self.RECORDING_TYPE_PREFERENCE:
             self.logger.debug(f"Checking if recording contains a file of type {preference}")
@@ -223,6 +224,7 @@ class Opencast:
             elif key == "file_size":
                 expected_size = int(files[0][key])
                 self.logger.debug(f"Recording size found: {expected_size}")
+
         #Output file lives in the in-progress directory
         filename = f"{self.IN_PROGRESS_ROOT}/{recording_id}.mp4"
 

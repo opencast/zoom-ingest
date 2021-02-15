@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, \
-    create_engine
+    Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -71,11 +71,24 @@ def with_session(f):
 def create_recording(dbs, j):
     rec = Recording(j)
     dbs.add(rec)
-    rec.update_status(Status.NEW)
-    dbs.merge(rec)
     dbs.commit()
     dbs.refresh(rec)
     return rec.get_id()
+
+@with_session
+def create_ingest(dbs, uuid, params):
+    ingest = Ingest(uuid, params)
+    dbs.add(ingest)
+    dbs.commit()
+    dbs.refresh(ingest)
+    return ingest.get_id()
+
+@with_session
+def create_user(dbs, user_id, first_name, last_name, email):
+    user = User(user_id, first_name, last_name, email)
+    dbs.add(user)
+    dbs.merge(user)
+    dbs.commit()
 
 
 class Constants:
@@ -104,21 +117,17 @@ class Recording(Base):
     rec_id = Column('id', Integer, primary_key=True)
     uuid = Column('uuid', String(length=32), nullable=False)
     user_id = Column('user_id', String(length=32), nullable=False)
-    data = Column('data', LargeBinary(), nullable=False)
-    status = Column('status', Integer(), nullable=False,
-                    default=Status.NEW)
-    timestamp = Column('timestamp', DateTime(), nullable=False,
-                    default=datetime.utcnow())
-    mediapackage_id = Column('mediapackage_id', String(length=36), nullable=True, default=None)
-    workflow_id = Column('workflow_id', String(length=36), nullable=True, default=None)
+    start_time = Column('start_time', String(length=32), nullable=False)
+    title = Column('title', String(length=256), nullable=False)
 
     def __init__(self, data):
         self.uuid = data['uuid']
         self.user_id = data['host_id']
-        self.data = json.dumps(data).encode('utf-8')
-        self.update_status(Status.NEW)
-        self.mediapackage_id = None
-        self.workflow_id = None
+        self.start_time = data['start_time']
+        self.title = data['topic']
+
+    def set_title(self, new_title):
+        self.title = new_title
 
     def get_id(self):
         return self.rec_id
@@ -127,8 +136,58 @@ class Recording(Base):
         """Load JSON data from event."""
         return json.loads(self.data.decode('utf-8'))
 
+    def get_rec_id(self):
+        return self.uuid
+
     def get_user_id(self):
         return self.user_id
+
+    def serialize(self):
+        """
+        Serialize this object as dictionary usable for conversion to JSON.
+
+        :return: Dictionary representing this object.
+        """
+        return {
+            'uuid': self.uuid,
+            'user_id': self.user_id,
+            'data': self.get_data(),
+        }
+
+
+class Ingest(Base):
+    """Database definition of an ingest to Opencast."""
+
+    __tablename__ = 'ingest'
+
+    ingest_id = Column('id', Integer(), primary_key=True, autoincrement=True)
+    uuid = Column('uuid', String(length=32), nullable=False)
+    status = Column('status', Integer(), nullable=False,
+                    default=Status.NEW)
+    timestamp = Column('timestamp', DateTime(), nullable=False,
+                    default=datetime.utcnow())
+    webhook_ingest = Column('is_webhook', Boolean(), default=False, nullable=False)
+    params = Column('zingest_parms', LargeBinary(), nullable=False)
+    mediapackage_id = Column('mediapackage_id', String(length=36), nullable=True, default=None)
+    workflow_id = Column('workflow_id', String(length=36), nullable=True, default=None)
+
+    def __init__(self, uuid, params="{}"):
+        self.uuid = uuid
+        if 'is_webhook' in params:
+            self.webhook_ingest = str(params['is_webhook']) in ['true', 'True']
+        self.params = json.dumps(params).encode('utf-8')
+        self.update_status(Status.NEW)
+        self.mediapackage_id = None
+        self.workflow_id = None
+
+    def get_id(self):
+        return self.ingest_id
+
+    def get_recording_id(self):
+        return self.uuid
+
+    def get_params(self):
+        return self.params
 
     def status_str(self):
         """Return status as string."""
@@ -150,14 +209,6 @@ class Recording(Base):
     def get_workflow_id(self):
         return self.workflow_id
 
-    def __repr__(self):
-        """
-        Return a string representation of an artist object.
-
-        :return: String representation of object.
-        """
-        return f'<Recording(uuid={self.uuid}, status={self.status})>'
-
     def serialize(self):
         """
         Serialize this object as dictionary usable for conversion to JSON.
@@ -165,14 +216,11 @@ class Recording(Base):
         :return: Dictionary representing this object.
         """
         return {
-            'uuid': self.uid,
-            'user_id': self.user_id,
-            'data': self.get_data(),
-            'status': self.status_str(),
-            'wf_id': self.workflow_id,
-            'timestamp': str(self.timestamp)
+            'uuid': self.uuid,
+            'status': self.status,
+            'mediapackage_id': self.mediapackage_id,
+            'workflow_id': self.workflow_id,
         }
-
 
 class User(Base):
     """Database definition of a Zoom user."""
@@ -180,9 +228,14 @@ class User(Base):
     __tablename__ = 'user'
 
     user_id = Column('user_id', String(length=32), nullable=False, primary_key=True)
+    first_name = Column('first_name', String(length=32), nullable=False)
+    last_name = Column('last_name', String(length=32), nullable=False)
+    email = Column('email', String(length=256), nullable=False) #yay RFC 5321
     updated = Column('updated', DateTime(), nullable=False, default=datetime.utcnow())
 
-    def _init__(self, user_name):
+    def __init__(self, user_name, first_name, last_name, email):
         self.user_id = user_name
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
         self.updated = datetime.utcnow()
-

@@ -17,6 +17,9 @@ import zingest.db
 webhook_event = None
 with open('test/resources/zoom/example-recording-completed.json', 'r') as webhook:
     webhook_event = json.loads(webhook.read())
+recording_info = None
+with open('test/resources/zoom/example-meetings-id-recordings.json', 'r') as info:
+    recording_info = json.loads(info.read())
 series_json = None
 with open('test/resources/opencast/series.json', 'r') as series:
     series_json = series.read()
@@ -46,11 +49,19 @@ class TestOpencast(unittest.TestCase):
                        "Rabbit": {"host": "http://localhost", "user": "test_user", "password": "test_password" },
                        "JWT": {"Key": "test_key", "Secret": "test_secret" },
                        "TESTING": {"IN_PROGRESS_ROOT": self.tempdir}}
+        self.base_zingest = {
+            "workflow_id": "schedule-and-upload",
+            "acl_id": "1101"
+        }
         self.zoom = Zoom(self.config)
+        self.zoom.get_recording = MagicMock(return_value=recording_info)
         self.rabbit = Rabbit(self.config, self.zoom)
         self.rabbit.start_consuming_rabbitmsg = MagicMock(return_value=None)
         self.fd, self.dbfile = tempfile.mkstemp()
+
         zingest.db.init({'Database': {'database': 'sqlite:///' + self.dbfile}})
+        self.zoom._create_recording_from_data(recording_info)
+        zingest.db.create_ingest(recording_info['uuid'], self.base_zingest)
 
     def createOC(self, config, rabbit, zoom):
         return Opencast(config, rabbit, zoom)
@@ -192,9 +203,11 @@ class TestOpencast(unittest.TestCase):
         self.assert_called(mock_dict['start'], 1) #ingest/ingest
 
         db = zingest.db.get_session()
-        db_record = db.query(zingest.db.Recording).one_or_none()
-        self.assertEqual("b1d7f8d2-91fd-4710-8c63-17e3e14749a9", db_record.get_mediapackage_id())
-        self.assertEqual("5267", db_record.get_workflow_id())
+        recording_db_record = db.query(zingest.db.Recording).one_or_none()
+        ingest_db_record = db.query(zingest.db.Ingest).one_or_none()
+        self.assertEqual("Yaxg95jbQyiQbTYP57GqSg==", recording_db_record.get_rec_id())
+        self.assertEqual("b1d7f8d2-91fd-4710-8c63-17e3e14749a9", ingest_db_record.get_mediapackage_id())
+        self.assertEqual("5267", ingest_db_record.get_workflow_id())
 
     #@requests_mock.Mocker()
     def asdftest_ocUpload(self, mocker):

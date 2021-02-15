@@ -1,33 +1,4 @@
 {
-   "host_id" : "2rckNdRpQ-qyGSspp66ByQ",
-   "share_url" : "https://us02web.zoom.us/rec/share/sGpfUStqsZcS-sMBjyXLXzXFqIAFPPMZ-dkpF4K6bZ4FQEd9X65cV04dP9hx8Yyg.OvQlwf2URkks7p0r",
-   "zingest_params" : {
-      "workflow_id" : "schedule-and-upload",
-      "title" : "Greg Logan's Zoom Meeting",
-      "acl_id" : "1101",
-      "publisher" : "ETH ZÃ¼rich, ID MMS; Schweiz",
-      "duration" : "2",
-      "is_webhook" : "False",
-      "date" : "2020-10-29T20:07:38Z",
-      "creator" : "Logan, Greg"
-   },
-   "token" : "None",
-   "start_time" : "2020-10-29T20:07:38Z",
-   "creator" : "2rckNdRpQ-qyGSspp66ByQ",
-   "recording_files" : [
-      {
-         "recording_id" : "1344d9e4-781a-46e7-9589-b14c84b3dec9",
-         "recording_type" : "shared_screen_with_speaker_view",
-         "download_url" : "https://us02web.zoom.us/rec/download/sxXwkt8NOXQnTuEMrS4rB8PG-9jN6SZdq-SAjfL3EVStz8XTvULoXrONPdkLr9bVywOd7ZIod3D1Jk-A.AP3kGZPtE5HnAChr",
-         "recording_start" : "2020-10-29T20:08:33Z",
-         "recording_end" : "2020-10-29T20:11:02Z",
-         "file_size" : 6532378,
-         "file_type" : "MP4"
-      }
-   ],
-   "duration" : 2,
-   "topic" : "Greg Logan's Zoom Meeting",
    "uuid" : "Yaxg95jbQyiQbTYP57GqSg==",
-   "received_time" : "Wed Jan 27 12:04:24 2021",
-   "zoom_series_id" : 88133603998
+   "ingest_id": 1
 }

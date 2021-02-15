@@ -106,7 +106,7 @@ class Zoom:
         except Exception as e:
             raise BadWebhookData("Unrecognized object format. {}".format(e))
 
-    def parse_recording_files(self, payload):
+    def _parse_recording_files(self, payload):
         recording_files = []
         for file in payload["recording_files"]:
             if file["file_type"].lower() == "mp4":
@@ -120,6 +120,19 @@ class Zoom:
                     "recording_type": file["recording_type"]
                 })
         return recording_files
+
+    def get_recording_files(self, rec_id):
+        rec = self.get_recording(rec_id)
+        self.validate_recording_object(rec)
+        return self._parse_recording_files(rec)
+
+    def create_recording_from_uuid(self, uuid):
+        data = self.get_recording(uuid)
+        return self._create_recording_from_data(data)
+
+    def _create_recording_from_data(self, data):
+        required_data = { x: data[x] for x in data if x in ('uuid', 'host_id', 'start_time', 'topic') }
+        return db.create_recording(required_data)
 
     def get_download_token(self):
         if not self.jwt_token or datetime.utcnow() + timedelta(seconds=1) > self.jwt_token_exp:
@@ -217,21 +230,13 @@ class Zoom:
     def _build_renderable_event_list(dbs, self, zoom_meetings, min_duration=0):
         zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
         self.logger.debug(f"Building renderable objects for zoom meetings: { zoom_rec_meeting_ids }")
-        existing_db_recordings = dbs.query(db.Recording.uuid, db.Recording.status).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids)).distinct(db.Recording.uuid).all()
+        existing_db_ingests = dbs.query(db.Recording.uuid, db.Ingest.status).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids), db.Recording.uuid == db.Ingest.uuid).distinct(db.Recording.uuid).all()
         existing_data = {}
-        for uuid, status in existing_db_recordings:
+        for uuid, status in existing_db_ingests:
             if existing_data.get(uuid) and (existing_data.get(uuid) != 2 or status != 2):
                 existing_data[uuid] = 1
             else:
                 existing_data[uuid] = status
-        #Create a naive mapping of UUID: status pairs
-        existing_data = { row[0]: row[1] for row in existing_db_recordings }
-        #Go through the list again, and set UUIDs with non-identical statuses to in-progress
-        #NB: Events which have not started ingesting yet do not appear in the DB, so we're comparing in-progress events vs finished
-        for uuid, status in existing_db_recordings:
-            if status != existing_data[uuid]:
-                existing_data[uuid] = 1
-
 
         self.logger.debug(f"There are { len(existing_data) } db records matching those IDs")
         renderable = []

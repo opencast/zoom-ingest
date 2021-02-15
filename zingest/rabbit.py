@@ -21,36 +21,19 @@ class Rabbit:
         self.logger.info("Setup complete")
         self.logger.debug(f"Init rabbitmq connection to {self.rabbit_url} with user {self.rabbit_user}")
 
-    def send_rabbit_msg(self, payload, token):
+    def _construct_rabbit_msg(self, uuid, ingest_id):
         self.logger.debug("Prepping message")
-        msg = self._construct_rabbit_msg(payload, token)
-        self._send_rabbit_msg(msg)
-
-    def _construct_rabbit_msg(self, payload, token):
-        now = time.asctime()
-
-        creator = self.zoom.get_recording_creator(payload)
-        recording_files = self.zoom.parse_recording_files(payload)
 
         rabbit_msg = {
-            "uuid": payload["uuid"],
-            "zoom_series_id": payload["id"],
-            "topic": payload["topic"],
-            "start_time": payload["start_time"],
-            "duration": payload["duration"],
-            "host_id": payload["host_id"],
-            "share_url": payload["share_url"],
-            "recording_files": recording_files,
-            "zingest_params": payload.get('zingest_params', {}),
-            "token": token,
-            "received_time": now,
-            "creator": creator
+            "uuid": uuid,
+            "ingest_id": ingest_id
         }
         self.logger.debug(f"Message is {rabbit_msg}")
 
         return rabbit_msg
 
-    def _send_rabbit_msg(self, msg):
+    def send_rabbit_msg(self, uuid, ingest_id):
+        msg = self._construct_rabbit_msg(uuid, ingest_id)
         self.logger.debug(f"Sending message to {self.rabbit_url}")
         credentials = pika.PlainCredentials(self.rabbit_user, self.rabbit_pass)
         connection = pika.BlockingConnection(pika.ConnectionParameters(self.rabbit_url, credentials=credentials))
