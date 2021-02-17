@@ -142,7 +142,7 @@ def do_list_recordings(user_id):
     renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'], min_duration=min_duration)
     user = z.get_user_name(user_id)
 
-    return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check)
+    return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check, workflow_list = o.get_workflows(), series_list = o.get_series(), acl_list = o.get_acls())
 
 # Query Zoom user
 
