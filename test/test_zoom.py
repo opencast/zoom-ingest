@@ -8,10 +8,14 @@ class TestZoom(unittest.TestCase):
 
     def setUp(self):
         self.config={"JWT": {"Key": "test_key", "Secret": "test_secret" }}
-        with open('test/resources/zoom/example-recording-completed.json', 'r') as webhook:
+        with open('test/resources/zoom/webhook-recording-completed.json', 'r') as webhook:
             self.event = json.loads(webhook.read())['payload']
-        with open('test/resources/zoom/example-recording-renamed.json', 'r') as webhook:
+        with open('test/resources/zoom/webhook-recording-renamed.json', 'r') as webhook:
             self.rename = json.loads(webhook.read())['payload']
+        with open('test/resources/zoom/list-available-users.json', 'r') as webhook:
+            self.available_users = json.loads(webhook.read())
+        with open('test/resources/zoom/get-user-recordings.json', 'r') as webhook:
+            self.available_recordings = json.loads(webhook.read())
 
     def tearDown(self):
         pass

@@ -5,7 +5,7 @@ from zingest.rabbit import Rabbit
 from zingest.zoom import Zoom
 
 webhook_event = None
-with open('test/resources/zoom/example-recording-completed.json', 'r') as webhook:
+with open('test/resources/zoom/webhook-recording-completed.json', 'r') as webhook:
     webhook_event = json.loads(webhook.read())
 
 class TestRabbit(unittest.TestCase):

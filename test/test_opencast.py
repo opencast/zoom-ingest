@@ -15,10 +15,10 @@ import shutil
 import zingest.db
 
 webhook_event = None
-with open('test/resources/zoom/example-recording-completed.json', 'r') as webhook:
+with open('test/resources/zoom/webhook-recording-completed.json', 'r') as webhook:
     webhook_event = json.loads(webhook.read())
 recording_info = None
-with open('test/resources/zoom/example-meetings-id-recordings.json', 'r') as info:
+with open('test/resources/zoom/get-recording.json', 'r') as info:
     recording_info = json.loads(info.read())
 series_json = None
 with open('test/resources/opencast/series.json', 'r') as series:
