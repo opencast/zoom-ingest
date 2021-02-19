@@ -1,0 +1,12 @@
+{
+   "page_size" : 25,
+   "next_page_token" : "",
+   "contacts" : [
+      {
+         "id" : "2rckNdRpQ-qyGSspp66ByQ",
+         "first_name" : "Greg",
+         "last_name" : "Logan",
+         "email" : "gregorydlogan@gmail.com"
+      }
+   ]
+}

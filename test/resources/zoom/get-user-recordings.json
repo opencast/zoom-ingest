@@ -1,0 +1,136 @@
+{
+   "from" : "2021-02-01",
+   "next_page_token" : "",
+   "meetings" : [
+      {
+         "total_size" : 20307154,
+         "duration" : 4,
+         "uuid" : "DfKuuQ8pSze78Q1La5lCdA==",
+         "account_id" : "ceSnBBwNTmG-6bGoJ7e7Ug",
+         "start_time" : "2021-02-11T22:06:20Z",
+         "id" : 89885197905,
+         "timezone" : "",
+         "topic" : "Greg Logan''s Zoom Meeting",
+         "share_url" : "https://us02web.zoom.us/rec/share/T7PsetOpRMzF0aSu6m4o9XhF6UPtIjJYyXUBpXhVkCf62qBobquC3YZV8vraa4Ue.b-PGMMwBJ5zNEmpz",
+         "recording_count" : 2,
+         "recording_files" : [
+            {
+               "meeting_id" : "DfKuuQ8pSze78Q1La5lCdA==",
+               "recording_end" : "2021-02-11T22:11:07Z",
+               "recording_start" : "2021-02-11T22:06:27Z",
+               "download_url" : "https://us02web.zoom.us/rec/download/rvTxVtmX_YfSM_MFd2b5EtGCpbXS7N_bqn2fZKa0-NNB0339wPsHuSx_ZCMyqvHG0zw8UdxtQ0ihy3mA.yPp-7JwJP4UOTsjk",
+               "play_url" : "https://us02web.zoom.us/rec/play/rvTxVtmX_YfSM_MFd2b5EtGCpbXS7N_bqn2fZKa0-NNB0339wPsHuSx_ZCMyqvHG0zw8UdxtQ0ihy3mA.yPp-7JwJP4UOTsjk",
+               "file_type" : "M4A",
+               "file_extension" : "M4A",
+               "status" : "completed",
+               "id" : "abe5d3d9-91a5-458b-9035-25f8314f874d",
+               "file_size" : 4456172,
+               "recording_type" : "audio_only"
+            },
+            {
+               "file_type" : "MP4",
+               "play_url" : "https://us02web.zoom.us/rec/play/RBpxXHb9yiPzczUfMh8wR981ND15nyndVtCitwyC79H1jT1WE8huHbxFnBD9G5NJHbK639TB0OIDSx1W.yGcaIFeBqwgvvdQF",
+               "recording_start" : "2021-02-11T22:06:27Z",
+               "download_url" : "https://us02web.zoom.us/rec/download/RBpxXHb9yiPzczUfMh8wR981ND15nyndVtCitwyC79H1jT1WE8huHbxFnBD9G5NJHbK639TB0OIDSx1W.yGcaIFeBqwgvvdQF",
+               "recording_end" : "2021-02-11T22:11:07Z",
+               "meeting_id" : "DfKuuQ8pSze78Q1La5lCdA==",
+               "recording_type" : "shared_screen_with_speaker_view",
+               "file_size" : 15850982,
+               "status" : "completed",
+               "id" : "b0863d1b-d84a-4452-b26e-8f8a1a208540",
+               "file_extension" : "MP4"
+            }
+         ],
+         "host_id" : "2rckNdRpQ-qyGSspp66ByQ",
+         "type" : 1
+      },
+      {
+         "total_size" : 3834086,
+         "duration" : 0,
+         "uuid" : "grEAY2hdSle0k31iVSxdnQ==",
+         "account_id" : "ceSnBBwNTmG-6bGoJ7e7Ug",
+         "start_time" : "2021-02-11T22:02:01Z",
+         "id" : 88018092268,
+         "timezone" : "",
+         "topic" : "Greg Logan's Zoom Meeting",
+         "share_url" : "https://us02web.zoom.us/rec/share/brwP10mYMFg_U5c3yny64E8BxRb5g3nV7uBN3uHNWc6_y2pTrJB15Nkm7OLbHPTs.dIdZB9bgbdDRs-dD",
+         "recording_count" : 2,
+         "recording_files" : [
+            {
+               "file_extension" : "MP4",
+               "id" : "6dd4ac51-111b-461f-bba0-55911e04ab7f",
+               "status" : "completed",
+               "file_size" : 2993081,
+               "recording_type" : "shared_screen_with_speaker_view",
+               "meeting_id" : "grEAY2hdSle0k31iVSxdnQ==",
+               "recording_end" : "2021-02-11T22:03:02Z",
+               "play_url" : "https://us02web.zoom.us/rec/play/DkeHs0ewK7BGwFc-zXAgi9dXO54YdQl0N3H_1_K8hlYWCswZVkEg6eNHhZ3obChEv3kwbZatYsyVZMJ1.9ywBfrGCWmZVCh0G",
+               "file_type" : "MP4",
+               "download_url" : "https://us02web.zoom.us/rec/download/DkeHs0ewK7BGwFc-zXAgi9dXO54YdQl0N3H_1_K8hlYWCswZVkEg6eNHhZ3obChEv3kwbZatYsyVZMJ1.9ywBfrGCWmZVCh0G",
+               "recording_start" : "2021-02-11T22:02:09Z"
+            },
+            {
+               "file_size" : 841005,
+               "recording_type" : "audio_only",
+               "status" : "completed",
+               "id" : "e336e989-a65f-43a5-8ec8-494144ae231f",
+               "file_extension" : "M4A",
+               "recording_start" : "2021-02-11T22:02:09Z",
+               "download_url" : "https://us02web.zoom.us/rec/download/g8Xzb9T1wOSHJG_BpCE8GaGwwpATXryxGT7FhQjA2QteemNhCL0lkBoDS6PgnDSlW3Whh2HPNlm37JN3.WEEE9qFFFbKJAJC9",
+               "play_url" : "https://us02web.zoom.us/rec/play/g8Xzb9T1wOSHJG_BpCE8GaGwwpATXryxGT7FhQjA2QteemNhCL0lkBoDS6PgnDSlW3Whh2HPNlm37JN3.WEEE9qFFFbKJAJC9",
+               "file_type" : "M4A",
+               "recording_end" : "2021-02-11T22:03:02Z",
+               "meeting_id" : "grEAY2hdSle0k31iVSxdnQ=="
+            }
+         ],
+         "host_id" : "2rckNdRpQ-qyGSspp66ByQ",
+         "type" : 1
+      },
+      {
+         "account_id" : "ceSnBBwNTmG-6bGoJ7e7Ug",
+         "uuid" : "Kp1ba7p/ReihrETJpsxD4Q==",
+         "duration" : 0,
+         "total_size" : 4147993,
+         "id" : 82366744368,
+         "start_time" : "2021-02-11T21:52:47Z",
+         "share_url" : "https://us02web.zoom.us/rec/share/ct4AVXIwxC6P4Gp3AKpgLofCcfHyD7s8AKhxcIn6Y2yY5hCtjD_HRC8xfogN856u.N8UhVFa0D2YvCGKK",
+         "topic" : "Test zoom meeting",
+         "timezone" : "",
+         "type" : 1,
+         "host_id" : "2rckNdRpQ-qyGSspp66ByQ",
+         "recording_files" : [
+            {
+               "file_extension" : "MP4",
+               "status" : "completed",
+               "id" : "10ddca2f-2ede-4530-8186-961cc4d0b461",
+               "recording_type" : "shared_screen_with_speaker_view",
+               "file_size" : 3275923,
+               "meeting_id" : "Kp1ba7p/ReihrETJpsxD4Q==",
+               "recording_end" : "2021-02-11T21:54:11Z",
+               "play_url" : "https://us02web.zoom.us/rec/play/T0rvZX_7vZVHw7RgL2srvDuvfMBB_mw67-kDnw843TtoSmB_0Ch14LBOWvXJhVtRssuHBQ1_sAHqQhaZ.MWs4uwwHEJIvvqiS",
+               "file_type" : "MP4",
+               "recording_start" : "2021-02-11T21:53:17Z",
+               "download_url" : "https://us02web.zoom.us/rec/download/T0rvZX_7vZVHw7RgL2srvDuvfMBB_mw67-kDnw843TtoSmB_0Ch14LBOWvXJhVtRssuHBQ1_sAHqQhaZ.MWs4uwwHEJIvvqiS"
+            },
+            {
+               "file_type" : "M4A",
+               "play_url" : "https://us02web.zoom.us/rec/play/63clh1uu-iJzqOMhfdJx3ZctIxCI_1l7afmJLvuV2jlgJy810nF6aCuJUge_AbOmWVCbB719uYiWcV6j.ExTfKLoPGpGJset7",
+               "download_url" : "https://us02web.zoom.us/rec/download/63clh1uu-iJzqOMhfdJx3ZctIxCI_1l7afmJLvuV2jlgJy810nF6aCuJUge_AbOmWVCbB719uYiWcV6j.ExTfKLoPGpGJset7",
+               "recording_start" : "2021-02-11T21:53:17Z",
+               "meeting_id" : "Kp1ba7p/ReihrETJpsxD4Q==",
+               "recording_end" : "2021-02-11T21:54:11Z",
+               "id" : "f9e5b707-0824-47e0-8ed7-bd48e65ae0c7",
+               "status" : "completed",
+               "file_size" : 872070,
+               "recording_type" : "audio_only",
+               "file_extension" : "M4A"
+            }
+         ],
+         "recording_count" : 2
+      }
+   ],
+   "total_records" : 3,
+   "page_size" : 30,
+   "to" : "2021-02-19",
+   "page_count" : 1
+}
