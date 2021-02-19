@@ -10,5 +10,5 @@ class RegexFilter:
         self.regex = re.compile(self.pattern)
         self.logger.debug(f"Filtering with regex {self.pattern} against recording topics")
 
-    def matches(self, obj):
-        return self.regex.search(obj['topic']) != None
+    def matches(self, thing):
+        return self.regex.search(thing) != None

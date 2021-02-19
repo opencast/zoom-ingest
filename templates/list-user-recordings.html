@@ -22,6 +22,11 @@
     <a href="?from={{ from_date }}&to={{ to_date }}&dur_check=true">Enable duration checks</a>
     {% endif %}
   </p>
+  {% if message %}
+  <h2>{{ message }}</h2>
+  {% endif %}
+  <form action="/bulk">
+  <input type="hidden" name="origin_email" value="{{ email }}" />
   <table style="width:100%">
     <tr>
       <th style="text-align:left">Bulk Ingest</th>
@@ -33,7 +38,7 @@
     </tr>
     {% for recording in recordings %}
     <tr{% if dur_check and recording.too_short %} class="short"{% endif %}>
-      <td><input type="checkbox" name="bulk_{{ recording.id }}"/></td>
+      <td><input type="checkbox" name="bulk_{{ recording.id }}"/{% if dur_check and recording.too_short %} disabled="true"{% endif %}></td>
       <td>{{ recording.date }}</td>
       <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?from={{ from_date }}&to={{ to_date }}&dur_check={{ dur_check }}">{{ recording.title }}</a></td>
       <td>{{ recording.status }}</td>
@@ -67,7 +72,8 @@
     <option value="{{ key }}" {% if workflow is defined and workflow['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
     {% endfor %}
   </select>
-  <button type="submit" formmethod="post" formaction="/bulk">Submit</button>
+  <button type="submit" formmethod="post" postaction="/bulk">Submit</button>
+  </form>
   <hr/>
   <a href="/">Full user list</a>
     <!--

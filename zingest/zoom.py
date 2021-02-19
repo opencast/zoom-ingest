@@ -131,7 +131,7 @@ class Zoom:
         return self._create_recording_from_data(data)
 
     def _create_recording_from_data(self, data):
-        required_data = { x: data[x] for x in data if x in ('uuid', 'host_id', 'start_time', 'topic') }
+        required_data = { x: data[x] for x in data if x in ('uuid', 'host_id', 'start_time', 'topic', 'duration') }
         return db.create_recording(required_data)
 
     def get_download_token(self):

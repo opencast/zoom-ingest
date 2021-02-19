@@ -79,7 +79,7 @@ z = Zoom(config)
 r = Rabbit(config, z)
 o = Opencast(config, r, z)
 
-f = RegexFilter(config)
+recording_filter = RegexFilter(config)
 
 app = Flask(__name__)
 
@@ -141,8 +141,9 @@ def do_list_recordings(user_id):
 
     renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'], min_duration=min_duration)
     user = z.get_user_name(user_id)
+    email = z.get_user_email(user_id)
 
-    return render_template("list-user-recordings.html", recordings=renderable, user=user, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check, workflow_list = o.get_workflows(), series_list = o.get_series(), acl_list = o.get_acls())
+    return render_template("list-user-recordings.html", recordings=renderable, user=user, email=email, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check, workflow_list = o.get_workflows(), series_list = o.get_series(), acl_list = o.get_acls())
 
 # Query Zoom user
 
@@ -213,27 +214,28 @@ def render_single_recording(recording_id, series_id = None, acl_id = None, workf
     return render_template("ingest-recording.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS, dur_check = query_params['dur_check'])
 
 
-def ingest_single_recording(recording_id):
+def _ingest_single_recording(recording_id):
     logger.info(f"Ingesting for { recording_id }")
     user_id = request.form['origin_email']
-    query_string = urllib.parse.unquote_plus(request.form['origin_query_string'])
+    query_string = urllib.parse.unquote_plus(request.form.get('origin_query_string',""))
     qs = urllib.parse.parse_qs(query_string)
     dur_check = True
     if 'dur_check' in qs and qs['dur_check'][0].lower() == 'false':
         dur_check = False
-    #TODO: Validate required terms are present
-    #TODO: Handle upload failure
-    recording_json = z.get_recording(recording_id)
-    params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not '' == value }
+    params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not key.startswith("bulk_") and not '' == value }
     params['is_webhook'] = False
     params['dur_check'] = dur_check
-    date = params['date']
-    time = params['time']
-    expected_format = "%Y-%m-%dT%H:%M:%SZ"
-    #Ensure this parses correctly, then set the date param with the combination of date and time
-    params['date'] = datetime.strptime(f"{ date }T{ time }Z", expected_format).strftime(expected_format)
-    recording_json['zingest_params'] = params
-    _queue_recording(recording_json)
+    if 'date' in params and 'time' in params:
+        date = params['date']
+        time = params['time']
+        expected_format = "%Y-%m-%dT%H:%M:%SZ"
+        #Ensure this parses correctly, then set the date param with the combination of date and time
+        params['date'] = datetime.strptime(f"{ date }T{ time }Z", expected_format).strftime(expected_format)
+    _queue_recording(recording_id, params)
+    return user_id, query_string
+
+def ingest_single_recording(recording_id):
+    user_id, query_string = _ingest_single_recording(recording_id)
     return redirect(f'/recordings/{ user_id }?{ query_string }')
 
 ## Handling of a single series
@@ -288,6 +290,30 @@ def do_deletes():
         return render_template("delete-record.html", recordings = current)
 
 ## Webhook support
+
+@app.route('/bulk', methods=['POST'])
+@app.errorhandler(400)
+@db.with_session
+def do_bulk(dbs):
+    logger.debug("Bulk POST recieved")
+    form_params = request.form
+    event_ids = [ urllib.parse.unquote_plus(name[len("_bulk"):]) for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
+    logger.debug(f"Bulk ingest for events { event_ids }")
+
+    acl_id = form_params.get("acl_id", "None")
+    workflow_id = form_params.get("workflow_id", None)
+    series_id = form_params.get("isParfOf")
+    if not workflow_id:
+        logger.error("No workflow ID set")
+        return render_template_string("No workflow ID set"), 400
+    logger.debug(f"Bulk ingest with workflow { workflow_id } and acl { acl_id } to series { series_id }")
+
+    for event_id in event_ids:
+        user_id, query_string = _ingest_single_recording(event_id)
+    if request.referrer:
+        return redirect(request.referrer)
+    else:
+        return redirect("/")
 
 @app.route('/webhook', methods=['POST'])
 @app.errorhandler(400)
@@ -353,6 +379,7 @@ def do_POST(dbs):
         logger.error("No mp4 files found!")
         return render_template_string("No mp4 files found!"), 400
 
+    uuid = obj['uuid']
     if "download_token" in body:
         token = body["download_token"]
         logger.debug(f"Token is {token}")
@@ -374,29 +401,18 @@ def do_POST(dbs):
     if len(WEBHOOK_ACL) > 0:
         zingest_params['acl_id'] = WEBHOOK_ACL
 
-    obj['zingest_params'] = zingest_params
-    return _queue_recording(obj, token)
+    return _queue_recording(uuid, zingest_params, token)
 
 ## Actually ingesting the recording (validating things, creating the rabbit message)
 
 @db.with_session
-def _queue_recording(dbs, obj, token=None):
-    try:
-        z.validate_recording_object(obj)
-    except BadWebhookData as e:
-        logger.error("Object failed validation")
-        return render_template_string("Object failed validation"), 400
-    except NoMp4Files as e:
-        logger.error("No mp4 files found!")
-        return render_template_string("No mp4 files found!"), 400
+def _queue_recording(dbs, uuid, zingest, token=None):
 
-    uuid = obj['uuid']
     #Check if the recording exists, and create it if it does not
     existing_rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
     if not existing_rec:
         existing_rec = z.create_recording_from_uuid(uuid)
 
-    zingest = obj['zingest_params']
     check_duration = zingest['dur_check'] if 'dur_check' in zingest else True
     is_webhook = zingest['is_webhook'] if 'is_webhook' in zingest else False
 
@@ -408,10 +424,10 @@ def _queue_recording(dbs, obj, token=None):
         return render_template_string("Webhook disabled!"), 405
 
     #Check the duration if the event is a webhook event, or we've told it to for manual events
-    if int(obj["duration"]) < MIN_DURATION and (is_webhook or check_duration):
+    if existing_rec.get_duration() < MIN_DURATION and (is_webhook or check_duration):
         logger.error("Recording is too short")
         return render_template_string("Recording is too short"), 400
-    elif not f.matches(obj) and obj['zingest_params']['is_webhook']: #Only filter on webhook events
+    elif not recording_filter.matches(existing_rec.get_title()) and is_webhook: #Only filter on webhook events
         logger.info(f"Recording { uuid } does not match the configured filter")
         return render_template_string(f"Recording { uuid } did not match configured filter(s) and has been dropped"), 200
     elif is_webhook and dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid, db.Ingest.webhook_ingest == True).one_or_none():
@@ -419,7 +435,8 @@ def _queue_recording(dbs, obj, token=None):
         return render_template_string(f"Not creating a new ingest for { uuid } via webhook event because it has already created one"), 200
 
     #Create the ingest record
-    ingest_id = db.create_ingest(uuid, obj['zingest_params'])
+    logger.debug(f"Creating ingest record for { uuid } with params { zingest }")
+    ingest_id = db.create_ingest(uuid, zingest)
 
     logger.debug("Sending rabbit message")
     r.send_rabbit_msg(uuid, ingest_id)

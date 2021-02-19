@@ -73,7 +73,7 @@ def create_recording(dbs, j):
     dbs.add(rec)
     dbs.commit()
     dbs.refresh(rec)
-    return rec.get_id()
+    return rec
 
 @with_session
 def create_ingest(dbs, uuid, params):
@@ -115,6 +115,7 @@ class Recording(Base):
     __tablename__ = 'recording'
 
     rec_id = Column('id', Integer, primary_key=True)
+    duration = Column('duration', Integer, nullable=False)
     uuid = Column('uuid', String(length=32), nullable=False)
     user_id = Column('user_id', String(length=32), nullable=False)
     start_time = Column('start_time', String(length=32), nullable=False)
@@ -122,6 +123,7 @@ class Recording(Base):
 
     def __init__(self, data):
         self.uuid = data['uuid']
+        self.duration = int(data['duration'])
         self.user_id = data['host_id']
         self.start_time = data['start_time']
         self.title = data['topic']
@@ -132,9 +134,11 @@ class Recording(Base):
     def get_id(self):
         return self.rec_id
 
-    def get_data(self):
-        """Load JSON data from event."""
-        return json.loads(self.data.decode('utf-8'))
+    def get_title(self):
+        return self.title
+
+    def get_duration(self):
+        return self.duration
 
     def get_rec_id(self):
         return self.uuid
@@ -151,7 +155,6 @@ class Recording(Base):
         return {
             'uuid': self.uuid,
             'user_id': self.user_id,
-            'data': self.get_data(),
         }
 
 
