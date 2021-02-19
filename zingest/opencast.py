@@ -238,7 +238,7 @@ class Opencast:
 
     @db.with_session
     def get_in_progress(dbs, self):
-        results = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED).all()
+        results = dbs.query(db.Recording).filter(db.Recording.status == db.Status.IN_PROGRESS).all()
         return self._build_ingest_renderable(results)
 
     @db.with_session

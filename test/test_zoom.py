@@ -183,6 +183,14 @@ class TestZoom(unittest.TestCase):
             zoom.validate_recording_renamed(self.rename)
 
 
+    def create_mock_zoom(self, mocker):
+        m.get('//api.zoom.us/v2/users', text=self.available_users)
+        m.get('//api.zoom.us/v2/users/2rckNdRpQ-qyGSspp66ByQ/recordings', text=self.available_recordings)
+        m.get('//api.zoom.us/v2/users/gregorydlogan%40gmail.com/recordings', text=self.available_recordings)
+
+        return Zoom(self.config)
+
+
     @unittest.skip("FIXME: Zoom library users requests in the backend, we should mock the responses and test zoom.py better")
     def test_parse_recordings(self):
         zoom = Zoom(self.config)

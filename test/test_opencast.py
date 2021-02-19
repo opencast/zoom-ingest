@@ -225,6 +225,12 @@ class TestOpencast(unittest.TestCase):
         self.assertEqual(mpid, wfdict['wf:workflow']['mp:mediapackage']['@id'])
         self.assertEqual(wfInstId, wfdict['wf:workflow']['@id'])
 
+    @requests_mock.Mocker()
+    def test_in_progress(self, mocker):
+        opencast, _, _ = self.create_mock_opencast(mocker)
+
+        ip = o.get_in_progress()
+        fin = o.get_finished()
 
 if __name__ == '__main__':
     unittest.main()
