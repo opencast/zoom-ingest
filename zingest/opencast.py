@@ -212,7 +212,7 @@ class Opencast:
 
         #If we've somehow cycled through all the candidates and nothing matches, fail
         if not recording_file:
-            raise BadWebhookData("No acceptable filetype found!")
+            raise NoMp4Files("No acceptable filetype found!")
 
         for key in files[0].keys():
             if key == "download_url":

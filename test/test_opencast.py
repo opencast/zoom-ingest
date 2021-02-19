@@ -55,6 +55,7 @@ class TestOpencast(unittest.TestCase):
         }
         self.zoom = Zoom(self.config)
         self.zoom.get_recording = MagicMock(return_value=recording_info)
+        self.zoom.get_user_name = MagicMock(return_value="Logan, Greg")
         self.rabbit = Rabbit(self.config, self.zoom)
         self.rabbit.start_consuming_rabbitmsg = MagicMock(return_value=None)
         self.fd, self.dbfile = tempfile.mkstemp()
@@ -209,11 +210,11 @@ class TestOpencast(unittest.TestCase):
         self.assertEqual("b1d7f8d2-91fd-4710-8c63-17e3e14749a9", ingest_db_record.get_mediapackage_id())
         self.assertEqual("5267", ingest_db_record.get_workflow_id())
 
-    #@requests_mock.Mocker()
-    def asdftest_ocUpload(self, mocker):
+    @requests_mock.Mocker()
+    def test_ocUpload(self, mocker):
         opencast, _, mock_dict = self.create_mock_opencast(mocker)
         wfdict = xmltodict.parse(ingest['ingest']) #start is the response ingest.xml, which is what the mock request returns
-        mpid, wfInstId = opencast.oc_upload("fake_uuid", "test/resources/fake", acl_id="test_acl", workflow_id="test_workflow")#, some="other_param")
+        mpid, wfInstId = opencast.oc_upload("fake_uuid", "test/resources/media/fake", acl_id="test_acl", workflow_id="test_workflow")#, some="other_param")
 
         self.assert_called(mock_dict['create'], 1) #created
         self.assert_called(mock_dict['attach'], 1) #attachment
