@@ -434,6 +434,14 @@ def _queue_recording(dbs, uuid, zingest, token=None):
         logger.info(f"Not creating a new ingest for { uuid } via webhook event because it has already created one")
         return render_template_string(f"Not creating a new ingest for { uuid } via webhook event because it has already created one"), 200
 
+    #Ensure the required metadata is all present
+    renderable = z.get_renderable_recording(uuid)
+    for el in ('title', 'date', 'time', 'duration'):
+        if el not in zingest:
+            zingest[el] = renderable[el]
+    if "creator" not in zingest:
+        zingest["creator"] = renderable["host"]
+
     #Create the ingest record
     logger.debug(f"Creating ingest record for { uuid } with params { zingest }")
     ingest_id = db.create_ingest(uuid, zingest)
