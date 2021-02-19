@@ -21,12 +21,7 @@ class Zoom:
 
         self.api_key = get_config(config, 'JWT', 'Key')
         self.api_secret = get_config(config, 'JWT', 'Secret')
-        if self.api_key:
-            self.logger.debug(f"Init with Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
-        else:
-            raise ValueError("Zoom API key not set")
-        if not self.api_secret:
-            raise ValueError("Zoom API secret not set")
+        self.logger.debug(f"Init with Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
         self.zoom_client = None
         self.zoom_client_exp = None
         self.jwt_token = None
