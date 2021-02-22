@@ -134,7 +134,10 @@ class Zoom:
             #Expires after 5 minutes
             self.jwt_token_exp = datetime.utcnow() + timedelta(minutes=5)
             payload = {"iss": self.api_key, "exp": self.jwt_token_exp}
-            self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS).decode("utf-8")
+            self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS)
+            #PyJWT 2.0 and newer return a string, older versions need to be decoded
+            if type(self.jwt_token) is not str:
+                self.jwt_token = self.jwt_token.decode("utf-8")
         return self.jwt_token
 
     def _get_zoom_client(self):
