@@ -177,10 +177,6 @@ class Zoom:
         user = self.get_user(user_id_or_email)
         return f"{ user['last_name'] }, { user['first_name'] }"
 
-    def get_recording_creator(self, payload):
-        return payload['host_id']
-        #RATELIMIT: 30/80 req/s
-
     @functools.lru_cache(maxsize=32)
     def get_user(self, email_or_id):
         fn = self._get_zoom_client().user.get

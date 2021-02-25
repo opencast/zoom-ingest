@@ -186,7 +186,7 @@ class TestZoom(unittest.TestCase):
     @unittest.skip("FIXME: Zoom library users requests in the backend, we should mock the responses and test zoom.py better")
     def test_parse_recordings(self):
         zoom = Zoom(self.config)
-        creator = zoom.get_recording_creator(self.event)
+        #creator = zoom.get_recording_creator(self.event)
         self.fail("This test is testing something that's hardcoded!")
 
 
