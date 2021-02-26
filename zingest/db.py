@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, \
-    Boolean, create_engine
+    Boolean, create_engine, func, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -76,6 +76,13 @@ def create_recording(dbs, j):
     return rec
 
 @with_session
+def create_recording_if_needed(dbs, j):
+    existing_recording = dbs.query(Recording).filter(Recording.uuid == j['uuid']).one_or_none()
+    if not existing_recording:
+        existing_recording = create_recording(j)
+    return existing_recording
+
+@with_session
 def create_ingest(dbs, uuid, params):
     ingest = Ingest(uuid, params)
     dbs.add(ingest)
@@ -84,11 +91,48 @@ def create_ingest(dbs, uuid, params):
     return ingest.get_id()
 
 @with_session
+def ensure_user(dbs, user_id, first_name, last_name, email):
+    existing_user = dbs.query(User).filter(User.user_id == user_id).one_or_none()
+    if not existing_user:
+        existing_user = create_user(user_id, first_name, last_name, email)
+    else:
+        #This isn't likely, but if the user's details change we should keep them up to date
+        if existing_user.first_name != first_name or \
+           existing_user.last_name != last_name or \
+           existing_user.email != email:
+            existing_user.update(first_name, last_name, email)
+            dbs.merge(existing_user)
+            dbs.commit()
+    return existing_user
+
+@with_session
 def create_user(dbs, user_id, first_name, last_name, email):
     user = User(user_id, first_name, last_name, email)
     dbs.add(user)
     dbs.merge(user)
     dbs.commit()
+    dbs.refresh(user)
+    return user
+
+
+@with_session
+def find_recordings_matching(dbs, query):
+    #TODO: Verify that this is safe, SQL-wise
+    wildcarded = f"%{ query.lower() }%"
+    return dbs.query(Recording).filter(or_(
+                Recording.title.ilike(wildcarded),
+                Recording.start_time.ilike(wildcarded)
+            )).all()
+
+@with_session
+def find_users_matching(dbs, query):
+    #TODO: Verify that this is safe, SQL-wise
+    wildcarded = f"%{ query.lower() }%"
+    return dbs.query(User).filter(or_(
+                User.first_name.ilike(wildcarded),
+                User.last_name.ilike(wildcarded),
+                User.email.ilike(wildcarded)
+            )).all()
 
 
 class Constants:
@@ -153,8 +197,13 @@ class Recording(Base):
         :return: Dictionary representing this object.
         """
         return {
-            'uuid': self.uuid,
-            'user_id': self.user_id,
+            'id': self.uuid,
+            'title': self.title,
+            'date': self.start_time[:10],
+            'time': self.start_time[11:-1],
+            'datetime': self.start_time,
+            'duration': self.duration,
+            'host': self.user_id
         }
 
 
@@ -238,6 +287,12 @@ class User(Base):
 
     def __init__(self, user_name, first_name, last_name, email):
         self.user_id = user_name
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.updated = datetime.utcnow()
+
+    def update(self, first_name, last_name, email):
         self.first_name = first_name
         self.last_name = last_name
         self.email = email

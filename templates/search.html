@@ -1,0 +1,108 @@
+<html>
+<head>
+  <title>Search for {{ term }}</title>
+  <style>
+  .short {
+    color: gray;
+  }
+  .error {
+    color: red;
+  }
+  </style>
+</head>
+<body>
+  <h1>Zoom search matching {{ query }}</h1>
+  <p>
+    {% if dur_check %}
+    <a href="?q={{ query }}&dur_check=false">Disable duration checks</a>
+    {% else %}
+    <a href="?q={{ query }}&dur_check=true">Enable duration checks</a>
+    {% endif %}
+    <div>
+    <form action="/">
+      <label for="query">Query term  </label>
+      <input type="text" name="q" value="{{ query }}"/>
+      <input type="submit"/>
+    </form>
+    <form action="/">
+      <label for="query">Query date </label>
+      <input type="date" name="q"/>
+      <input type="submit"/>
+    </form>
+    </div>
+  </p>
+  {% if message %}
+  <h2>{{ message }}</h2>
+  {% endif %}
+  <h2>Matching recordings:</h2>
+  <form action="/bulk">
+  <input type="hidden" name="origin_email" value="{{ email }}" />
+  <table style="width:100%">
+    <tr>
+      <th style="text-align:left">Bulk Ingest</th>
+      <th style="text-align:left">Date</th>
+      <th style="text-align:left">Title</th>
+      <th style="text-align:left">Status</th>
+      <th style="text-align:left">Duration</th>
+      <th style="text-align:left">Action</th>
+    </tr>
+    {% for recording in recordings %}
+    <tr{% if dur_check and recording.too_short %} class="short"{% endif %}>
+      <td><input type="checkbox" name="bulk_{{ recording.id }}"/{% if dur_check and recording.too_short %} disabled="true"{% endif %}></td>
+      <td>{{ recording.date }}</td>
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?q={{ query }}&dur_check={{ dur_check }}">{{ recording.title }}</a></td>
+      <td>{{ recording.status }}</td>
+      <td{% if dur_check and recording.too_short %} class="error"{% endif %}>{{ recording.duration }}</td>
+      {% if (dur_check and not recording.too_short) or not dur_check %}
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?q={{ query }}&dur_check={{ dur_check }}">Select</a></td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+  <hr/>
+  <label for="isPartOf">Series</label>
+  <select id="isPartOf" name="isPartOf">
+    <option value="" {% if series == None %}selected="true"{% endif %}>--No Series--</option>
+    {% for key, value in series_list.items() %}
+    <option value="{{ key }}" {% if series is defined and series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  {#<!--<a href="../series?epid={{ recording.id | urlencode }}&oem={{ recording.email }}&oqs={{ query_string }}">Create New Series</a>-->#}
+  <label for="acl_id">ACL</label>
+  <select id="acl_id" name="acl_id">
+    <option value="" {% if acl == None %}selected="true"{% endif %}>--Blank ACL--</option>
+    {% for key, value in acl_list.items() %}
+    <option value="{{ key }}" {% if acl is defined and acl['identifier'] == key %}selected="true"{% endif %}>{{ value['name'] }}</option>
+    {% endfor %}
+  </select>
+  <label for="workflow_id">Workflow</label>
+  <select id="workflow_id" name="workflow_id" required>
+    <option value=""{% if workflow == None %}selected="true"{% endif %} disabled="disabled">Select Workflow</option>
+    {% for key, value in workflow_list.items() %}
+    <option value="{{ key }}" {% if workflow is defined and workflow['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" formmethod="post" postaction="/bulk"{% if recordings | length < 1 %} disabled="true"{% endif %}>Submit</button>
+  </form>
+  <hr/>
+  <h2>Matching users:</h2>
+  <table style="width:100%">
+    <tr>
+      <th style="text-align:left">Name</th>
+      <th style="text-align:left">Email</th>
+      <th style="text-align:left">Recordings</th>
+    </tr>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.last_name }}, {{ user.first_name }}</td>
+      <td>{{ user.email }}</td>
+      <td><a href="/recordings/{{ user.id }}">List</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+    <!--
+ |
+  <a href="/cancel">Cancellable ingests</a>
+  -->
+</body>
+</html>

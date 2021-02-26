@@ -101,11 +101,13 @@ def validate_date(date_obj):
 
 
 def get_query_params():
-    from_date = validate_date(request.args.get('from', date.today() - timedelta(days = 30)))
-    to_date = validate_date(request.args.get('to', date.today()))
-    page_size = request.args.get('page_size', None)
-    dur_check = request.args.get('dur_check', "true").lower() == 'true'
-    return { 'from': from_date, 'to': to_date, 'page_size': page_size, 'dur_check': dur_check}
+    return {
+        'from': validate_date(request.args.get('from', date.today() - timedelta(days = 30))),
+        'to': validate_date(request.args.get('to', date.today())),
+        'page_size': request.args.get('page_size', None),
+        'dur_check': request.args.get('dur_check', "true").lower() == 'true',
+        'oref': request.args.get('oref', request.referrer)
+    }
 
 
 def build_query_string(param_dict = None):
@@ -115,23 +117,6 @@ def build_query_string(param_dict = None):
     query_string = urlencode(clean_dict)
     logger.debug(f"Query string is { query_string }")
     return query_string
-
-## List of all users
-
-@app.route('/', methods=['GET'])
-def do_GET():
-    page_num = request.args.get('page', 1)
-    users = z.list_available_users(page_num)
-    page_number = int(users['page_number'])
-    page_size = int(users['page_size'])
-    total_users = int(users['total_records'])
-
-    user_from = (page_number - 1) * page_size + 1
-    user_to = min(page_number * page_size, total_users)
-    last_page = None if user_from <= page_size else page_number - 1
-    next_page = None if page_number * page_size >= total_users else page_number + 1
-
-    return render_template("list-users.html", users = users['users'], user_from = user_from, user_to = user_to, last_page = last_page, next_page = next_page)
 
 ## List of recordings for a single user,
 
@@ -153,42 +138,21 @@ def do_list_recordings(user_id):
 
     return render_template("list-user-recordings.html", recordings=renderable, user=user, email=email, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check, workflow_list = o.get_workflows(), series_list = o.get_series(), acl_list = o.get_acls())
 
-# Query Zoom user
-
-@app.route('/user/search', methods=['GET'])
-def do_user_search():
-    q = request.args.get('q', None)
-    token = request.args.get('token', '')
-    return render_user_search(q=q, token=token)
-
-
-def render_user_search(q=None, token=''):
-    if not q:
-        return render_template("user-search.html")
-    response = None
-    try:
-        next_page_token = None
-        if token and len(token) > 0:
-            next_page_token = urllib.parse.unquote(token)
-        response = z.search_user(search_key=q, next_page_token=next_page_token)
-        if response and 'contacts' in response.json():
-            token = response.json().get('next_page_token', None)
-            # double quote token
-            token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
-            users = [{
-                'id': item.get('id'),
-                'email': item.get('email'),
-                'first_name': item.get('first_name'),
-                'last_name': item.get('last_name'),
-            } for item in response.json().get('contacts')]
-            return render_template("user-search.html", q=q, token=token_quoted, users=users)
-        return render_template("user-search.html", q=q, info_msg='No users found')
-    except Exception as e:
-        logger.debug(f"Zoom contact search response failed: { e }")
-        if response:
-            logger.debug(f"Zoom contact search response is { response }")
-        return render_template("user-search.html", error_msg=f'Failed to query user { q }', q=q)
-
+def get_user_list(dbs, q, token=None):
+    response = z.search_user(search_key=q, next_page_token=token)
+    users = []
+    token_quoted = None
+    if response and 'contacts' in response.json():
+        token = response.json().get('next_page_token', None)
+        # double quote token
+        token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
+        users = [{
+            'id': item.get('id'),
+            'email': item.get('email'),
+            'first_name': item.get('first_name'),
+            'last_name': item.get('last_name'),
+        } for item in response.json().get('contacts')]
+    return users, token_quoted
 
 ## Handling of a single recording
 
@@ -202,24 +166,23 @@ def single_recording(recording_id):
         acl_id = request.args.get("acl", None)
         query_params = get_query_params()
         query_string = build_query_string()
-        return render_single_recording(recording_id_decoded, series_id = series_id, query_params = query_params)
+
+        renderable = z.get_renderable_recording(recording_id_decoded)
+        series = None
+        if series_id:
+            #The template partially supports autofilling most of the variables based on the series
+            # but it's not 100% working, so let's just ignore it completely!
+            series = {'identifier': series_id}
+            o.get_single_series(series_id)
+        acl = None
+        if acl_id:
+            acl = o.get_single_acl(acl_id)
+        workflow_id = None
+        query_string = build_query_string(query_params)
+        return render_template("ingest-recording.html", recording=renderable, referrer=query_params['oref'], workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS, dur_check = query_params['dur_check'])
     elif request.method == "POST":
-        return ingest_single_recording(recording_id_decoded)
-
-
-def render_single_recording(recording_id, series_id = None, acl_id = None, workflow_id = None, query_params = {}):
-    renderable = z.get_renderable_recording(recording_id)
-    series = None
-    if series_id:
-        #The template partially supports autofilling most of the variables based on the series
-        # but it's not 100% working, so let's just ignore it completely!
-        series = {'identifier': series_id}
-        o.get_single_series(series_id)
-    acl = None
-    if acl_id:
-        acl = o.get_single_acl(acl_id)
-    query_string = build_query_string(query_params)
-    return render_template("ingest-recording.html", recording=renderable, workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS, dur_check = query_params['dur_check'])
+        user_id, query_string = _ingest_single_recording(recording_id_decoded)
+        return redirect(f'/?{ query_string }')
 
 
 def _ingest_single_recording(recording_id):
@@ -242,9 +205,6 @@ def _ingest_single_recording(recording_id):
     _queue_recording(recording_id, params)
     return user_id, query_string
 
-def ingest_single_recording(recording_id):
-    user_id, query_string = _ingest_single_recording(recording_id)
-    return redirect(f'/recordings/{ user_id }?{ query_string }')
 
 ## Handling of a single series
 
@@ -297,12 +257,49 @@ def do_deletes():
         current = o.get_finished()
         return render_template("delete-record.html", recordings = current)
 
-## Webhook support
+@app.route('/', methods=["GET"])
+@app.errorhandler(400)
+def do_search():
+    q = request.args.get('q', None)
+    token = request.args.get('token', '')
+    query_params = get_query_params()
+
+    logger.debug(f"Running search for query '{ q }'")
+
+    #get recording renderable
+    params = { k: v for k, v in query_params.items() }
+    params['min_duration'] = int(MIN_DURATION) if query_params['dur_check'] else 0
+
+    recordings = []
+    users = []
+    token_quoted = ''
+    if q and len(q) > 0:
+        recordings = z.get_recordings_from_db(q, params['min_duration'])
+        logger.debug(f"Found { len(recordings) } recordings matching { q }")
+        if token and len(token) > 0:
+            token = urllib.parse.unquote(token)
+        users, token_quoted = get_user_list(q, token)
+        logger.debug(f"Found { len(users) } users matching { q }")
+    else:
+        q = "" #Dummy value to make rendering look better but also do nothing
+
+    #Remember: params is the existing query param dict from above!
+    params['query'] = q
+    params['token'] = token_quoted
+    params['recordings'] = recordings
+    params['users'] = users
+    #user=user, email=email,
+    params['workflow_list'] = o.get_workflows()
+    params['series_list'] = o.get_series()
+    params['acl_list'] = o.get_acls()
+
+    return render_template("search.html", **params )
+
+## Bulk ingest support
 
 @app.route('/bulk', methods=['POST'])
 @app.errorhandler(400)
-@db.with_session
-def do_bulk(dbs):
+def do_bulk():
     logger.debug("Bulk POST recieved")
     form_params = request.form
     event_ids = [ urllib.parse.unquote_plus(name[len("_bulk"):]) for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
@@ -322,6 +319,8 @@ def do_bulk(dbs):
         return redirect(request.referrer)
     else:
         return redirect("/")
+
+## Webhook support
 
 @app.route('/webhook', methods=['POST'])
 @app.errorhandler(400)

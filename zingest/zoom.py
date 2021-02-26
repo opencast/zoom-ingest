@@ -178,10 +178,17 @@ class Zoom:
         return f"{ user['last_name'] }, { user['first_name'] }"
 
     @functools.lru_cache(maxsize=32)
-    def get_user(self, email_or_id):
+    @db.with_session
+    def get_user(dbs, self, email_or_id):
         fn = self._get_zoom_client().user.get
         args = {'id': email_or_id}
         return self._make_zoom_request(fn, args)
+
+    def ensure_user_in_db(self, email_or_id):
+        data = self.get_user(email_or_id)
+        db.ensure_user(data['id'], data['first_name'], data['last_name'], data['email'])
+        return data
+
 
     def get_user_email(self, user_id):
         self.logger.debug(f"Looking up email for { user_id }")
@@ -216,37 +223,59 @@ class Zoom:
             self.logger.warning("Got a response from Zoom, but data was invalid")
             self.logger.debug(f"{ zoom_results }")
             return []
+        self.ensure_user_in_db(user_id)
         zoom_meetings = zoom_results['meetings']
+        for meeting in zoom_meetings:
+            db.create_recording_if_needed(meeting)
         self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
         return self._build_renderable_event_list(zoom_meetings, min_duration)
 
     @db.with_session
-    def _build_renderable_event_list(dbs, self, zoom_meetings, min_duration=0):
-        zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
-        self.logger.debug(f"Building renderable objects for zoom meetings: { zoom_rec_meeting_ids }")
-        existing_db_ingests = dbs.query(db.Recording.uuid, db.Ingest.status).filter(db.Recording.uuid.in_(zoom_rec_meeting_ids), db.Recording.uuid == db.Ingest.uuid).distinct(db.Recording.uuid).all()
+    def _get_statuses_for(dbs, self, meetings):
+        self.logger.debug(f"Building renderable objects for meetings: { meetings }")
+        existing_db_ingests = dbs.query(db.Recording.uuid, db.Ingest.status) \
+            .filter(db.Recording.uuid.in_(meetings), db.Recording.uuid == db.Ingest.uuid) \
+            .distinct(db.Recording.uuid) \
+            .all()
         existing_data = {}
         for uuid, status in existing_db_ingests:
             if existing_data.get(uuid) and (existing_data.get(uuid) != 2 or status != 2):
                 existing_data[uuid] = 1
             else:
                 existing_data[uuid] = status
-
         self.logger.debug(f"There are { len(existing_data) } db records matching those IDs")
+        return existing_data
+
+
+    def get_recordings_from_db(self, query, min_duration=0):
+        db_recordings = db.find_recordings_matching(query)
+        print(f"Found { len(db_recordings) } matching recordings")
+        existing_data = self._get_statuses_for([ x.get_rec_id() for x in db_recordings ])
+
+        renderable = []
+        for rec in db_recordings:
+            rec_uuid = rec.get_rec_id()
+            render = rec.serialize()
+            render['too_short'] =  int(render['duration']) < int(min_duration)
+            render['status'] = db.Status.str(existing_data[rec_uuid]) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
+            renderable.append(render)
+        return renderable
+
+    def _build_renderable_event_list(self, zoom_meetings, min_duration=0):
+        zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
+        existing_data = self._get_statuses_for(zoom_rec_meeting_ids)
+
         renderable = []
         for element in zoom_meetings:
             rec_uuid = element['uuid']
             status = db.Status.str(existing_data[rec_uuid]) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
-            email = element['host_email'] if 'host_email' in element else self.get_user_email(element['host_id'])
-            host = self.get_user_name(email)
+            host = self.get_user_name(element['host_id'])
             item = {
                 'id': rec_uuid,
                 'title': element['topic'],
                 'date': element['start_time'][:10],
                 'time': element['start_time'][11:-1],
                 'duration': element['duration'],
-                'url': element['share_url'],
-                'email': email,
                 'host': host,
                 'status': status,
                 'too_short': int(element['duration']) < int(min_duration)
