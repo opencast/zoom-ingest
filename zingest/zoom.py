@@ -301,7 +301,6 @@ class Zoom:
 
     def get_renderable_recording(self, recording_id):
         recording = self.get_recording(recording_id)
-        self.logger.debug(f"Recording json looks like: { recording }")
         #We pass in a list of one, so we know that the returned list is of size 1
         return self._build_renderable_event_list([ recording ])[0]
 
