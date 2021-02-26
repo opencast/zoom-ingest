@@ -185,14 +185,10 @@ def single_recording(recording_id):
         return redirect(f'/?{ query_string }')
 
 
-def _ingest_single_recording(recording_id):
+def _ingest_single_recording(recording_id, dur_check=True):
     logger.info(f"Ingesting for { recording_id }")
     user_id = request.form['origin_email']
     query_string = urllib.parse.unquote_plus(request.form.get('origin_query_string',""))
-    qs = urllib.parse.parse_qs(query_string)
-    dur_check = True
-    if 'dur_check' in qs and qs['dur_check'][0].lower() == 'false':
-        dur_check = False
     params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not key.startswith("bulk_") and not '' == value }
     params['is_webhook'] = False
     params['dur_check'] = dur_check
@@ -306,15 +302,16 @@ def do_bulk():
     logger.debug(f"Bulk ingest for events { event_ids }")
 
     acl_id = form_params.get("acl_id", "None")
-    workflow_id = form_params.get("workflow_id", None)
-    series_id = form_params.get("isParfOf")
+    workflow_id = form_params.get("workflow_id", "None")
+    series_id = form_params.get("isParfOf", "None")
+    dur_check = form_params.get("dur_check", "True") == "True"
     if not workflow_id:
         logger.error("No workflow ID set")
         return render_template_string("No workflow ID set"), 400
-    logger.debug(f"Bulk ingest with workflow { workflow_id } and acl { acl_id } to series { series_id }")
+    logger.debug(f"Bulk ingest with workflow { workflow_id } and acl id { acl_id } to series { series_id }")
 
     for event_id in event_ids:
-        user_id, query_string = _ingest_single_recording(event_id)
+        user_id, query_string = _ingest_single_recording(event_id, dur_check)
     if request.referrer:
         return redirect(request.referrer)
     else:
