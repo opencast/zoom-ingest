@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from sqlalchemy import Column, Integer, String, LargeBinary, DateTime, \
-    Boolean, create_engine, func, or_
+    Boolean, create_engine, func, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -121,7 +121,15 @@ def find_recordings_matching(dbs, query):
     wildcarded = f"%{ query.lower() }%"
     return dbs.query(Recording).filter(or_(
                 Recording.title.ilike(wildcarded),
-                Recording.start_time.ilike(wildcarded)
+                Recording.start_time.ilike(wildcarded),
+                and_(
+                  or_(
+                    User.first_name.ilike(wildcarded),
+                    User.last_name.ilike(wildcarded),
+                    User.email.ilike(wildcarded)
+                  ),
+                  Recording.user_id == User.user_id
+                )
             )).all()
 
 @with_session
