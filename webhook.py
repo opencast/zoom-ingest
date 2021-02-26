@@ -85,16 +85,24 @@ app = Flask(__name__)
 
 ## Utility Methods
 
-def validate_date(date_string):
-    if date_string != None:
-        return datetime.strptime(date_string, '%Y-%m-%d').date()
+def validate_date(date_obj):
+    if not date:
+        logger.error(f"Date object is None")
+        #FIXME: throw an exception
+        return None
+    if date_obj and isinstance(date_obj, str):
+        return datetime.strptime(date_obj, '%Y-%m-%d').date()
+    elif date_obj and isinstance(date_obj, date):
+        return date_obj
     else:
+        logger.error(f"Unparsable date { date_obj }")
+        #FIXME: This should *really* throw an exception
         return None
 
 
 def get_query_params():
-    from_date = validate_date(request.args.get('from', None))
-    to_date = validate_date(request.args.get('to', None))
+    from_date = validate_date(request.args.get('from', date.today() - timedelta(days = 30)))
+    to_date = validate_date(request.args.get('to', date.today()))
     page_size = request.args.get('page_size', None)
     dur_check = request.args.get('dur_check', "true").lower() == 'true'
     return { 'from': from_date, 'to': to_date, 'page_size': page_size, 'dur_check': dur_check}
@@ -132,8 +140,8 @@ def do_list_recordings(user_id):
     query_params = get_query_params()
     query_string = build_query_string(query_params)
 
-    from_date = query_params['from'] if query_params['from'] != None else date.today() - timedelta(days = 30)
-    to_date = query_params['to'] if query_params['to'] != None else date.today()
+    from_date = query_params['from']
+    to_date = query_params['to']
     month_back = from_date - timedelta(days = 30)
     month_forward = to_date + timedelta(days = 30)
     dur_check = query_params['dur_check']
