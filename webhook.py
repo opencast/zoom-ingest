@@ -25,12 +25,13 @@ logger.info("Startup")
 
 try:
     config = configparser.ConfigParser()
-    if os.path.isfile("etc/zoom-ingest/settings.ini"):
-        config.read("etc/zoom-ingest/settings.ini")
-        logger.debug("Configuration read from etc/zoom-ingest/settings.ini")
+    config_path = '/etc/zoom-ingest/settings.ini'
+    if os.path.isfile(config_path):
+        config.read(config_path)
     else:
-        config.read("/etc/zoom-ingest/settings.ini")
-        logger.debug("Configuration read from /etc/zoom-ingest/settings.ini")
+        config_path = 'etc/zoom-ingest/settings.ini'
+        config.read(config_path)
+    logger.debug(f'Configuration read from {config_path}')
 except FileNotFoundError:
     sys.exit("No settings found")
 
