@@ -249,7 +249,7 @@ class Zoom:
 
     def get_recordings_from_db(self, query, min_duration=0):
         db_recordings = db.find_recordings_matching(query)
-        print(f"Found { len(db_recordings) } matching recordings")
+        self.logger.debug(f"Found { len(db_recordings) } matching recordings")
         existing_data = self._get_statuses_for([ x.get_rec_id() for x in db_recordings ])
 
         renderable = []

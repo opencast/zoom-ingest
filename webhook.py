@@ -192,12 +192,6 @@ def _ingest_single_recording(recording_id, dur_check=True):
     params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not key.startswith("bulk_") and not '' == value }
     params['is_webhook'] = False
     params['dur_check'] = dur_check
-    if 'date' in params and 'time' in params:
-        date = params['date']
-        time = params['time']
-        expected_format = "%Y-%m-%dT%H:%M:%SZ"
-        #Ensure this parses correctly, then set the date param with the combination of date and time
-        params['date'] = datetime.strptime(f"{ date }T{ time }Z", expected_format).strftime(expected_format)
     _queue_recording(recording_id, params)
     return user_id, query_string
 
@@ -443,6 +437,15 @@ def _queue_recording(dbs, uuid, zingest, token=None):
     for el in ('title', 'date', 'time', 'duration'):
         if el not in zingest:
             zingest[el] = renderable[el]
+    if 'date' in zingest and 'time' in zingest:
+        date = zingest['date']
+        time = zingest['time']
+        expected_format = "%Y-%m-%dT%H:%M:%SZ"
+        #Ensure this parses correctly, if not then set the date param with the combination of date and time
+        try:
+            parsed = datetime.strptime(date, expected_format)
+        except ValueError as e:
+            zingest['date'] = datetime.strptime(f"{ date }T{ time }Z", expected_format).strftime(expected_format)
     if "creator" not in zingest:
         zingest["creator"] = renderable["host"]
 
