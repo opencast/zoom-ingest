@@ -51,7 +51,11 @@ try:
     else:
         SERIES_FIELDS = None
         logger.debug("All series metadata fields are visible")
-
+    SERIES_CREATE_ENABLED = get_config_ignore(config, 'Visibility', 'series_create_enabled', True)
+    if not SERIES_CREATE_ENABLED or SERIES_CREATE_ENABLED.lower() == 'true':
+        SERIES_CREATE_ENABLED = True
+    else:
+        SERIES_CREATE_ENABLED = False
     WEBHOOK_SERIES = (config['Webhook']['default_series_id']).strip()
     WEBHOOK_ACL = (config['Webhook']['default_acl_id']).strip()
     WEBHOOK_WORKFLOW = (config['Webhook']['default_workflow_id']).strip()
@@ -180,7 +184,20 @@ def single_recording(recording_id):
             acl = o.get_single_acl(acl_id)
         workflow_id = None
         query_string = build_query_string(query_params)
-        return render_template("ingest-recording.html", recording=renderable, referrer=query_params['oref'], workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS, dur_check = query_params['dur_check'])
+        return render_template("ingest-recording.html",
+                               recording=renderable,
+                               referrer=query_params['oref'],
+                               workflow_list=o.get_workflows(),
+                               series_list=o.get_series(),
+                               series=series,
+                               acl_list=o.get_acls(),
+                               acl=acl,
+                               workflow=workflow_id,
+                               query_string=query_string,
+                               url_query_string=urllib.parse.quote_plus(query_string),
+                               visibility=EPISODE_FIELDS,
+                               series_create_enabled=SERIES_CREATE_ENABLED,
+                               dur_check=query_params['dur_check'])
     elif request.method == "POST":
         user_id, query_string = _ingest_single_recording(recording_id_decoded)
         return redirect(f'/?{ query_string }')
