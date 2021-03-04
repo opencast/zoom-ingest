@@ -139,7 +139,7 @@ def do_list_recordings(user_id):
 
     return render_template("list-user-recordings.html", recordings=renderable, user=user, email=email, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check, workflow_list = o.get_workflows(), series_list = o.get_series(), acl_list = o.get_acls())
 
-def get_user_list(dbs, q, token=None):
+def get_user_list(q, token=None):
     response = z.search_user(search_key=q, next_page_token=token)
     users = []
     token_quoted = None
