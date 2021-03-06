@@ -115,18 +115,21 @@ def create_user(dbs, user_id, first_name, last_name, email):
     return user
 
 
+def __ilike(thing, searches):
+    return [ thing.ilike(search) for search in searches ]
+
 @with_session
 def find_recordings_matching(dbs, query):
     #TODO: Verify that this is safe, SQL-wise
-    wildcarded = f"%{ query.lower() }%"
+    wildcarded = [ f"%{ element }%" for element in query.lower().split(" ") ]
     return dbs.query(Recording).filter(or_(
-                Recording.title.ilike(wildcarded),
-                Recording.start_time.ilike(wildcarded),
+                *__ilike(Recording.title, wildcarded),
+                *__ilike(Recording.start_time, wildcarded),
                 and_(
                   or_(
-                    User.first_name.ilike(wildcarded),
-                    User.last_name.ilike(wildcarded),
-                    User.email.ilike(wildcarded)
+                    *__ilike(User.first_name, wildcarded),
+                    *__ilike(User.last_name, wildcarded),
+                    *__ilike(User.email,wildcarded)
                   ),
                   Recording.user_id == User.user_id
                 )
@@ -135,7 +138,7 @@ def find_recordings_matching(dbs, query):
 @with_session
 def find_users_matching(dbs, query):
     #TODO: Verify that this is safe, SQL-wise
-    wildcarded = f"%{ query.lower() }%"
+    wildcarded = [ f"%{ element }%" for element in query.lower().split(" ") ]
     return dbs.query(User).filter(or_(
                 User.first_name.ilike(wildcarded),
                 User.last_name.ilike(wildcarded),
