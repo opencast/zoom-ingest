@@ -13,6 +13,9 @@
   }
   .plain {
   }
+  div.error {
+    text-align: center;
+  }
   </style>
 </head>
 <body>
@@ -37,7 +40,9 @@
     </div>
   </p>
   {% if message %}
-  <h2>{{ message }}</h2>
+  <div class="error">
+    <p>{{ message }}</p>
+  </div>
   {% endif %}
   <h2>Matching recordings:</h2>
   <form action="/bulk">
