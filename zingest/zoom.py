@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from random import random
 from urllib.parse import quote
 import time
+from requests import HTTPError
 
 import jwt
 from zoomus import ZoomClient
@@ -284,20 +285,31 @@ class Zoom:
         return renderable
 
     @functools.lru_cache(maxsize=32)
-    def get_recording(self, recording_id):
-        if not recording_id:
-            raise ValueError('Recording ID not set or is empty.')
-        #RATELIMIT: 30/80 req/s
-        self.logger.debug(f"Getting recording { recording_id }")
-        fn = self._get_zoom_client().recording.get
-        # If recording_id starts with / or contains //, we must **double encode** the recording_id
-        # before making an API request.
-        # See https://marketplace.zoom.us/docs/api-reference/zoom-api/cloud-recording/recordingget
-        if recording_id.startswith('/') or '//' in recording_id:
-            args = { 'meeting_id': quote(quote(recording_id, safe=''), safe='') }
-        else:
-            args = { 'meeting_id': recording_id }
-        return self._make_zoom_request(fn, args)
+    @db.with_session
+    def get_recording(dbs, self, recording_id):
+        try:
+            if not recording_id:
+                raise ValueError('Recording ID not set or is empty.')
+            #RATELIMIT: 30/80 req/s
+            self.logger.debug(f"Getting recording { recording_id }")
+            fn = self._get_zoom_client().recording.get
+            # If recording_id starts with / or contains //, we must **double encode** the recording_id
+            # before making an API request.
+            # See https://marketplace.zoom.us/docs/api-reference/zoom-api/cloud-recording/recordingget
+            if recording_id.startswith('/') or '//' in recording_id:
+                args = { 'meeting_id': quote(quote(recording_id, safe=''), safe='') }
+            else:
+                args = { 'meeting_id': recording_id }
+            return self._make_zoom_request(fn, args)
+        except HTTPError as e:
+            self.logger.debug(f"HTTPError fetching { recording_id }")
+            if e.response.status_code == 404:
+                self.logger.debug(f"Zoom has returned a 404 for recording ID { recording_id }, removing it from the db")
+                rec = dbs.query(db.Recording).filter(db.Recording.uuid == recording_id).one_or_none()
+                if rec:
+                  dbs.delete(rec)
+                  dbs.commit()
+            raise #Rather than returning some error token let's let the caller deal with it
 
     def get_renderable_recording(self, recording_id):
         recording = self.get_recording(recording_id)

@@ -17,14 +17,14 @@
 </head>
 <body>
   <h1>Recordings for {{ user }}</h1>
-  <h3>Displaying recordings from {{ from_date }} to {{ to_date }}</h3>
+  <h3>Displaying recordings from {{ from }} to {{ to }}</h3>
   <p>
-    <a href="?from={{ month_back }}&to={{ from_date }}&dur_check={{ dur_check | string | lower }}">1 month earlier</a> |
-    <a href="?from={{ to_date }}&to={{ month_forward }}&dur_check={{ dur_check | string | lower }}">1 month later</a> |
+    <a href="?from={{ month_back }}&to={{ from }}&dur_check={{ dur_check | string | lower }}&q={{ q }}">1 month earlier</a> |
+    <a href="?from={{ to }}&to={{ month_forward }}&dur_check={{ dur_check | string | lower }}&q={{ q }}">1 month later</a> |
     {% if dur_check %}
-    <a href="?from={{ from_date }}&to={{ to_date }}&dur_check=false">Disable duration checks</a>
+    <a href="?from={{ from }}&to={{ to }}&q={{ q }}&dur_check=false">Disable duration checks</a>
     {% else %}
-    <a href="?from={{ from_date }}&to={{ to_date }}&dur_check=true">Enable duration checks</a>
+    <a href="?from={{ from }}&to={{ to }}&q={{ q }}&dur_check=true">Enable duration checks</a>
     {% endif %}
   </p>
   {% if message %}
@@ -46,11 +46,11 @@
     <tr class="{{ loop.cycle('plain', 'grey') }}{% if dur_check and recording.too_short %} short"{% endif %}">
       <td><input type="checkbox" name="bulk_{{ recording.id }}"/{% if dur_check and recording.too_short %} disabled="true"{% endif %}></td>
       <td>{{ recording.date }}</td>
-      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?from={{ from_date }}&to={{ to_date }}&dur_check={{ dur_check }}">{{ recording.title }}</a></td>
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?{{ query_string }}">{{ recording.title }}</a></td>
       <td>{{ recording.status }}</td>
       <td{% if dur_check and recording.too_short %} class="error"{% endif %}>{{ recording.duration }}</td>
       {% if (dur_check and not recording.too_short) or not dur_check %}
-      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?from={{ from_date }}&to={{ to_date }}&dur_check={{ dur_check }}">Select</a></td>
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?{{ query_string }}">Select</a></td>
       {% endif %}
     </tr>
     {% endfor %}
@@ -81,7 +81,7 @@
   <button type="submit" formmethod="post" postaction="/bulk">Submit</button>
   </form>
   <hr/>
-  <a href="/">Full user list</a>
+  <a href="/?{{ query_string }}">Full user list</a>
     <!--
  |
   <a href="/cancel">Cancellable ingests</a>

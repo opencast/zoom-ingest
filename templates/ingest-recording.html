@@ -22,8 +22,8 @@
 <body>
   <h1>Details for <a href={{ recording.url }}>{{ recording.title }}</a></h1>
   <form action="../">
-    <input type="hidden"  name="origin_email" id="origin_email" value="{{ recording.email }}"/>
-    <input type="hidden"  name="origin_query_string" id="origin_query_string" value="{{ url_query_string }}"/>
+    <input type="hidden"  name="origin_page" id="origin_page" value="{{ origin_page }}"/>
+    <input type="hidden"  name="origin_query_string" id="origin_query_string" value="{{ query_string }}"/>
     <input type="hidden"  name="dur_check" id="dur_check" value="{{ dur_check }}"/>
     <table style="width:100%">
       <tr><td><h3>Common Episode Metadata</h3></td><td/><td><h3>ETH Extended Metadata</h3></td><td/></tr>
@@ -97,7 +97,7 @@
             <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
-          <a href="../series?epid={{ recording.id | urlencode }}&oem={{ recording.email }}&oqs={{ query_string }}">Create New Series</a>
+          <a href="../series?epid={{ recording.id | urlencode }}&{{ query_string }}">Create New Series</a>
         </td>
       </tr>
       <tr>

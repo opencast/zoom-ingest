@@ -61,11 +61,11 @@
     <tr class="{{ loop.cycle('plain', 'grey') }}{% if dur_check and recording.too_short %} short"{% endif %}">
       <td><input type="checkbox" name="bulk_{{ recording.id }}"/{% if dur_check and recording.too_short %} disabled="true"{% endif %}></td>
       <td>{{ recording.date }}</td>
-      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?q={{ query }}&dur_check={{ dur_check }}">{{ recording.title }}</a></td>
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?{{ query_string }}">{{ recording.title }}</a></td>
       <td>{{ recording.status }}</td>
       <td{% if dur_check and recording.too_short %} class="error"{% endif %}>{{ recording.duration }}</td>
       {% if (dur_check and not recording.too_short) or not dur_check %}
-      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?q={{ query }}&dur_check={{ dur_check }}">Select</a></td>
+      <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?{{ query_string }}">Select</a></td>
       {% endif %}
     </tr>
     {% endfor %}
@@ -107,7 +107,7 @@
     <tr class="{{ loop.cycle('plain', 'grey') }}">
       <td>{{ user.last_name }}, {{ user.first_name }}</td>
       <td>{{ user.email }}</td>
-      <td><a href="/recordings/{{ user.id }}">List</a></td>
+      <td><a href="/recordings/{{ user.id }}?{{ query_string }}">List</a></td>
     </tr>
     {% endfor %}
   </table>

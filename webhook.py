@@ -107,14 +107,17 @@ def get_query_params():
         'to': validate_date(request.args.get('to', date.today())),
         'page_size': request.args.get('page_size', None),
         'dur_check': request.args.get('dur_check', "true").lower() == 'true',
-        'oref': request.args.get('oref', request.referrer)
+        'min_duration': int(MIN_DURATION) if request.args.get('dur_check', "true").lower() == 'true' else 0,
+        'q': request.args.get('q', None),
+        'origin_page': request.args.get('origin_page', None)
     }
 
 
 def build_query_string(param_dict = None):
     if None == param_dict:
         param_dict = get_query_params()
-    clean_dict = { key: value for key, value in param_dict.items() if None != value }
+    filter_names = get_query_params().keys()
+    clean_dict = { key: value for key, value in param_dict.items() if None != value and key in filter_names }
     query_string = urlencode(clean_dict)
     logger.debug(f"Query string is { query_string }")
     return query_string
@@ -123,21 +126,35 @@ def build_query_string(param_dict = None):
 
 @app.route('/recordings/<user_id>', methods=['GET'])
 def do_list_recordings(user_id):
-    query_params = get_query_params()
-    query_string = build_query_string(query_params)
+    try:
+        query_params = get_query_params()
+        query_string = build_query_string(query_params)
 
-    from_date = query_params['from']
-    to_date = query_params['to']
-    month_back = from_date - timedelta(days = 30)
-    month_forward = to_date + timedelta(days = 30)
-    dur_check = query_params['dur_check']
-    min_duration = int(MIN_DURATION) if dur_check else 0
+        from_date = query_params['from']
+        to_date = query_params['to']
+        month_back = from_date - timedelta(days = 30)
+        month_forward = to_date + timedelta(days = 30)
+        min_duration = query_params['min_duration']
 
-    renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'], min_duration=min_duration)
-    user = z.get_user_name(user_id)
-    email = z.get_user_email(user_id)
+        renderable = z.get_user_recordings(user_id, from_date = from_date, to_date = to_date, page_size = query_params['page_size'], min_duration=min_duration)
+        user = z.get_user_name(user_id)
 
-    return render_template("list-user-recordings.html", recordings=renderable, user=user, email=email, from_date=from_date, to_date=to_date, month_back=month_back, month_forward=month_forward, dur_check = dur_check, workflow_list = o.get_workflows(), series_list = o.get_series(), acl_list = o.get_acls())
+        params = {
+                'recordings': renderable,
+                'user': user,
+                'month_back': month_back,
+                'month_forward': month_forward,
+                'workflow_list': o.get_workflows(),
+                'series_list': o.get_series(),
+                'acl_list': o.get_acls(),
+            }
+        params.update(query_params)
+        params['origin_page'] = f"/recordings/{ user_id }"
+        params['query_string'] = build_query_string(params)
+        return render_template("list-user-recordings.html", **params)
+    except Exception as e:
+        logger.exception(f"Unable to render recording list for { user_id }")
+        return render_template("error.html", message = repr(e))
 
 def get_user_list(q, token=None):
     response = z.search_user(search_key=q, next_page_token=token)
@@ -159,42 +176,60 @@ def get_user_list(q, token=None):
 
 @app.route('/recording/<path:recording_id>', methods=['GET', 'POST'])
 def single_recording(recording_id):
-    # We should double quote the recording_id as it may contain, start or end with an /
-    recording_id_decoded = urllib.parse.unquote(recording_id)
-    logger.debug(f'GETting recording with ID { recording_id_decoded }')
-    if request.method == "GET":
-        series_id = request.args.get("sid", None)
-        acl_id = request.args.get("acl", None)
-        query_params = get_query_params()
-        query_string = build_query_string()
+    try:
+        # We should double quote the recording_id as it may contain, start or end with an /
+        recording_id_decoded = urllib.parse.unquote(recording_id)
+        logger.debug(f'GETting recording with ID { recording_id_decoded }')
+        if request.method == "GET":
+            series_id = request.args.get("sid", None)
+            acl_id = request.args.get("acl", None)
+            query_params = get_query_params()
+            #query_string = build_query_string(query_params)
 
-        renderable = z.get_renderable_recording(recording_id_decoded)
-        series = None
-        if series_id:
-            #The template partially supports autofilling most of the variables based on the series
-            # but it's not 100% working, so let's just ignore it completely!
-            series = {'identifier': series_id}
-            o.get_single_series(series_id)
-        acl = None
-        if acl_id:
-            acl = o.get_single_acl(acl_id)
-        workflow_id = None
-        query_string = build_query_string(query_params)
-        return render_template("ingest-recording.html", recording=renderable, referrer=query_params['oref'], workflow_list = o.get_workflows(), series_list = o.get_series(), series = series, acl_list = o.get_acls(), acl = acl, workflow = workflow_id, query_string = query_string, url_query_string = urllib.parse.quote_plus(query_string), visibility = EPISODE_FIELDS, dur_check = query_params['dur_check'])
-    elif request.method == "POST":
-        user_id, query_string = _ingest_single_recording(recording_id_decoded)
-        return redirect(f'/?{ query_string }')
+            renderable = z.get_renderable_recording(recording_id_decoded)
+            series = None
+            if series_id:
+                #The template partially supports autofilling most of the variables based on the series
+                # but it's not 100% working, so let's just ignore it completely!
+                series = {'identifier': series_id}
+                o.get_single_series(series_id)
+            acl = None
+            if acl_id:
+                acl = o.get_single_acl(acl_id)
+            workflow_id = None
+
+            params = {
+                'recording': renderable,
+                'workflow': workflow_id,
+                'workflow_list': o.get_workflows(),
+                'series': series,
+                'series_list': o.get_series(),
+                'acl': acl,
+                'acl_list': o.get_acls(),
+                'visibility': EPISODE_FIELDS,
+            }
+            params.update(query_params)
+            params['query_string'] = build_query_string(params)
+            return render_template("ingest-recording.html", **params)
+        elif request.method == "POST":
+            origin_page, query_string = _ingest_single_recording(recording_id_decoded)
+            return redirect(f'{ origin_page }?{ query_string }')
+    except Exception as e:
+        logger.exception(f"Unable to render or ingest recording { recording_id }")
+        return render_template("error.html", message = repr(e))
 
 
 def _ingest_single_recording(recording_id, dur_check=True):
     logger.info(f"Ingesting for { recording_id }")
-    user_id = request.form['origin_email']
+    origin_page = urllib.parse.unquote_plus(request.form.get('origin_page', ""))
     query_string = urllib.parse.unquote_plus(request.form.get('origin_query_string',""))
+
     params = { key: value for key, value in request.form.items() if not key.startswith("origin") and not key.startswith("bulk_") and not '' == value }
     params['is_webhook'] = False
     params['dur_check'] = dur_check
     _queue_recording(recording_id, params)
-    return user_id, query_string
+
+    return origin_page, query_string
 
 
 ## Handling of a single series
@@ -202,27 +237,38 @@ def _ingest_single_recording(recording_id, dur_check=True):
 @app.route('/series', defaults={'series_id': None}, methods=['GET', 'POST'])
 @app.route('/series/<series_id>', methods=['GET', 'POST']) #FIXME: The GET here only partially renders correctly, POST should be PUT to reflect OC api use of PUT for modifying existing series
 def get_series_list(series_id=None):
-    if request.method == "GET":
-        series = None
-        if None != series_id:
-            series = o.get_single_series(series_id)
-            #TODO: Need to get the theme and acl data from the respective endpoints ({sid}/acl and {sid}/properties -> { 'theme': $id })
-        epId = request.args.get('epid', "")
-        origin_email = request.args.get('oem', "")
-        origin_query_string = request.args.get('oqs', "")
-        origin = { "email": origin_email, "query_string": urllib.parse.quote_plus(origin_query_string), "epid": urllib.parse.quote_plus(epId) }
-        return render_template("create-series.html", series = series, acl_list = o.get_acls(), theme_list = o.get_themes(), origin = origin, visibility = SERIES_FIELDS)
-    elif request.method == "POST":
-        #TODO: Validate required terms are present
-        epid = urllib.parse.unquote_plus(request.form['origin_epid'])
-        origin_query_string = urllib.parse.unquote_plus(request.form['origin_query_string'])
-        #Create the series
-        new_series_id = o.create_series(**request.form)
-        acl_id = request.form.get('acl_id', None)
-        #Redirect either to the episode (epId) or back to the create series bits in case of error
-        if acl_id:
-            return redirect(f'recording/{ epid }?sid={ new_series_id }&acl={ acl_id }')
-        return redirect(f'recording/{ epid }?sid={ new_series_id }&{ origin_query_string }')
+    try:
+        if request.method == "GET":
+            series = None
+            if None != series_id:
+                series = o.get_single_series(series_id)
+                #TODO: Need to get the theme and acl data from the respective endpoints ({sid}/acl and {sid}/properties -> { 'theme': $id })
+            query_params = get_query_params()
+            params = {
+                'origin_epid': request.args.get('epid', ""),
+                'series': series,
+                'acl_list': o.get_acls(),
+                'theme_list': o.get_themes(),
+                'visibility': EPISODE_FIELDS,
+            }
+            params.update(query_params)
+            params['query_string'] = build_query_string(params)
+            return render_template("create-series.html", **params)
+        elif request.method == "POST":
+            query_string = urllib.parse.unquote_plus(request.form.get('origin_query_string',""))
+            epid = urllib.parse.unquote_plus(request.form['origin_epid'])
+
+            #Create the series
+            new_series_id = o.create_series(**request.form)
+            acl_id = request.form.get('acl_id', None)
+
+            #Redirect either to the episode (epId) or back to the create series bits in case of error
+            if acl_id:
+                return redirect(f'recording/{ epid }?sid={ new_series_id }&{ query_string }')
+            return redirect(f'recording/{ epid }?&{ query_string }')
+    except Exception as e:
+        logger.exception(f"Unable to render or create series { series_id }")
+        return render_template("error.html", message = repr(e))
 
 ## Cancelling an ingest
 
@@ -251,66 +297,83 @@ def do_deletes():
 @app.route('/', methods=["GET"])
 @app.errorhandler(400)
 def do_search():
-    q = request.args.get('q', None)
-    token = request.args.get('token', '')
-    query_params = get_query_params()
+    try:
+        q = request.args.get('q', None)
+        token = request.args.get('token', '')
+        query_params = get_query_params()
 
-    logger.debug(f"Running search for query '{ q }'")
+        logger.debug(f"Running search for query '{ q }'")
 
-    #get recording renderable
-    params = { k: v for k, v in query_params.items() }
-    params['min_duration'] = int(MIN_DURATION) if query_params['dur_check'] else 0
+        #get recording renderable
+        params = { k: v for k, v in query_params.items() }
+        params['origin_page'] = "/"
 
-    recordings = []
-    users = []
-    token_quoted = ''
-    if q and len(q) > 0:
-        recordings = z.get_recordings_from_db(q, params['min_duration'])
-        logger.debug(f"Found { len(recordings) } recordings matching { q }")
-        if token and len(token) > 0:
-            token = urllib.parse.unquote(token)
-        users, token_quoted = get_user_list(q, token)
-        logger.debug(f"Found { len(users) } users matching { q }")
-    else:
-        q = "" #Dummy value to make rendering look better but also do nothing
+        recordings = []
+        users = []
+        token_quoted = ''
+        try :
+            if q and len(q) > 0:
+                recordings = z.get_recordings_from_db(q, params['min_duration'])
+                logger.debug(f"Found { len(recordings) } recordings matching { q }")
+                if token and len(token) > 0:
+                    token = urllib.parse.unquote(token)
+                users, token_quoted = get_user_list(q, token)
+                logger.debug(f"Found { len(users) } users matching { q }")
+            else:
+                q = "" #Dummy value to make rendering look better but also do nothing
+        except Exception as e:
+            logger.exception(f"Unable to search for { q }", e)
+            params['message'] = f"Error searching for { q }: { repr(e) }"
 
-    #Remember: params is the existing query param dict from above!
-    params['query'] = q
-    params['token'] = token_quoted
-    params['recordings'] = recordings
-    params['users'] = users
-    #user=user, email=email,
-    params['workflow_list'] = o.get_workflows()
-    params['series_list'] = o.get_series()
-    params['acl_list'] = o.get_acls()
+        #Remember: params is the existing query param dict from above!
+        params['query'] = q
+        params['token'] = token_quoted
+        params['recordings'] = recordings
+        params['users'] = users
+        #user=user, email=email,
+        params['workflow_list'] = o.get_workflows()
+        params['series_list'] = o.get_series()
+        params['acl_list'] = o.get_acls()
+        params['query_string'] = build_query_string(params)
 
-    return render_template("search.html", **params )
+        return render_template("search.html", **params )
+    except Exception as e:
+        logger.exception(f"Unable to render search")
+        return render_template("error.html", message = repr(e))
 
 ## Bulk ingest support
 
 @app.route('/bulk', methods=['POST'])
 @app.errorhandler(400)
 def do_bulk():
-    logger.debug("Bulk POST recieved")
-    form_params = request.form
-    event_ids = [ urllib.parse.unquote_plus(name[len("_bulk"):]) for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
-    logger.debug(f"Bulk ingest for events { event_ids }")
+    try:
+        logger.debug("Bulk POST recieved")
+        form_params = request.form
+        event_ids = [ urllib.parse.unquote_plus(name[len("_bulk"):]) for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
+        logger.debug(f"Bulk ingest for events { event_ids }")
 
-    acl_id = form_params.get("acl_id", "None")
-    workflow_id = form_params.get("workflow_id", "None")
-    series_id = form_params.get("isParfOf", "None")
-    dur_check = form_params.get("dur_check", "True") == "True"
-    if not workflow_id:
-        logger.error("No workflow ID set")
-        return render_template_string("No workflow ID set"), 400
-    logger.debug(f"Bulk ingest with workflow { workflow_id } and acl id { acl_id } to series { series_id }")
+        acl_id = form_params.get("acl_id", "None")
+        workflow_id = form_params.get("workflow_id", "None")
+        series_id = form_params.get("isParfOf", "None")
+        dur_check = form_params.get("dur_check", "True") == "True"
+        if not workflow_id:
+            logger.error("No workflow ID set")
+            return render_template_string("No workflow ID set"), 400
+        logger.debug(f"Bulk ingest with workflow { workflow_id } and acl id { acl_id } to series { series_id }")
 
-    for event_id in event_ids:
-        user_id, query_string = _ingest_single_recording(event_id, dur_check)
-    if request.referrer:
-        return redirect(request.referrer)
-    else:
-        return redirect("/")
+        for event_id in event_ids:
+            origin_page, query_string = _ingest_single_recording(event_id, dur_check)
+            #FIXME use the variables above to reconstruct source?
+
+        logger.debug(f"Referrer is { request.referrer }")
+        if request.referrer:
+            return redirect(request.referrer)
+        else:
+            return redirect("/")
+    except Exception as e:
+        logger.exception("Unable to ingest all recordings")
+        return render_template("error.html", message = repr(e))
+
 
 ## Webhook support
 
