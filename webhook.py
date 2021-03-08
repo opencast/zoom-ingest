@@ -336,7 +336,6 @@ def do_search():
         params['token'] = token_quoted
         params['recordings'] = recordings
         params['users'] = users
-        #user=user, email=email,
         params['workflow_list'] = o.get_workflows()
         params['series_list'] = o.get_series()
         params['acl_list'] = o.get_acls()
