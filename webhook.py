@@ -168,12 +168,13 @@ def get_user_list(q, token=None):
         token = response.json().get('next_page_token', None)
         # double quote token
         token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
-        users = [{
+        users = sorted([{
             'id': item.get('id'),
             'email': item.get('email'),
             'first_name': item.get('first_name'),
             'last_name': item.get('last_name'),
-        } for item in response.json().get('contacts')]
+        } for item in response.json().get('contacts')],
+        key = lambda x : z.format_user_name(x))
     return users, token_quoted
 
 ## Handling of a single recording
