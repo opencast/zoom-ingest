@@ -26,7 +26,20 @@
     <input type="hidden"  name="origin_query_string" id="origin_query_string" value="{{ query_string }}"/>
     <input type="hidden"  name="dur_check" id="dur_check" value="{{ dur_check }}"/>
     <table style="width:100%">
-      <tr><td><h3>Common Episode Metadata</h3></td><td/><td><h3>ETH Extended Metadata</h3></td><td/></tr>
+      <tr>
+        <td><h3>Common Episode Metadata</h3></td>
+        {% set eth_fields_enabled=False %}
+        {% if visibility %}
+        {% for item in visibility %}
+        {% if item and item.startswith('eth-') %}
+        {% set eth_fields_enabled=True %}
+        {% endif%}
+        {% endfor %}
+        {% endif %}
+        {% if eth_fields_enabled %}
+        <td><h3>ETH Extended Metadata</h3></td>
+        {% endif %}
+      </tr>
       <tr>
         {% if visibility == None or (visibility != None and ('date' in visibility or 'time' in visibility)) %}
         <td>
@@ -97,7 +110,9 @@
             <option value="{{ key }}" {% if series['identifier'] == key %}selected="true"{% endif %}>{{ value }}</option>
             {% endfor %}
           </select>
+          {% if series_create_enabled == None or series_create_enabled %}
           <a href="../series?epid={{ recording.id | urlencode }}&{{ query_string }}">Create New Series</a>
+          {% endif %}
         </td>
       </tr>
       <tr>

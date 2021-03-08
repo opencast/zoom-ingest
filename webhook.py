@@ -51,7 +51,11 @@ try:
     else:
         SERIES_FIELDS = None
         logger.debug("All series metadata fields are visible")
-
+    SERIES_CREATE_ENABLED = get_config_ignore(config, 'Visibility', 'series_create_enabled', True)
+    if not SERIES_CREATE_ENABLED or SERIES_CREATE_ENABLED.lower() == 'true':
+        SERIES_CREATE_ENABLED = True
+    else:
+        SERIES_CREATE_ENABLED = False
     WEBHOOK_SERIES = (config['Webhook']['default_series_id']).strip()
     WEBHOOK_ACL = (config['Webhook']['default_acl_id']).strip()
     WEBHOOK_WORKFLOW = (config['Webhook']['default_workflow_id']).strip()
@@ -207,6 +211,7 @@ def single_recording(recording_id):
                 'acl': acl,
                 'acl_list': o.get_acls(),
                 'visibility': EPISODE_FIELDS,
+                'series_create_enabled': SERIES_CREATE_ENABLED,
             }
             params.update(query_params)
             params['query_string'] = build_query_string(params)
