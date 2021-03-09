@@ -22,9 +22,9 @@
   <h1>Zoom search matching {{ query }}</h1>
   <p>
     {% if dur_check %}
-    <a href="?{{ query_string }}&dur_check=false">Disable duration checks</a>
+    <a href="?{{ dur_disable_qs }}">Disable duration checks</a>
     {% else %}
-    <a href="?{{ query_string }}&dur_check=true">Enable duration checks</a>
+    <a href="?{{ dur_enable_qs }}">Enable duration checks</a>
     {% endif %}
     <div>
     <form action="/">

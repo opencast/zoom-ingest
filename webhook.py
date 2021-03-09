@@ -104,14 +104,22 @@ def validate_date(date_obj):
         #FIXME: This should *really* throw an exception
         return None
 
-
 def get_query_params():
+    #Some pages take the existing query string, and append another dur_check on it
+    #This renders, in Flask, as a list inside to_dict
+    #Loop through the elements ensuring they're all true.  If one is false, disable checks
+    params = request.args.to_dict(flat=False)
+    dur_check = True
+    if 'dur_check' in params:
+        for element in params['dur_check']:
+            dur_check = dur_check and element.lower() == 'true'
+
     return {
         'from': validate_date(request.args.get('from', date.today() - timedelta(days = 30))),
         'to': validate_date(request.args.get('to', date.today())),
         'page_size': request.args.get('page_size', None),
-        'dur_check': request.args.get('dur_check', "true").lower() == 'true',
-        'min_duration': int(MIN_DURATION) if request.args.get('dur_check', "true").lower() == 'true' else 0,
+        'dur_check': dur_check,
+        'min_duration': int(MIN_DURATION) if dur_check else 0,
         'qt': request.args.get('qt', ""),
         'qu': request.args.get('qu', ""),
         'qd': request.args.get('qd', ""),
@@ -119,11 +127,13 @@ def get_query_params():
     }
 
 
-def build_query_string(param_dict = None):
+def build_query_string(param_dict = None, overrides = None):
     if None == param_dict:
         param_dict = get_query_params()
     filter_names = get_query_params().keys()
     clean_dict = { key: value for key, value in param_dict.items() if None != value and key in filter_names }
+    if overrides:
+        clean_dict.update(overrides)
     query_string = urlencode(clean_dict)
     logger.debug(f"Query string is { query_string }")
     return query_string
@@ -157,6 +167,11 @@ def do_list_recordings(user_id):
         params.update(query_params)
         params['origin_page'] = f"/recordings/{ user_id }"
         params['query_string'] = build_query_string(params)
+        params['month_back_qs'] = build_query_string(params, {'from': month_back, 'to': params['from']})
+        params['month_forward_qs'] = build_query_string(params, {'from': params['to'], 'to': month_forward})
+        params['dur_enable_qs'] = build_query_string(params, {'dur_check': 'true'})
+        params['dur_disable_qs'] = build_query_string(params, {'dur_check': 'false'})
+
         return render_template("list-user-recordings.html", **params)
     except Exception as e:
         logger.exception(f"Unable to render recording list for { user_id }")
@@ -348,6 +363,8 @@ def do_search():
 
         params.update(query_params)
         params['query_string'] = build_query_string(params)
+        params['dur_enable_qs'] = build_query_string(params, {'dur_check': 'true'})
+        params['dur_disable_qs'] = build_query_string(params, {'dur_check': 'false'})
 
         return render_template("search.html", **params )
     except Exception as e:

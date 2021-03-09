@@ -19,12 +19,12 @@
   <h1>Recordings for {{ user }}</h1>
   <h3>Displaying recordings from {{ from }} to {{ to }}</h3>
   <p>
-    <a href="?from={{ month_back }}&to={{ from }}&dur_check={{ dur_check | string | lower }}&q={{ q }}">1 month earlier</a> |
-    <a href="?from={{ to }}&to={{ month_forward }}&dur_check={{ dur_check | string | lower }}&q={{ q }}">1 month later</a> |
+    <a href="?{{ month_back_qs }}">1 month earlier</a> |
+    <a href="?{{ month_forward_qs }}">1 month later</a> |
     {% if dur_check %}
-    <a href="?from={{ from }}&to={{ to }}&q={{ q }}&dur_check=false">Disable duration checks</a>
+    <a href="?{{ dur_disable_qs }}">Disable duration checks</a>
     {% else %}
-    <a href="?from={{ from }}&to={{ to }}&q={{ q }}&dur_check=true">Enable duration checks</a>
+    <a href="?{{ dur_enable_qs }}">Enable duration checks</a>
     {% endif %}
   </p>
   {% if message %}
