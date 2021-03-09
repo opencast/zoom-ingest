@@ -251,8 +251,8 @@ class Zoom:
         return existing_data
 
 
-    def get_recordings_from_db(self, query, min_duration=0):
-        db_recordings = db.find_recordings_matching(query)
+    def get_recordings_from_db(self, title=None, user=None, date=None, min_duration=0):
+        db_recordings = db.find_recordings_matching(title=title, user=user, date=date)
         self.logger.debug(f"Found { len(db_recordings) } matching recordings")
         existing_data = self._get_statuses_for([ x.get_rec_id() for x in db_recordings ])
 

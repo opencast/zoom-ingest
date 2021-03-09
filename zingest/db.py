@@ -118,22 +118,41 @@ def create_user(dbs, user_id, first_name, last_name, email):
 def __ilike(thing, searches):
     return [ thing.ilike(search) for search in searches ]
 
+def __wildcard(thing):
+    return [ f"%{ element }%" for element in thing.lower().split(" ") ]
+
 @with_session
-def find_recordings_matching(dbs, query):
+def find_recordings_matching(dbs, title=None, user=None, date=None):
+    log = logging.getLogger(__name__)
     #TODO: Verify that this is safe, SQL-wise
-    wildcarded = [ f"%{ element }%" for element in query.lower().split(" ") ]
-    return dbs.query(Recording).filter(or_(
-                *__ilike(Recording.title, wildcarded),
-                *__ilike(Recording.start_time, wildcarded),
-                and_(
-                  or_(
-                    *__ilike(User.first_name, wildcarded),
-                    *__ilike(User.last_name, wildcarded),
-                    *__ilike(User.email,wildcarded)
-                  ),
-                  Recording.user_id == User.user_id
-                )
-            )).all()
+    title_preds, user_preds, date_preds = [], [], []
+    if title:
+        wildcarded = __wildcard(title)
+        log.debug(f"Title searching for { wildcarded }")
+        title_preds = __ilike(Recording.title, wildcarded)
+    if user:
+        wildcarded = __wildcard(user)
+        log.debug(f"User searching for { wildcarded }")
+        user_preds.extend(__ilike(User.first_name, wildcarded))
+        user_preds.extend(__ilike(User.last_name, wildcarded))
+        user_preds.extend(__ilike(User.email, wildcarded))
+        #NB: We're expanding the contents of the user_preds list
+        user_preds = or_( *user_preds )
+    if date:
+        wildcarded = __wildcard(date)
+        log.debug(f"Date searching for { wildcarded }")
+        date_preds = __ilike(Recording.start_time, wildcarded)
+
+    if not user and len(title_preds) + len(date_preds) < 1:
+        return []
+
+    pred = and_( *title_preds, *date_preds)
+    #NB: We're expanding the contents of the title and date preds here,
+    #but *not* the user preds because we've already done that above
+    if user:
+        pred = and_( *title_preds, *date_preds, user_preds)
+    return dbs.query(Recording).filter(pred).all()
+
 
 @with_session
 def find_users_matching(dbs, query):

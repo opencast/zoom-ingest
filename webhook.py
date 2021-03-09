@@ -112,7 +112,9 @@ def get_query_params():
         'page_size': request.args.get('page_size', None),
         'dur_check': request.args.get('dur_check', "true").lower() == 'true',
         'min_duration': int(MIN_DURATION) if request.args.get('dur_check', "true").lower() == 'true' else 0,
-        'q': request.args.get('q', None),
+        'qt': request.args.get('qt', ""),
+        'qu': request.args.get('qu', ""),
+        'qd': request.args.get('qd', ""),
         'origin_page': request.args.get('origin_page', None)
     }
 
@@ -304,41 +306,47 @@ def do_deletes():
 @app.errorhandler(400)
 def do_search():
     try:
-        q = request.args.get('q', None)
         token = request.args.get('token', '')
         query_params = get_query_params()
 
-        logger.debug(f"Running search for query '{ q }'")
+        logger.debug(f"Running search")
 
-        #get recording renderable
-        params = { k: v for k, v in query_params.items() }
-        params['origin_page'] = "/"
+        params = {}
 
         recordings = []
         users = []
         token_quoted = ''
+        query_title = query_params['qt'] if len(query_params['qt']) > 0 else None
+        query_user = query_params['qu'] if len(query_params['qu']) > 0 else None
+        query_date = query_params['qd'] if len(query_params['qd']) > 0 else None
         try :
-            if q and len(q) > 0:
-                recordings = z.get_recordings_from_db(q, params['min_duration'])
-                logger.debug(f"Found { len(recordings) } recordings matching { q }")
+            logger.debug(f"Searching for { query_title }, { query_user }, { query_date }")
+            recordings.extend(z.get_recordings_from_db(title=query_title, user=query_user, date=query_date, min_duration=query_params['min_duration']))
+            logger.debug(f"Found { len(recordings) } recordings matching { query_title }")
+        except Exception as e:
+            logger.exception(f"Unable to search for { query_title }, { query_user }, { query_date }", e)
+            params['message'] = f"Error searching for { query_title }, { query_user }, { query_date }: { repr(e) }"
+
+        try:
+            if query_user and len(query_user) > 0:
                 if token and len(token) > 0:
                     token = urllib.parse.unquote(token)
-                users, token_quoted = get_user_list(q, token)
-                logger.debug(f"Found { len(users) } users matching { q }")
-            else:
-                q = "" #Dummy value to make rendering look better but also do nothing
+                users, token_quoted = get_user_list(query_user, token)
+                logger.debug(f"Found { len(users) } users matching { query_user }")
         except Exception as e:
-            logger.exception(f"Unable to search for { q }", e)
-            params['message'] = f"Error searching for { q }: { repr(e) }"
+            logger.exception(f"Unable to search for { query_user }", e)
+            params['message'] = f"Error searching for { query_user }: { repr(e) }"
 
-        #Remember: params is the existing query param dict from above!
-        params['query'] = q
+
+        params['origin_page'] = "/"
         params['token'] = token_quoted
         params['recordings'] = recordings
         params['users'] = users
         params['workflow_list'] = o.get_workflows()
         params['series_list'] = o.get_series()
         params['acl_list'] = o.get_acls()
+
+        params.update(query_params)
         params['query_string'] = build_query_string(params)
 
         return render_template("search.html", **params )

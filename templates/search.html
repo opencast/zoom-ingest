@@ -22,20 +22,27 @@
   <h1>Zoom search matching {{ query }}</h1>
   <p>
     {% if dur_check %}
-    <a href="?q={{ query }}&dur_check=false">Disable duration checks</a>
+    <a href="?{{ query_string }}&dur_check=false">Disable duration checks</a>
     {% else %}
-    <a href="?q={{ query }}&dur_check=true">Enable duration checks</a>
+    <a href="?{{ query_string }}&dur_check=true">Enable duration checks</a>
     {% endif %}
     <div>
     <form action="/">
-      <label for="query">Query term  </label>
-      <input type="text" name="q" value="{{ query }}"/>
-      <input type="submit"/>
-    </form>
-    <form action="/">
-      <label for="query">Query date </label>
-      <input type="date" name="q"/>
-      <input type="submit"/>
+      <table>
+        <tr><td>
+          <label for="qu">User search  </label>
+          <input type="text" name="qu" value="{{ qu }}"/>
+        </td></tr><tr><td>
+          <label for="qt">Title search  </label>
+          <input type="text" name="qt" value="{{ qt }}"/>
+        </td></tr><tr><td>
+          <label for="qd">Date search </label>
+          <input id="query_date" type="date" name="qd" value="{{ qd }}"/>
+          <button type="button" onclick="document.getElementById('query_date').value = ''">Clear Date</button>
+        </td></tr><tr><td>
+          <input type="submit"/>
+        </td></tr>
+      </table>
     </form>
     </div>
   </p>
