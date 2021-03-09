@@ -40,6 +40,7 @@
           <input id="query_date" type="date" name="qd" value="{{ qd }}"/>
           <button type="button" onclick="document.getElementById('query_date').value = ''">Clear Date</button>
         </td></tr><tr><td>
+          <input type="hidden" id="token" name="token" value="{{ token }}">
           <input type="submit"/>
         </td></tr>
       </table>
@@ -105,6 +106,7 @@
   </form>
   <hr/>
   <h2>Matching users:</h2>
+  <a href="/?{{ query_string }}&token={{ token }}">More user results</a>
   <table style="width:100%">
     <tr>
       <th style="text-align:left">Name</th>
