@@ -260,6 +260,7 @@ class Zoom:
         for rec in db_recordings:
             rec_uuid = rec.get_rec_id()
             render = rec.serialize()
+            render['host'] = self.get_user_name(render['host'])
             render['too_short'] =  int(render['duration']) < int(min_duration)
             render['status'] = db.Status.str(existing_data[rec_uuid]) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
             renderable.append(render)
