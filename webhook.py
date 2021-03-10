@@ -355,7 +355,6 @@ def do_search():
             params['message'] = f"Error searching for { query_user }: { repr(e) }"
 
 
-        params['origin_page'] = "/"
         params['token'] = token_quoted
         params['recordings'] = recordings
         params['users'] = users
@@ -364,7 +363,7 @@ def do_search():
         params['acl_list'] = o.get_acls()
 
         params.update(query_params)
-        params['query_string'] = build_query_string(params)
+        params['query_string'] = build_query_string(params, {'origin_page': '/'})
         params['dur_enable_qs'] = build_query_string(params, {'dur_check': 'true'})
         params['dur_disable_qs'] = build_query_string(params, {'dur_check': 'false'})
 
