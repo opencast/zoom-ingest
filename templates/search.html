@@ -61,6 +61,7 @@
       <th style="text-align:left">Date</th>
       <th style="text-align:left">Title</th>
       <th style="text-align:left">Host</th>
+      <th style="text-align:left">Date</th>
       <th style="text-align:left">Status</th>
       <th style="text-align:left">Duration</th>
       <th style="text-align:left">Action</th>
@@ -71,6 +72,7 @@
       <td>{{ recording.date }}</td>
       <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?{{ query_string }}">{{ recording.title }}</a></td>
       <td>{{ recording.host }}</td>
+      <td>{{ recording.date }}</td>
       <td>{{ recording.status }}</td>
       <td{% if dur_check and recording.too_short %} class="error"{% endif %}>{{ recording.duration }}</td>
       {% if (dur_check and not recording.too_short) or not dur_check %}
