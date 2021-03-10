@@ -380,7 +380,7 @@ def do_bulk():
     try:
         logger.debug("Bulk POST recieved")
         form_params = request.form
-        event_ids = [ urllib.parse.unquote_plus(name[len("_bulk"):]) for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
+        event_ids = [ urllib.parse.unquote_plus(urllib.parse.unquote_plus(name[len("bulk_"):])) for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
         logger.debug(f"Bulk ingest for events { event_ids }")
 
         acl_id = form_params.get("acl_id", "None")
@@ -394,7 +394,6 @@ def do_bulk():
 
         for event_id in event_ids:
             origin_page, query_string = _ingest_single_recording(event_id, dur_check)
-            #FIXME use the variables above to reconstruct source?
 
         logger.debug(f"Referrer is { request.referrer }")
         if request.referrer:
