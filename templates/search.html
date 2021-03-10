@@ -52,6 +52,7 @@
     <p>{{ message }}</p>
   </div>
   {% endif %}
+  {% if recordings | length > 0 %}
   <h2>Matching recordings:</h2>
   <form action="/bulk">
   <input type="hidden" name="dur_check" value="{{ dur_check }}" />
@@ -107,6 +108,8 @@
   <button type="submit" formmethod="post" postaction="/bulk"{% if recordings | length < 1 %} disabled="true"{% endif %}>Submit</button>
   </form>
   <hr/>
+  {% endif %}
+  {% if users | length > 0 %}
   <h2>Matching users:</h2>
   {% if token != '' %}
   <a href="/?{{ query_string }}&token={{ token }}">More user results</a>
@@ -126,6 +129,7 @@
     {% endfor %}
   </table>
   <hr/>
+  {% endif %}
   <a href="/?{{ query_string }}">Home</a>
     <!--
  |
