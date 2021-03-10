@@ -334,10 +334,12 @@ def do_search():
         query_title = query_params['qt'] if len(query_params['qt']) > 0 else None
         query_user = query_params['qu'] if len(query_params['qu']) > 0 else None
         query_date = query_params['qd'] if len(query_params['qd']) > 0 else None
-        try :
-            logger.debug(f"Searching for { query_title }, { query_user }, { query_date }")
-            recordings.extend(z.get_recordings_from_db(title=query_title, user=query_user, date=query_date, min_duration=query_params['min_duration']))
-            logger.debug(f"Found { len(recordings) } recordings matching { query_title }")
+        logger.debug(f"Searching for { query_title }, { query_user }, { query_date }")
+        try:
+            #Only search for recordings if we a date or title search query
+            if query_date or query_title:
+                recordings.extend(z.get_recordings_from_db(title=query_title, user=query_user, date=query_date, min_duration=query_params['min_duration']))
+                logger.debug(f"Found { len(recordings) } recordings matching { query_title }")
         except Exception as e:
             logger.exception(f"Unable to search for { query_title }, { query_user }, { query_date }", e)
             params['message'] = f"Error searching for { query_title }, { query_user }, { query_date }: { repr(e) }"
