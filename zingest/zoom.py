@@ -220,7 +220,8 @@ class Zoom:
         fn = self._get_zoom_client().recording.list
         return self._make_zoom_request(fn, params)
 
-    def get_user_recordings(self, user_id, from_date=None, to_date=None, page_size=None, min_duration=0):
+    @db.with_session
+    def get_user_recordings(dbs, self, user_id, from_date=None, to_date=None, page_size=None, min_duration=0):
         #Get the list of recordings from Zoom
         zoom_results = self._get_user_recordings(user_id, from_date, to_date, page_size)
         if 'meetings' not in zoom_results:
@@ -232,7 +233,10 @@ class Zoom:
         for meeting in zoom_meetings:
             db.create_recording_if_needed(meeting)
         self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
-        return self._build_renderable_event_list(zoom_meetings, min_duration)
+        #We're requerying the DB here since we need to get *all* of the recordings, not the ones we just created
+        ids = [ m['uuid'] for m in zoom_meetings ]
+        db_recordings = dbs.query(db.Recording).filter(db.Recording.uuid.in_(ids)).all()
+        return self._build_renderable_event_list(db_recordings, min_duration)
 
     @db.with_session
     def _get_statuses_for(dbs, self, meetings):
@@ -250,11 +254,13 @@ class Zoom:
         self.logger.debug(f"There are { len(existing_data) } db records matching those IDs")
         return existing_data
 
-
     def get_recordings_from_db(self, title=None, user=None, date=None, min_duration=0):
         db_recordings = db.find_recordings_matching(title=title, user=user, date=date)
         self.logger.debug(f"Found { len(db_recordings) } matching recordings")
-        existing_data = self._get_statuses_for([ x.get_rec_id() for x in db_recordings ])
+        return self._build_renderable_event_list(db_recordings, min_duration)
+
+    def _build_renderable_event_list(self, db_recordings, min_duration=0):
+        existing_data = self._get_statuses_for([ meet.get_rec_id() for meet in db_recordings ])
 
         renderable = []
         for rec in db_recordings:
@@ -264,28 +270,6 @@ class Zoom:
             render['too_short'] =  int(render['duration']) < int(min_duration)
             render['status'] = db.Status.str(existing_data[rec_uuid]) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
             renderable.append(render)
-        return renderable
-
-    def _build_renderable_event_list(self, zoom_meetings, min_duration=0):
-        zoom_rec_meeting_ids = [ x['uuid'] for x in zoom_meetings ]
-        existing_data = self._get_statuses_for(zoom_rec_meeting_ids)
-
-        renderable = []
-        for element in zoom_meetings:
-            rec_uuid = element['uuid']
-            status = db.Status.str(existing_data[rec_uuid]) if rec_uuid in existing_data else db.Status.str(db.Status.NEW)
-            host = self.get_user_name(element['host_id'])
-            item = {
-                'id': rec_uuid,
-                'title': element['topic'],
-                'date': element['start_time'][:10],
-                'time': element['start_time'][11:-1],
-                'duration': element['duration'],
-                'host': host,
-                'status': status,
-                'too_short': int(element['duration']) < int(min_duration)
-            }
-            renderable.append(item)
         return renderable
 
     @functools.lru_cache(maxsize=32)
@@ -316,7 +300,10 @@ class Zoom:
             raise #Rather than returning some error token let's let the caller deal with it
 
     def get_renderable_recording(self, recording_id):
+        #Get the recording from Zoom
         recording = self.get_recording(recording_id)
+        #Turn it into a database entry
+        recording = db.create_recording_if_needed(recording)
         #We pass in a list of one, so we know that the returned list is of size 1
         return self._build_renderable_event_list([ recording ])[0]
 
