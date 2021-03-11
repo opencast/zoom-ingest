@@ -228,6 +228,7 @@ class Recording(Base):
         """
         return {
             'id': self.uuid,
+            'db_id': self.rec_id,
             'title': self.title,
             'date': self.start_time[:10],
             'time': self.start_time[11:-1],

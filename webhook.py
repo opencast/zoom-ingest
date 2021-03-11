@@ -380,7 +380,7 @@ def do_bulk():
     try:
         logger.debug("Bulk POST recieved")
         form_params = request.form
-        event_ids = [ urllib.parse.unquote_plus(urllib.parse.unquote_plus(name[len("bulk_"):])) for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
+        event_ids = [ name[len("bulk_"):] for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
         logger.debug(f"Bulk ingest for events { event_ids }")
 
         acl_id = form_params.get("acl_id", "None")
@@ -501,9 +501,17 @@ def do_POST(dbs):
 def _queue_recording(dbs, uuid, zingest, token=None):
 
     #Check if the recording exists, and create it if it does not
-    existing_rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
-    if not existing_rec:
+    #Check if the uuid is a uuid
+    uuid_rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+    #Check if the uuid is actually the raw db ID (used in bulk ingest)
+    id_rec = dbs.query(db.Recording).filter(db.Recording.rec_id == uuid).one_or_none()
+    #Still doesn't exist?  Create it then.
+    if not uuid_rec and not id_rec:
         existing_rec = z.create_recording_from_uuid(uuid)
+    else:
+        existing_rec = uuid_rec if uuid_rec else id_rec
+        uuid = existing_rec.get_rec_id()
+
 
     check_duration = zingest['dur_check'] if 'dur_check' in zingest else True
     is_webhook = zingest['is_webhook'] if 'is_webhook' in zingest else False
