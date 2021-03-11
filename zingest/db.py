@@ -137,7 +137,7 @@ def find_recordings_matching(dbs, title=None, user=None, date=None):
         user_preds.extend(__ilike(User.last_name, wildcarded))
         user_preds.extend(__ilike(User.email, wildcarded))
         #NB: We're expanding the contents of the user_preds list
-        user_preds = or_( *user_preds )
+        user_preds = and_(or_( *user_preds ), Recording.user_id == User.user_id)
     if date:
         wildcarded = __wildcard(date)
         log.debug(f"Date searching for { wildcarded }")
