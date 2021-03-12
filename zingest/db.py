@@ -163,7 +163,7 @@ def find_recordings_matching(dbs, title=None, user=None, date=None):
     #but *not* the user preds because we've already done that above
     if user:
         pred = and_( *title_preds, *date_preds, user_preds)
-    return dbs.query(Recording).filter(pred).all()
+    return dbs.query(Recording).filter(pred).order_by(Recording.start_time.desc()).all()
 
 
 @with_session
