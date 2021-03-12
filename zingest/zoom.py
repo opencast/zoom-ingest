@@ -177,14 +177,23 @@ class Zoom:
     @functools.lru_cache(maxsize=32)
     @db.with_session
     def get_user(dbs, self, email_or_id):
+        #Search the DB for the user
+        existing_user = db.find_user_by_id_or_email(email_or_id)
+        if existing_user:
+            return existing_user.serialize()
+
+        #Else, create the user in the db and return it
+        fn = self._get_zoom_client().user.get
+        args = {'id': email_or_id}
+        user_json = self._make_zoom_request(fn, args)
+        existing_user = db.ensure_user(user_json)
+        return existing_user.serialize()
+
+    @functools.lru_cache(maxsize=32)
+    def __get_user_from_zoom(self, email_or_id):
         fn = self._get_zoom_client().user.get
         args = {'id': email_or_id}
         return self._make_zoom_request(fn, args)
-
-    def ensure_user_in_db(self, email_or_id):
-        data = self.get_user(email_or_id)
-        db.ensure_user(data['id'], data['first_name'], data['last_name'], data['email'])
-        return data
 
 
     def get_user_email(self, user_id):
@@ -221,7 +230,8 @@ class Zoom:
             self.logger.warning("Got a response from Zoom, but data was invalid")
             self.logger.debug(f"{ zoom_results }")
             return []
-        self.ensure_user_in_db(user_id)
+        #get_user ensure the user is present in the DB
+        self.get_user(user_id)
         zoom_meetings = zoom_results['meetings']
         for meeting in zoom_meetings:
             db.create_recording_if_needed(meeting)

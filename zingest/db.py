@@ -91,7 +91,11 @@ def create_ingest(dbs, uuid, params):
     return ingest.get_id()
 
 @with_session
-def ensure_user(dbs, user_id, first_name, last_name, email):
+def ensure_user(dbs, j):
+    user_id = j['user_id']
+    first_name = j['first_name']
+    last_name = j['last_name']
+    email = j['email']
     existing_user = dbs.query(User).filter(User.user_id == user_id).one_or_none()
     if not existing_user:
         existing_user = create_user(user_id, first_name, last_name, email)
@@ -113,6 +117,14 @@ def create_user(dbs, user_id, first_name, last_name, email):
     dbs.commit()
     dbs.refresh(user)
     return user
+
+def find_user(dbs, user_id=None, email=None):
+    preds = []
+    if user_id:
+        preds.append(User.user_id == user_id)
+    if email:
+        preds.append(User.email == email)
+    dbs.query(User).filter(or_(*preds)).all()
 
 
 def __ilike(thing, searches):
@@ -163,6 +175,15 @@ def find_users_matching(dbs, query):
                 User.last_name.ilike(wildcarded),
                 User.email.ilike(wildcarded)
             )).all()
+
+@with_session
+def find_user_by_id_or_email(dbs, query):
+    #TODO: Verify that this is safe, SQL-wise
+    return dbs.query(User).filter(or_(
+                User.user_id == query,
+                User.email == query
+            )).one_or_none()
+
 
 
 class Constants:
@@ -328,3 +349,11 @@ class User(Base):
         self.last_name = last_name
         self.email = email
         self.updated = datetime.utcnow()
+
+    def serialize(self):
+        return {
+            'id': self.user_id,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name
+        }
