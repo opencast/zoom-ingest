@@ -166,13 +166,6 @@ class Zoom:
             resp.raise_for_status()
         return resp.json()
 
-    def list_available_users(self, page):
-        #300 is the maximum page size per the docs
-        self.logger.debug(f"Fetching 300 users, page { page }")
-        fn = self._get_zoom_client().user.list
-        args = {'page_size': 300, 'page_number': page}
-        return self._make_zoom_request(fn, args)
-
     def get_user_name(self, user_id_or_email):
         self.logger.debug(f"Looking up plaintext name for { user_id_or_email }")
         user = self.get_user(user_id_or_email)
