@@ -133,6 +133,8 @@ def build_query_string(param_dict = None, overrides = None):
         param_dict = get_query_params()
     filter_names = get_query_params().keys()
     clean_dict = { key: value for key, value in param_dict.items() if None != value and key in filter_names }
+    #Ensure the dur check is lower (booleans are automatically Camelcase)
+    clean_dict['dur_check'] = str(clean_dict['dur_check']).lower()
     if overrides:
         clean_dict.update(overrides)
     query_string = urlencode(clean_dict)
