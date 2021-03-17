@@ -111,8 +111,8 @@
   {% endif %}
   {% if users | length > 0 %}
   <h2>Matching users:</h2>
-  {% if token != '' %}
-  <a href="/?{{ query_string }}&token={{ token }}">More user results</a>
+  {% if next_token != '' %}
+  <a href="/?{{ more_qs }}">More user results</a>
   {% endif %}
   <table style="width:100%">
     <tr>

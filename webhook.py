@@ -123,8 +123,7 @@ def get_query_params():
         'qt': request.args.get('qt', ""),
         'qu': request.args.get('qu', ""),
         'qd': request.args.get('qd', ""),
-        'origin_page': request.args.get('origin_page', None),
-        'token': request.args.get('token', '')
+        'origin_page': request.args.get('origin_page', None)
     }
 
 
@@ -310,7 +309,7 @@ def do_deletes():
 def do_search():
     try:
         query_params = get_query_params()
-        token = query_params['token']
+        token = request.args.get('token', '')
 
         logger.debug(f"Running search")
 
@@ -337,7 +336,7 @@ def do_search():
                 if token and len(token) > 0:
                     token = urllib.parse.unquote(token)
                 users, token_quoted = z.get_user_list(query_user, token)
-                logger.debug(f"Found { len(users) } users matching { query_user }, with token { token_quoted }")
+                logger.debug(f"Found { len(users) } users matching { query_user }, with token '{ token_quoted }'")
         except Exception as e:
             logger.exception(f"Unable to search for { query_user }", e)
             params['message'] = f"Error searching for { query_user }: { repr(e) }"
@@ -345,7 +344,10 @@ def do_search():
 
         params.update(query_params)
         #NB: Updating the token *must* be done after the query param update(), because otherwise the *request's* token gets used for further rendering...
-        params['token'] = token_quoted if token_quoted != None else ''
+        #We are explicitly *clearing* the token here because it becomes invalid once used.
+        #Making exactly the same request twice gets you the right info the first time, and *no users at all* the second time
+        params['token'] = ''
+        params['next_token'] = token_quoted if token_quoted != None else ''
         params['recordings'] = recordings
         params['users'] = users
         params['workflow_list'] = o.get_workflows()
@@ -355,6 +357,7 @@ def do_search():
         params['query_string'] = build_query_string(params, {'origin_page': '/'})
         params['dur_enable_qs'] = build_query_string(params, {'dur_check': 'true'})
         params['dur_disable_qs'] = build_query_string(params, {'dur_check': 'false'})
+        params['more_qs'] = build_query_string(params, {'token': token_quoted})
 
         return render_template("search.html", **params )
     except Exception as e:
