@@ -135,7 +135,8 @@ def build_query_string(param_dict = None, overrides = None):
     if overrides:
         clean_dict.update(overrides)
     query_string = urlencode(clean_dict)
-    logger.debug(f"Query string is { query_string }")
+    #This ideally would be at trace, but whatever.  It's generating confusing logs because of the overrides
+    #logger.debug(f"Query string is { query_string }")
     return query_string
 
 ## List of recordings for a single user,
