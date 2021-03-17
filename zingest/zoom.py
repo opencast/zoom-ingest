@@ -204,6 +204,7 @@ class Zoom:
         fn = self._get_zoom_client().user.get
         args = {'id': email_or_id}
         user_json = self._make_zoom_request(fn, args)
+        self.logger.debug(f"{ user_json }")
         existing_user = db.ensure_user(user_json)
         return existing_user.serialize()
 
