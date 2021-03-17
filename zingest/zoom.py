@@ -150,6 +150,22 @@ class Zoom:
             self.zoom_client = ZoomClient(self.api_key, self.api_secret)
         return self.zoom_client
 
+    def _cleaner(self, thing):
+        if type(thing) is not dict:
+            return
+        for key, value in thing.items():
+            if type(value) is str:
+                thing[key] = value.replace('\u200b', '')  #Some users are somehow putting zero width spaces into their metadata, let's remove them
+            elif type(value) is dict:
+                self._cleaner(value)
+            elif type(value) is list:
+                for element in value:
+                      self._cleaner(element)
+            else:
+                #this shouldn't happen, but let's log it anyway
+                self.logger.debug(f'Unexpected type cleaning { thing }')
+                pass
+
     def _make_zoom_request(self, function, args, attempts=5):
         self.logger.debug(f"Making zoom call to { function.__qualname__ } with { args }")
         resp = function(**args)
@@ -164,7 +180,9 @@ class Zoom:
                     time.sleep(random(1, 5))
                     return self._make_zoom_request(self, function, args, attempts=(attempts - 1))
             resp.raise_for_status()
-        return resp.json()
+        resp_dict = resp.json()
+        self._cleaner(resp_dict)
+        return resp_dict
 
     def get_user_name(self, user_id_or_email):
         self.logger.debug(f"Looking up plaintext name for { user_id_or_email }")
