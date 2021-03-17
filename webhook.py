@@ -305,7 +305,7 @@ def do_deletes():
 @app.errorhandler(400)
 def do_search():
     try:
-        token = request.args.get('token', '')
+        token = request.args.get('token', None)
         query_params = get_query_params()
 
         logger.debug(f"Running search")
@@ -330,16 +330,19 @@ def do_search():
 
         try:
             if query_user and len(query_user) > 0:
-                if token and len(token) > 0:
+                if token and len(token) > 0 and 'None' != token:
                     token = urllib.parse.unquote(token)
-                users, token_quoted = get_user_list(query_user, token)
+                else:
+                    #A blank or null token should be None, not 'None'
+                    token = None
+                users, token_quoted = z.get_user_list(query_user, token)
                 logger.debug(f"Found { len(users) } users matching { query_user }")
         except Exception as e:
             logger.exception(f"Unable to search for { query_user }", e)
             params['message'] = f"Error searching for { query_user }: { repr(e) }"
 
 
-        params['token'] = token_quoted
+        params['token'] = token_quoted if token_quoted not in (None, 'None') else ''
         params['recordings'] = recordings
         params['users'] = users
         params['workflow_list'] = o.get_workflows()
