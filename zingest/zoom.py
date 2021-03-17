@@ -334,15 +334,16 @@ class Zoom:
         return self._build_renderable_event_list([ recording ])[0]
 
     def get_user_list(self, q, token=None):
+        #Ensure we're using a valid token
+        used_token = token if token and len(token) > 0 else None
         response = self.search_user(search_key=q, next_page_token=token)
         users = []
         token_quoted = None
         if response and 'contacts' in response.json():
             token = response.json().get('next_page_token', None)
-            # double quote token
-            token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
-            if token_quoted == "None":
-                token_quoted = ''
+            if token != None:
+                # double quote token
+                token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
             users = sorted([{
                 'id': item.get('id'),
                 'email': item.get('email'),
@@ -350,6 +351,7 @@ class Zoom:
                 'last_name': item.get('last_name'),
             } for item in response.json().get('contacts')],
             key = lambda x : self.format_user_name(x))
+            #Ensure the users are all in the DB too
             for user in users:
                 db.ensure_user(user)
         return users, token_quoted

@@ -123,7 +123,8 @@ def get_query_params():
         'qt': request.args.get('qt', ""),
         'qu': request.args.get('qu', ""),
         'qd': request.args.get('qd', ""),
-        'origin_page': request.args.get('origin_page', None)
+        'origin_page': request.args.get('origin_page', None),
+        'token': request.args.get('token', '')
     }
 
 
@@ -306,8 +307,8 @@ def do_deletes():
 @app.errorhandler(400)
 def do_search():
     try:
-        token = request.args.get('token', None)
         query_params = get_query_params()
+        token = query_params['token']
 
         logger.debug(f"Running search")
 
@@ -331,11 +332,8 @@ def do_search():
 
         try:
             if query_user and len(query_user) > 0:
-                if token and len(token) > 0 and 'None' != token:
+                if token and len(token) > 0:
                     token = urllib.parse.unquote(token)
-                else:
-                    #A blank or null token should be None, not 'None'
-                    token = None
                 users, token_quoted = z.get_user_list(query_user, token)
                 logger.debug(f"Found { len(users) } users matching { query_user }")
         except Exception as e:
@@ -343,7 +341,7 @@ def do_search():
             params['message'] = f"Error searching for { query_user }: { repr(e) }"
 
 
-        params['token'] = token_quoted if token_quoted not in (None, 'None') else ''
+        params['token'] = token_quoted if token_quoted != None else ''
         params['recordings'] = recordings
         params['users'] = users
         params['workflow_list'] = o.get_workflows()
