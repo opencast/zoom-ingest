@@ -92,7 +92,7 @@ def create_ingest(dbs, uuid, params):
 
 @with_session
 def ensure_user(dbs, j):
-    user_id = j['user_id']
+    user_id = j['id']
     first_name = j['first_name']
     last_name = j['last_name']
     email = j['email']
