@@ -93,8 +93,8 @@ def create_ingest(dbs, uuid, params):
 @with_session
 def ensure_user(dbs, j):
     user_id = j['id']
-    first_name = j['first_name']
-    last_name = j['last_name']
+    first_name = j['first_name'] if j['first_name'] != None else ""
+    last_name = j['last_name'] if j['last_name'] != None else ""
     email = j['email']
     existing_user = dbs.query(User).filter(User.user_id == user_id).one_or_none()
     if not existing_user:
