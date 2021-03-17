@@ -177,22 +177,6 @@ def do_list_recordings(user_id):
         logger.exception(f"Unable to render recording list for { user_id }")
         return render_template("error.html", message = repr(e))
 
-def get_user_list(q, token=None):
-    response = z.search_user(search_key=q, next_page_token=token)
-    users = []
-    token_quoted = None
-    if response and 'contacts' in response.json():
-        token = response.json().get('next_page_token', None)
-        # double quote token
-        token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
-        users = sorted([{
-            'id': item.get('id'),
-            'email': item.get('email'),
-            'first_name': item.get('first_name'),
-            'last_name': item.get('last_name'),
-        } for item in response.json().get('contacts')],
-        key = lambda x : z.format_user_name(x))
-    return users, token_quoted
 
 ## Handling of a single recording
 

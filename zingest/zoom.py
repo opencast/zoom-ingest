@@ -2,6 +2,7 @@ import functools
 import logging
 from datetime import datetime, timedelta
 from random import random
+import urllib.parse
 from urllib.parse import quote
 import time
 from requests import HTTPError
@@ -197,8 +198,7 @@ class Zoom:
         return f"{ user['last_name'] }, { user['first_name'] }"
 
     @functools.lru_cache(maxsize=32)
-    @db.with_session
-    def get_user(dbs, self, email_or_id):
+    def get_user(self, email_or_id):
         #Search the DB for the user
         existing_user = db.find_user_by_id_or_email(email_or_id)
         if existing_user:
@@ -332,6 +332,27 @@ class Zoom:
         recording = db.create_recording_if_needed(recording)
         #We pass in a list of one, so we know that the returned list is of size 1
         return self._build_renderable_event_list([ recording ])[0]
+
+    def get_user_list(self, q, token=None):
+        response = self.search_user(search_key=q, next_page_token=token)
+        users = []
+        token_quoted = None
+        if response and 'contacts' in response.json():
+            token = response.json().get('next_page_token', None)
+            # double quote token
+            token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
+            if token_quoted == "None":
+                token_quoted = ''
+            users = sorted([{
+                'id': item.get('id'),
+                'email': item.get('email'),
+                'first_name': item.get('first_name'),
+                'last_name': item.get('last_name'),
+            } for item in response.json().get('contacts')],
+            key = lambda x : self.format_user_name(x))
+            for user in users:
+                db.ensure_user(user)
+        return users, token_quoted
 
     # Do not cache result as the next_page_token expire after 15 minutes
     def search_user(self, search_key, page_size=25, next_page_token=None):
