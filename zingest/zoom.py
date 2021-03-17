@@ -161,9 +161,13 @@ class Zoom:
             elif type(value) is list:
                 for element in value:
                       self._cleaner(element)
+            elif type(value) in [int, bool]:
+                #Do nothing, don't need to filter this
+                pass
             else:
                 #this shouldn't happen, but let's log it anyway
                 self.logger.debug(f'Unexpected type cleaning { thing }')
+                self.logger.debug(f'{ type(value) }')
                 pass
 
     def _make_zoom_request(self, function, args, attempts=5):
