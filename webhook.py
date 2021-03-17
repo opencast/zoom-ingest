@@ -354,7 +354,8 @@ def do_search():
         params['series_list'] = o.get_series()
         params['acl_list'] = o.get_acls()
 
-        params['query_string'] = build_query_string(params, {'origin_page': '/'})
+        params['origin_page'] = "/"
+        params['query_string'] = build_query_string(params)
         params['dur_enable_qs'] = build_query_string(params, {'dur_check': 'true'})
         params['dur_disable_qs'] = build_query_string(params, {'dur_check': 'false'})
         params['more_qs'] = build_query_string(params, {'token': token_quoted})
