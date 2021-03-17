@@ -95,19 +95,22 @@ class Opencast:
                 self.logger.exception("Error connecting to rabbit!  Retry in 10 seconds...")
                 time.sleep(10)
 
-    @db.with_session
-    def process_backlog(dbs, self):
+    def process_backlog(self):
         while True:
             try:
-                self.logger.info("Checking backlog")
-                hour_ago = datetime.utcnow() - timedelta(hours=1)
-                ing_list = dbs.query(db.Ingest).filter(db.Ingest.status != db.Status.FINISHED, db.Ingest.timestamp <= hour_ago).all()
-                for ing in ing_list:
-                    self._process(ing)
-                time.sleep(60)
+                self._process_backlog()
             except Exception as e:
                 self.logger.exception("Catchall while processing the backlog. Please report this as a bug.")
                 time.sleep(10)
+
+    @db.with_session
+    def _process_backlog(dbs, self):
+        self.logger.info("Checking backlog")
+        hour_ago = datetime.utcnow() - timedelta(hours=1)
+        ing_list = dbs.query(db.Ingest).filter(db.Ingest.status != db.Status.FINISHED, db.Ingest.timestamp <= hour_ago).all()
+        for ing in ing_list:
+            self._process(ing)
+        time.sleep(60)
 
     def _do_download(self, url, output, expected_size):
         Path(f"{ self.IN_PROGRESS_ROOT }").mkdir(parents=True, exist_ok=True)
