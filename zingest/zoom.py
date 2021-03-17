@@ -340,10 +340,10 @@ class Zoom:
         users = []
         token_quoted = None
         if response and 'contacts' in response.json():
-            token = response.json().get('next_page_token', None)
-            if token != None:
+            resp_token = response.json().get('next_page_token', None)
+            if resp_token != None:
                 # double quote token
-                token_quoted = urllib.parse.quote(urllib.parse.quote(token, safe=''), safe='')
+                token_quoted = urllib.parse.quote(urllib.parse.quote(resp_token, safe=''), safe='')
             users = sorted([{
                 'id': item.get('id'),
                 'email': item.get('email'),

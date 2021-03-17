@@ -337,12 +337,14 @@ def do_search():
                 if token and len(token) > 0:
                     token = urllib.parse.unquote(token)
                 users, token_quoted = z.get_user_list(query_user, token)
-                logger.debug(f"Found { len(users) } users matching { query_user }")
+                logger.debug(f"Found { len(users) } users matching { query_user }, with token { token_quoted }")
         except Exception as e:
             logger.exception(f"Unable to search for { query_user }", e)
             params['message'] = f"Error searching for { query_user }: { repr(e) }"
 
 
+        params.update(query_params)
+        #NB: Updating the token *must* be done after the query param update(), because otherwise the *request's* token gets used for further rendering...
         params['token'] = token_quoted if token_quoted != None else ''
         params['recordings'] = recordings
         params['users'] = users
@@ -350,7 +352,6 @@ def do_search():
         params['series_list'] = o.get_series()
         params['acl_list'] = o.get_acls()
 
-        params.update(query_params)
         params['query_string'] = build_query_string(params, {'origin_page': '/'})
         params['dur_enable_qs'] = build_query_string(params, {'dur_check': 'true'})
         params['dur_disable_qs'] = build_query_string(params, {'dur_check': 'false'})
