@@ -129,9 +129,16 @@ class Opencast:
         return requests.get(url, auth=self.auth, headers=Opencast.HEADERS)
 
     def create_callback(self, encoder):
+        last = 0
         def callback(monitor):
-            #Logging to two decimal places
-            self.logger.debug(f"{ '{:4.2f}'.format(monitor.bytes_read / monitor.len * 100) }% uploaded")
+            nonlocal last
+            pct = int(monitor.bytes_read / monitor.len * 100)
+            #Log every 5%, and only if it's a *new* percentage
+            #This callback gets called for every read() of the underlying file (possibly every 512 bytes)
+            if pct % 5 == 0 and pct > last:
+                last = pct
+                #Logging to two decimal places
+                self.logger.debug(f"{ '{:4.2f}'.format(pct) }% uploaded")
         return callback
 
     def _do_post(self, url, data, files=None):
