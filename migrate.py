@@ -127,7 +127,7 @@ def migrate(dbs):
         names = zingest['creator'].split(', ')
         print(data)
         rec = db.create_recording(data)
-        db.ensure_user(rec.get_user_id(), names[1], names[0], z.get_user_email(rec.get_user_id()))
+        db.ensure_user({'id': rec.get_user_id(), 'first_name': names[1], 'last_name': names[0], 'email': z.get_user_email(rec.get_user_id())})
         ingest_id = db.create_ingest(rec.get_rec_id(), zingest)
         dbs.commit()
 
