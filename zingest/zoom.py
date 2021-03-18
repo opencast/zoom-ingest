@@ -339,8 +339,8 @@ class Zoom:
         response = self.search_user(search_key=q, next_page_token=token)
         users = []
         token_quoted = None
-        if response and 'contacts' in response.json():
-            resp_token = response.json().get('next_page_token', None)
+        if response and 'contacts' in response:
+            resp_token = response.get('next_page_token', None)
             if resp_token != None:
                 # double quote token
                 token_quoted = urllib.parse.quote(urllib.parse.quote(resp_token, safe=''), safe='')
@@ -349,7 +349,7 @@ class Zoom:
                 'email': item.get('email'),
                 'first_name': item.get('first_name'),
                 'last_name': item.get('last_name'),
-            } for item in response.json().get('contacts')],
+            } for item in response.get('contacts')],
             key = lambda x : self.format_user_name(x))
             #Ensure the users are all in the DB too
             for user in users:
@@ -358,14 +358,13 @@ class Zoom:
 
     # Do not cache result as the next_page_token expire after 15 minutes
     def search_user(self, search_key, page_size=25, next_page_token=None):
-        # TODO: use zoom client implementation
-        #       see https://github.com/prschmid/zoomus/pull/146
-        params = {
+        fn = self._get_zoom_client().contacts.search
+        args = {
             'search_key': search_key,
             'query_presence_status': 'false',
             'page_size': page_size,
         }
         if next_page_token and len(next_page_token) > 0:
-            params['next_page_token'] = next_page_token
-        self.logger.debug(f"Search zoom contacts with params: " + str(params))
-        return self._get_zoom_client().get_request("/contacts", params=params)
+            args['next_page_token'] = next_page_token
+        self.logger.debug(f"Search zoom contacts with params: " + str(args))
+        return self._make_zoom_request(fn, args)
