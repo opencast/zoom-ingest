@@ -8,10 +8,13 @@ from math import floor
 from pathlib import Path
 from urllib.error import HTTPError
 import re
-
+from xml.parsers.expat import ExpatError
 import requests
 import xmltodict
 from requests.auth import HTTPDigestAuth
+from requests_toolbelt.multipart.encoder import MultipartEncoder, MultipartEncoderMonitor
+from requests_toolbelt.exceptions import StreamingError
+from requests_toolbelt.downloadutils import stream
 
 import zingest
 from zingest import db
@@ -117,25 +120,37 @@ class Opencast:
         if os.path.isfile(output) and expected_size == os.path.getsize(output):
           self.logger.debug(f"{ output } already exists and is the right size")
           return
-        with requests.get(url, stream=True) as req:
-            #Raises an exception if there is one
-            req.raise_for_status()
-            with open(output, 'wb') as f:
-                for chunk in req.iter_content(chunk_size=8192):
-                    # If you have chunk encoded response uncomment if
-                    # and set chunk_size parameter to None.
-                    #if chunk:
-                    f.write(chunk)
-                f.close()
-            req.close()
+        with open(output, 'wb') as fd:
+            r = requests.get(url, stream=True)
+            stream.stream_response_to_file(r, path=fd, chunksize=8192)
 
     def _do_get(self, url):
         self.logger.debug(f"GETting { url }")
         return requests.get(url, auth=self.auth, headers=Opencast.HEADERS)
 
+    def create_callback(self, encoder):
+        def callback(monitor):
+            #Logging to two decimal places
+            self.logger.debug(f"{ '{:4.2f}'.format(monitor.bytes_read / monitor.len * 100) }% uploaded")
+        return callback
+
     def _do_post(self, url, data, files=None):
         self.logger.debug(f"POSTing { data } to { url }")
-        return requests.post(url, auth=self.auth, headers=Opencast.HEADERS, data=data, files=files)
+        #Take the data params (form params)
+        fields = data
+        #Add the files
+        #TODO: validate this somehow
+        if files:
+            fields.update(files)
+        e = MultipartEncoder(fields = fields)
+        #self.logger.debug(e.to_string())
+        m = MultipartEncoderMonitor(e, self.create_callback(e))
+        #Clone the defaul headers, then set the content type
+        #NB: Without setting this content type the ingest will fail when uploading anything!
+        headers = {}
+        headers.update(Opencast.HEADERS)
+        headers['Content-Type'] = m.content_type
+        return requests.post(url, auth=self.auth, headers=headers, data=m)
 
     def _do_put(self, url, data):
         self.logger.debug(f"PUTing { data } to { url }")
@@ -183,11 +198,15 @@ class Opencast:
             ingest.set_mediapackage_id(mp_id)
             dbs.merge(ingest)
             dbs.commit()
+        except ExpatError as e:
+            self.logger.error(f"Opencast did not return a valid mediapackage for { uuid }, will retry later")
+        except StreamingError as e:
+            self.logger.exception(f"Error downloading media for { uuid }, will retry")
         except HTTPError as er:
-            self.logger.exception("Unable to fetch file, will retry later")
+            self.logger.exception(f"Unable to fetch file for { uuid }, will retry later")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
         except Exception as e:
-            self.logger.exception("General Exception")
+            self.logger.exception(f"General Exception processing { uuid }")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
 
     def _rm(self, path):
@@ -513,6 +532,10 @@ class Opencast:
       xacml['Policy']['Rule'] = rules
       return xmltodict.unparse(xacml)
 
+    def _check_valid_mediapackage(self, mp):
+        #We throw out the results here, we're just looking for the exception if the mediapackage is invalid
+        xmltodict.parse(mp)
+
     def oc_upload(self, rec_id, filename, acl_id=None, workflow_id=None, **kwargs):
 
         if not workflow_id:
@@ -530,21 +553,28 @@ class Opencast:
         with open(filename, 'rb') as fobj:
             self.logger.info(f"Creating mediapackage for { rec_id }")
             mp = self._do_get(f'{ self.url }/ingest/createMediaPackage').text
-            self.logger.debug(f"Ingesting episode security settings for { rec_id }")
-            mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files={ "BODY": ep_acl }).text
+            self._check_valid_mediapackage(mp)
+            #self.logger.debug(f"Ingesting episode security settings for { rec_id }")
+            #mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
+            #self._check_valid_mediapackage(mp)
             self.logger.debug(f"Ingesting episode dublin core settings for { rec_id }")
             mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': ep_dc}).text
+            self._check_valid_mediapackage(mp)
             if eth_dc:
                 self.logger.debug(f"Ingesting episode ethterms for { rec_id }")
                 mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/episode', 'mediaPackage': mp, 'dublinCore': eth_dc}).text
+                self._check_valid_mediapackage(mp)
             self.logger.info(f"Ingesting zoom video for { rec_id }")
-            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": fobj }).text
+            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": (os.path.basename(filename), fobj, "video/mp4") }).text
+            self._check_valid_mediapackage(mp)
             self.logger.info(f"Triggering processing for { rec_id }")
             workflow = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={'mediaPackage': mp}).text
-            wfdict = xmltodict.parse(workflow)
-            mpid = wfdict['wf:workflow']['mp:mediapackage']['@id']
-            workflow_instance_id = wfdict['wf:workflow']['@id']
-            self.logger.info(f"Ingested { rec_id } as workflow { workflow_instance_id } on mediapackage { mpid }")
+
+        wfdict = xmltodict.parse(workflow)
+        mpid = wfdict['wf:workflow']['mp:mediapackage']['@id']
+        workflow_instance_id = wfdict['wf:workflow']['@id']
+
+        self.logger.info(f"Ingested { rec_id } as workflow { workflow_instance_id } on mediapackage { mpid }")
         return mpid, workflow_instance_id
 
     def create_series(self, title, acl_id, theme_id=None, **kwargs):
