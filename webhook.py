@@ -438,12 +438,13 @@ def do_POST(dbs):
             logger.debug(f"Validating recording.renamed event")
             z.validate_recording_renamed(payload)
             uuid = obj['uuid']
-            existing_db_ingest = dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid).one_or_none()
-            if existing_db_ingest:
-                existing_db_recording = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+            existing_db_recording = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+            if existing_db_recording:
                 existing_db_recording.set_title(obj['topic'])
                 dbs.merge(existing_db_recording)
                 dbs.commit()
+            existing_db_ingest = dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid).one_or_none()
+            if existing_db_ingest:
                 logger.debug(f"Recieved a rename event for event { uuid }, renamed to { obj['topic'] }.  No further processing, already ingested as { existing_db_ingest.get_id() }.")
                 return f"Recieved a rename event for event { uuid }, renamed to { obj['topic'] }.  No further processing, already ingested as { existing_db_ingest.get_id() }."
 
