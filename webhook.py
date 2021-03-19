@@ -5,6 +5,7 @@ import sys
 import urllib.parse
 from datetime import datetime, date, timedelta
 from urllib.parse import urlencode, parse_qs
+from requests import HTTPError
 
 from flask import Flask, request, render_template, render_template_string, redirect
 
@@ -224,6 +225,8 @@ def single_recording(recording_id):
         elif request.method == "POST":
             origin_page, query_string = _ingest_single_recording(recording_id_decoded)
             return redirect(f'{ origin_page }?{ query_string }')
+    except HTTPError as e:
+        return render_template("error.html", message = f"Recording not found.  Zoom may still be processing this recording, try again in a few minutes")
     except Exception as e:
         logger.exception(f"Unable to render or ingest recording { recording_id }")
         return render_template("error.html", message = repr(e))
