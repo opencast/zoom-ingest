@@ -561,16 +561,17 @@ class Opencast:
             self.logger.info(f"Creating mediapackage for { rec_id }")
             mp = self._do_get(f'{ self.url }/ingest/createMediaPackage').text
             self._check_valid_mediapackage(mp)
-            self.logger.debug(f"Ingesting episode security settings for { rec_id }")
-            mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
-            self._check_valid_mediapackage(mp)
+
             self.logger.debug(f"Ingesting episode dublin core settings for { rec_id }")
-            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': ep_dc}).text
+            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': self._prep_dublincore()}).text
             self._check_valid_mediapackage(mp)
             if eth_dc:
                 self.logger.debug(f"Ingesting episode ethterms for { rec_id }")
                 mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/episode', 'mediaPackage': mp, 'dublinCore': eth_dc}).text
                 self._check_valid_mediapackage(mp)
+            self.logger.debug(f"Ingesting episode security settings for { rec_id }")
+            mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
+            self._check_valid_mediapackage(mp)
             self.logger.info(f"Ingesting zoom video for { rec_id }")
             mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": (os.path.basename(filename), fobj, "video/mp4") }).text
             self._check_valid_mediapackage(mp)
