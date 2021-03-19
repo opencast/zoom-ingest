@@ -280,29 +280,7 @@ def get_series_list(series_id=None):
         logger.exception(f"Unable to render or create series { series_id }")
         return render_template("error.html", message = repr(e))
 
-## Cancelling an ingest
-
-@app.route('/cancel', methods=['GET', 'POST'])
-def do_cancels():
-    if request.method == "GET":
-        current = o.get_in_progress()
-        return render_template("cancel-ingest.html", recordings = current)
-    else:
-        o.cancel_ingest(request.form['ingestid'])
-        current = o.get_in_progress()
-        return render_template("cancel-ingest.html", recordings = current)
-
-## Deleting an ingest which has already happened (this is mainly for testing)
-
-@app.route('/delete', methods=['GET', 'POST'])
-def do_deletes():
-    if request.method == "GET":
-        current = o.get_finished()
-        return render_template("delete-record.html", recordings = current)
-    else:
-        o.cancel_ingest(request.form['ingestid'])
-        current = o.get_finished()
-        return render_template("delete-record.html", recordings = current)
+# Main search
 
 @app.route('/', methods=["GET"])
 @app.errorhandler(400)
