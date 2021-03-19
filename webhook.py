@@ -438,15 +438,16 @@ def do_POST(dbs):
             logger.debug(f"Validating recording.renamed event")
             z.validate_recording_renamed(payload)
             uuid = obj['uuid']
+            new_title = obj['topic'].replace('\u200b', '')
             existing_db_recording = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if existing_db_recording:
-                existing_db_recording.set_title(obj['topic'])
+                existing_db_recording.set_title(new_title)
                 dbs.merge(existing_db_recording)
                 dbs.commit()
             existing_db_ingest = dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid).one_or_none()
             if existing_db_ingest:
-                logger.debug(f"Recieved a rename event for event { uuid }, renamed to { obj['topic'] }.  No further processing, already ingested as { existing_db_ingest.get_id() }.")
-                return f"Recieved a rename event for event { uuid }, renamed to { obj['topic'] }.  No further processing, already ingested as { existing_db_ingest.get_id() }."
+                logger.debug(f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as { existing_db_ingest.get_id() }.")
+                return f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as { existing_db_ingest.get_id() }."
 
             #In this case, we've recieved a rename for something that's *not* in the database
             #So we treat it as if it's a normal recording complete webhook event
@@ -477,7 +478,7 @@ def do_POST(dbs):
     zingest_params = {
         'is_webhook': True,
         'workflow_id': WEBHOOK_WORKFLOW,
-        'title': obj['topic'],
+        'title': obj['topic'].replace('\u200b', ''),
         'creator': z.get_user_name(obj['host_id']),
         'date': obj['start_time'],
         'duration': obj['duration']

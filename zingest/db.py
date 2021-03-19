@@ -221,10 +221,10 @@ class Recording(Base):
         self.duration = int(data['duration'])
         self.user_id = data['host_id']
         self.start_time = data['start_time']
-        self.title = data['topic']
+        self.title = data['topic'].replace('\u200b', '')
 
     def set_title(self, new_title):
-        self.title = new_title
+        self.title = new_title.replace('\u200b', '')
 
     def get_id(self):
         return self.rec_id
