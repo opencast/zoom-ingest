@@ -205,6 +205,8 @@ class Opencast:
             ingest.set_mediapackage_id(mp_id)
             dbs.merge(ingest)
             dbs.commit()
+        except FileNotFoundError as e:
+            self.logger.error(f"Unable to ingest { uuid }, file not found, will retry later")
         except ExpatError as e:
             self.logger.error(f"Opencast did not return a valid mediapackage for { uuid }, will retry later")
         except StreamingError as e:
