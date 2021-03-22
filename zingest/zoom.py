@@ -261,7 +261,7 @@ class Zoom:
         self.logger.debug(f"Got a list of { len(zoom_meetings) } meetings")
         #We're requerying the DB here since we need to get *all* of the recordings, not the ones we just created
         ids = [ m['uuid'] for m in zoom_meetings ]
-        db_recordings = dbs.query(db.Recording).filter(db.Recording.uuid.in_(ids)).all()
+        db_recordings = dbs.query(db.Recording).filter(db.Recording.uuid.in_(ids)).order_by(db.Recording.start_time.desc()).all()
         return self._build_renderable_event_list(db_recordings, min_duration)
 
     @db.with_session
