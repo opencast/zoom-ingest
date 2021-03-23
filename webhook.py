@@ -438,6 +438,9 @@ def do_POST(dbs):
             obj = z.get_recording(uuid)
             #Validate it again, just in case Zoom changes something
             z.validate_recording_object(obj)
+            #We're seeing the occasional issue where the rename event fires, but the response from Zoom contains the *old* name.
+            #So we override it here.
+            obj['topic'] = new_title
         else:
             self.logger.info(f"Unknown event type { event_type }, but passing initial validations.  Unable to continue processing this event.")
             return f"Unable to ingest, unkonwn event type { event_type }"
