@@ -565,7 +565,7 @@ class Opencast:
             self._check_valid_mediapackage(mp)
 
             self.logger.debug(f"Ingesting episode dublin core settings for { rec_id }")
-            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': self._prep_dublincore()}).text
+            mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': ep_dc}).text
             self._check_valid_mediapackage(mp)
             if eth_dc:
                 self.logger.debug(f"Ingesting episode ethterms for { rec_id }")
