@@ -21,9 +21,11 @@ class Zoom:
     def __init__(self, config):
         self.logger = logging.getLogger(__name__)
 
-        self.api_key = get_config(config, 'JWT', 'Key')
-        self.api_secret = get_config(config, 'JWT', 'Secret')
+        self.api_key = get_config(config, 'Zoom', 'JWT_Key')
+        self.api_secret = get_config(config, 'Zoom', 'JWT_Secret')
         self.logger.debug(f"Init with Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
+        self.gdpr = get_config(config, 'Zoom', 'GDPR').lower() == 'true'
+        self.logger.info(f"GDPR compliant endpoints in use: { self.gdpr }")
         self.zoom_client = None
         self.zoom_client_exp = None
         self.jwt_token = None
@@ -148,7 +150,10 @@ class Zoom:
             self.logger.debug("Creating new zoom client")
             # zoom client library set this interval, so we
             self.zoom_client_exp = datetime.utcnow() + timedelta(hours=1)
-            self.zoom_client = ZoomClient(self.api_key, self.api_secret)
+            if self.gdpr:
+                self.zoom_client = ZoomClient(self.api_key, self.api_secret, base_uri=zoomus.client.API_BASE_URIS[zoomus.util.API_GDPR])
+            else:
+                self.zoom_client = ZoomClient(self.api_key, self.api_secret)
         return self.zoom_client
 
     def _cleaner(self, thing):

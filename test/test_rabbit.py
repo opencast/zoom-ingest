@@ -12,7 +12,7 @@ class TestRabbit(unittest.TestCase):
 
     def setUp(self):
         self.config = {"Rabbit": {"host": "localhost", "user": "test_user", "password": "test_password" }}
-        zoom_config={"JWT": {"Key": "test_key", "Secret": "test_secret" }}
+        zoom_config={"Zoom": {"JWT_Key": "test_key", "JWT_Secret": "test_secret", "GDPR": "False" }}
         self.zoom = Zoom(zoom_config)
 
     def tearDown(self):

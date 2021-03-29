@@ -47,7 +47,7 @@ class TestOpencast(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.config = {"Opencast": {"Url": "http://localhost", "User": "test_user", "Password": "test_password", 'workflow_filter': None, 'series_filter': None},
                        "Rabbit": {"host": "http://localhost", "user": "test_user", "password": "test_password" },
-                       "JWT": {"Key": "test_key", "Secret": "test_secret" },
+                       "Zoom": {"JWT_Key": "test_key", "JWT_Secret": "test_secret", "GDPR": "False" },
                        "TESTING": {"IN_PROGRESS_ROOT": self.tempdir}}
         self.base_zingest = {
             "workflow_id": "schedule-and-upload",

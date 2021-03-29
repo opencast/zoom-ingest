@@ -7,7 +7,7 @@ from zingest.zoom import Zoom
 class TestZoom(unittest.TestCase):
 
     def setUp(self):
-        self.config={"JWT": {"Key": "test_key", "Secret": "test_secret" }}
+        self.config={"Zoom": {"JWT_Key": "test_key", "JWT_Secret": "test_secret", "GDPR": "False" }}
         with open('test/resources/zoom/webhook-recording-completed.json', 'r') as webhook:
             self.event = json.loads(webhook.read())['payload']
         with open('test/resources/zoom/webhook-recording-renamed.json', 'r') as webhook:
@@ -25,34 +25,40 @@ class TestZoom(unittest.TestCase):
           Zoom(None)
 
     def test_missingZoomConfig(self):
-        del self.config["JWT"]
+        del self.config["Zoom"]
         with self.assertRaises(KeyError):
           Zoom(self.config)
 
     def test_missingKeyConfig(self):
-        del self.config["JWT"]["Key"]
+        del self.config["Zoom"]["JWT_Key"]
         with self.assertRaises(KeyError):
           Zoom(self.config)
 
     def test_missingSecretConfig(self):
-        del self.config["JWT"]["Secret"]
+        del self.config["Zoom"]["JWT_Secret"]
         with self.assertRaises(KeyError):
           Zoom(self.config)
 
     def test_badKeyConfig(self):
-        self.config["JWT"]["Key"] = None
+        self.config["Zoom"]["JWT_Key"] = None
         with self.assertRaises(ValueError):
           Zoom(self.config)
 
     def test_badSecretConfig(self):
-        self.config["JWT"]["Secret"] = None
+        self.config["Zoom"]["JWT_Secret"] = None
+        with self.assertRaises(ValueError):
+          Zoom(self.config)
+
+    def test_badGDPR(self):
+        self.config["Zoom"]["GDPR"] = None
         with self.assertRaises(ValueError):
           Zoom(self.config)
 
     def test_goodConfig(self):
         zoom = Zoom(self.config)
-        self.assertEqual(self.config["JWT"]["Key"], zoom.api_key)
-        self.assertEqual(self.config["JWT"]["Secret"], zoom.api_secret)
+        self.assertEqual(self.config["Zoom"]["JWT_Key"], zoom.api_key)
+        self.assertEqual(self.config["Zoom"]["JWT_Secret"], zoom.api_secret)
+        self.assertEqual(self.config["Zoom"]["GDPR"].lower(), str(zoom.gdpr).lower())
 
     def validate_bad_data(self, payload):
         zoom = Zoom(self.config)
