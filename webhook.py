@@ -425,10 +425,11 @@ def do_POST(dbs):
                 existing_db_recording.set_title(new_title)
                 dbs.merge(existing_db_recording)
                 dbs.commit()
-            existing_db_ingest = dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid).one_or_none()
-            if existing_db_ingest:
-                logger.debug(f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as { existing_db_ingest.get_id() }.")
-                return f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as { existing_db_ingest.get_id() }."
+            existing_db_ingest = dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid).all()
+            if len(existing_db_ingest) > 1:
+                workflow_ids = [ existing.get_workflow_id() for existing in existing_db_ingest ]
+                logger.debug(f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as workflow(s) { ', '.join(workflow_ids) }.")
+                return f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as { ', '.join(workflow_ids) }."
 
             #In this case, we've recieved a rename for something that's *not* in the database
             #So we treat it as if it's a normal recording complete webhook event
