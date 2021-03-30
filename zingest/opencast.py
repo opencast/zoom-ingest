@@ -264,16 +264,6 @@ class Opencast:
 
         return filename
 
-    @db.with_session
-    def get_in_progress(dbs, self):
-        results = dbs.query(db.Recording).filter(db.Recording.status != db.Status.FINISHED).all()
-        return self._build_ingest_renderable(results)
-
-    @db.with_session
-    def get_finished(dbs, self):
-        results = dbs.query(db.Recording).filter(db.Recording.status == db.Status.FINISHED).all()
-        return self._build_ingest_renderable(results)
-
     def _build_ingest_renderable(self, results):
         ip = []
         for result in results:
@@ -288,15 +278,6 @@ class Opencast:
             }
             ip.append(item)
         return ip
-
-    @db.with_session
-    def cancel_ingest(dbs, self, ingest_id):
-        try:
-            self.logger.info(f"Canceled ingest { ingest_id }")
-            dbs.query(db.Recording).filter(db.Recording.rec_id == ingest_id).delete(synchronize_session=False)
-            dbs.commit()
-        except Exception as e:
-            self.logger.exception(f"Unable to delete { ingest_id }")
 
     def get_themes(self):
         if not self.themes or self.themes_updated <= datetime.utcnow() - timedelta(hours = 1):
