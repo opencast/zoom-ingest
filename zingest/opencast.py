@@ -192,10 +192,10 @@ class Opencast:
             if not os.path.isdir(f'{self.IN_PROGRESS_ROOT}'):
                 os.mkdir(f'{self.IN_PROGRESS_ROOT}')
 
-            self.logger.info(f"Fetching {uuid}")
+            self.logger.info(f"{ uuid }: Fetching {uuid}")
             files = self.zoom.get_recording_files(uuid)
             filename = self.fetch_file(uuid, files)
-            self.logger.info(f"Uploading {uuid} as {filename} to {self.url}")
+            self.logger.info(f"{ uuid }: Uploading {uuid} as {filename} to {self.url}")
 
             mp_id, workflow_id = self.oc_upload(uuid, filename, **params)
             self._rm(filename)
@@ -219,42 +219,39 @@ class Opencast:
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
 
     def _rm(self, path):
-        self.logger.debug(f"Removing {path}")
+        self.logger.debug(f"Removing { path }")
         try:
             if os.path.isfile(path):
                 os.remove(path)
         except Exception as e:
             if os.path.isfile(path):
-                self.logger.exception("Exception removing {path}.  File will need to be manually removed.")
+                self.logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
 
     def fetch_file(self, recording_id, files):
         dl_url = ''
         recording_file = None
         for preference in self.RECORDING_TYPE_PREFERENCE:
-            self.logger.debug(f"Checking if recording contains a file of type {preference}")
+            self.logger.debug(f"{ recording_id  }: Checking if recording contains a file of type { preference }")
             for candidate in files:
                 if preference == candidate['recording_type']:
                     recording_file = candidate
                     break
             if recording_file:
-                self.logger.debug(f"Recording contains a file of type {preference}!")
+                self.logger.debug(f"{ recording_id  }: Recording contains a file of type { preference }!")
                 #We've found one, quit
                 break
 
         #If we've somehow cycled through all the candidates and nothing matches, fail
         if not recording_file:
-            raise NoMp4Files("No acceptable filetype found!")
+            raise NoMp4Files(f"{ Recording_id }: No acceptable filetype found!")
 
         for key in files[0].keys():
             if key == "download_url":
                 dl_url = files[0][key]
-                self.logger.debug(f"Download url found: {dl_url}")
-            elif key == "recording_id":
-                recording_id = files[0][key]
-                self.logger.debug(f"Recording id found: {recording_id}")
+                self.logger.debug(f"{ recording_id  }: Download url found: {dl_url}")
             elif key == "file_size":
                 expected_size = int(files[0][key])
-                self.logger.debug(f"Recording size found: {expected_size}")
+                self.logger.debug(f"{ recording_id  }: Recording size found: {expected_size}")
 
         #Output file lives in the in-progress directory
         filename = f"{self.IN_PROGRESS_ROOT}/{recording_id}.mp4"
@@ -262,7 +259,7 @@ class Opencast:
         #Zoom token gets calculated at download time, regardless of inclusion in the rabbit message
         token = self.zoom.get_download_token()
         url = f"{dl_url}?access_token={ token }"
-        self.logger.debug(f"Downloading from { url } to { filename }")
+        self.logger.debug(f"{ recording_id  }: Downloading from { url } to { filename }")
         self._do_download(f"{ url }", filename, expected_size)
 
         return filename
@@ -560,24 +557,24 @@ class Opencast:
         wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}
 
         with open(filename, 'rb') as fobj:
-            self.logger.info(f"Creating mediapackage for { rec_id }")
+            self.logger.info(f"{ rec_id  }: Creating mediapackage")
             mp = self._do_get(f'{ self.url }/ingest/createMediaPackage').text
             self._check_valid_mediapackage(mp)
 
-            self.logger.debug(f"Ingesting episode dublin core settings for { rec_id }")
+            self.logger.debug(f"{ rec_id  }: Ingesting episode dublin core settings")
             mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'dublincore/episode', 'mediaPackage': mp, 'dublinCore': ep_dc}).text
             self._check_valid_mediapackage(mp)
             if eth_dc:
-                self.logger.debug(f"Ingesting episode ethterms for { rec_id }")
+                self.logger.debug(f"{ rec_id  }: Ingesting episode ethterms")
                 mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/episode', 'mediaPackage': mp, 'dublinCore': eth_dc}).text
                 self._check_valid_mediapackage(mp)
-            self.logger.debug(f"Ingesting episode security settings for { rec_id }")
+            self.logger.debug(f"{ rec_id  }: Ingesting episode security settings")
             mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
             self._check_valid_mediapackage(mp)
-            self.logger.info(f"Ingesting zoom video for { rec_id }")
+            self.logger.info(f"{ rec_id  }: Ingesting zoom video")
             mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": (os.path.basename(filename), fobj, "video/mp4") }).text
             self._check_valid_mediapackage(mp)
-            self.logger.info(f"Triggering processing for { rec_id }")
+            self.logger.info(f"{ rec_id  }: Triggering processing")
             workflow = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={'mediaPackage': mp}).text
 
         wfdict = xmltodict.parse(workflow)

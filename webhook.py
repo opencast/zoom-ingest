@@ -451,14 +451,20 @@ def do_POST(dbs):
     except NoMp4Files as e:
         logger.error("No mp4 files found!")
         return render_template_string("No mp4 files found!"), 400
+    except Exception as e:
+        logger.exception("General error in webhook!")
+        logger.error("Body is vvv")
+        logger.error(body)
+        logger.error("Body is ^^^")
+        return render_template_string("Error"), 500
 
     uuid = obj['uuid']
     if "download_token" in body:
         token = body["download_token"]
-        logger.debug(f"Token is {token}")
+        logger.debug(f"Token for { uuid } is {token}")
     else:
         token = None
-        logger.debug("Token missing, using None")
+        logger.debug(f"Token for { uuid } is missing, using None")
 
     zingest_params = {
         'is_webhook': True,
@@ -501,13 +507,13 @@ def _queue_recording(dbs, uuid, zingest, token=None):
     logger.debug(f"Is a webhook event: { is_webhook }")
 
     if not WEBHOOK_ENABLE and is_webhook:
-        self.logger.debug("Incoming POST is a webhook event, and the webhook is disabled!")
+        self.logger.debug(f"Incoming POST for { uuid } is a webhook event, and the webhook is disabled!")
         return render_template_string("Webhook disabled!"), 405
 
     #Check the duration if the event is a webhook event, or we've told it to for manual events
     if existing_rec.get_duration() < MIN_DURATION and (is_webhook or check_duration):
-        logger.error("Recording is too short")
-        return render_template_string("Recording is too short"), 400
+        logger.error(f"Recording { uuid } is too short")
+        return render_template_string(f"Recording { uuid } is too short"), 400
     elif not recording_filter.matches(existing_rec.get_title()) and is_webhook: #Only filter on webhook events
         logger.info(f"Recording { uuid } does not match the configured filter")
         return render_template_string(f"Recording { uuid } did not match configured filter(s) and has been dropped"), 200
@@ -536,11 +542,11 @@ def _queue_recording(dbs, uuid, zingest, token=None):
     logger.debug(f"Creating ingest record for { uuid } with params { zingest }")
     ingest_id = db.create_ingest(uuid, zingest)
 
-    logger.debug("Sending rabbit message")
+    logger.debug(f"Sending rabbit message to ingest { uuid } with params { ingest_id }")
     r.send_rabbit_msg(uuid, ingest_id)
 
     logger.debug("POST processed successfully")
-    return f"Successfully sent { uuid } to rabbit"
+    return f"Successfully sent { uuid } and { ingest_id } to rabbit"
 
 
 if __name__ == "__main__":
