@@ -245,13 +245,9 @@ class Opencast:
         if not recording_file:
             raise NoMp4Files(f"{ Recording_id }: No acceptable filetype found!")
 
-        for key in files[0].keys():
-            if key == "download_url":
-                dl_url = files[0][key]
-                self.logger.debug(f"{ recording_id  }: Download url found: {dl_url}")
-            elif key == "file_size":
-                expected_size = int(files[0][key])
-                self.logger.debug(f"{ recording_id  }: Recording size found: {expected_size}")
+        dl_url = recording_file["download_url"]
+        expected_size = recording_file["file_size"]
+        uuid = recording_file["recording_id"]
 
         #Output file lives in the in-progress directory
         filename = f"{self.IN_PROGRESS_ROOT}/{recording_id}.mp4"
@@ -259,7 +255,7 @@ class Opencast:
         #Zoom token gets calculated at download time, regardless of inclusion in the rabbit message
         token = self.zoom.get_download_token()
         url = f"{dl_url}?access_token={ token }"
-        self.logger.debug(f"{ recording_id  }: Downloading from { url } to { filename }")
+        self.logger.debug(f"{ recording_id  }: Downloading file id { uuid } from { url } to { filename }")
         self._do_download(f"{ url }", filename, expected_size)
 
         return filename
