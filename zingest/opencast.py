@@ -250,7 +250,8 @@ class Opencast:
         uuid = recording_file["recording_id"]
 
         #Output file lives in the in-progress directory
-        filename = f"{self.IN_PROGRESS_ROOT}/{recording_id}.mp4"
+        #NB: recording_id likely contains characters which are invalid on some filesystems
+        filename = f"{self.IN_PROGRESS_ROOT}/{ uuid }.mp4"
 
         #Zoom token gets calculated at download time, regardless of inclusion in the rabbit message
         token = self.zoom.get_download_token()
