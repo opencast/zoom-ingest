@@ -143,8 +143,10 @@ class Zoom:
         try:
             self._validate_object_fields(required_object_fields, obj)
 
+            uuid = obj['uuid']
             files = obj["recording_files"]
-            self.logger.debug(f"Found {len(files)} potential files")
+            self.logger.debug(f"{ uuid }: Found { len(files) } potential files")
+            self.logger.debug(f"{ uuid }: File ids and types: { { x['id']: x['recording_type'] for x in files } }")
 
             # make sure there's some mp4 files in here somewhere
             found_mp4 = False
@@ -154,10 +156,10 @@ class Zoom:
                     continue
                 found_mp4 = True
                 if file["status"].lower() != "completed":
-                    raise BadWebhookData(f"File with incomplete status {file['status']}")
+                    raise BadWebhookData(f"{ uuid }: File with incomplete status {file['status']}")
             if not found_mp4:
-                raise NoMp4Files("No mp4 files in recording data")
-            self.logger.debug(f"Event {obj['uuid']} passed validation!")
+                raise NoMp4Files(f"{ uuid }: No mp4 files in recording data")
+            self.logger.debug(f"Event { uuid } passed validation!")
         except NoMp4Files:
             # let these bubble up as we handle them differently depending
             # on who the caller is

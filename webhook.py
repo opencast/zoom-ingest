@@ -292,8 +292,6 @@ def do_search():
         query_params = get_query_params()
         token = request.args.get('token', '')
 
-        logger.debug(f"Running search")
-
         params = {}
 
         recordings = []
@@ -503,8 +501,8 @@ def _queue_recording(dbs, uuid, zingest, token=None):
     check_duration = zingest['dur_check'] if 'dur_check' in zingest else True
     is_webhook = zingest['is_webhook'] if 'is_webhook' in zingest else False
 
-    logger.debug(f"Checking duration: { check_duration }")
-    logger.debug(f"Is a webhook event: { is_webhook }")
+    logger.debug(f"{ uuid }: Checking duration: { check_duration }")
+    logger.debug(f"{ uuid }: Is a webhook event: { is_webhook }")
 
     if not WEBHOOK_ENABLE and is_webhook:
         self.logger.debug(f"Incoming POST for { uuid } is a webhook event, and the webhook is disabled!")
