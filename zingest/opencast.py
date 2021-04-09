@@ -549,7 +549,7 @@ class Opencast:
             self.logger.debug(f"{ rec_id  }: Ingesting episode security settings")
             mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
             self._check_valid_mediapackage(mp)
-            self.logger.info(f"{ rec_id  }: Ingesting zoom video")
+            self.logger.info(f"{ rec_id  }: Ingesting zoom video { filename }")
             mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": (os.path.basename(filename), fobj, "video/mp4") }).text
             self._check_valid_mediapackage(mp)
             self.logger.info(f"{ rec_id  }: Triggering processing")
