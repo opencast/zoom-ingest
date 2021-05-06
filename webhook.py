@@ -441,7 +441,7 @@ def do_POST(dbs):
             #So we override it here.
             obj['topic'] = new_title
         else:
-            self.logger.info(f"Unknown event type { event_type }, but passing initial validations.  Unable to continue processing this event.")
+            logger.info(f"Unknown event type { event_type }, but passing initial validations.  Unable to continue processing this event.")
             return f"Unable to ingest, unkonwn event type { event_type }"
     except BadWebhookData as e:
         logger.exception("Payload failed validation")
@@ -485,13 +485,19 @@ def do_POST(dbs):
 @db.with_session
 def _queue_recording(dbs, uuid, zingest, token=None):
 
+    logger.debug(f"_queue_recording called with { uuid } and { zingest }")
     #Check if the recording exists, and create it if it does not
     #Check if the uuid is a uuid
     uuid_rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
+    if uuid_rec:
+        logger.debug(f"Found recording by uuid")
     #Check if the uuid is actually the raw db ID (used in bulk ingest)
     id_rec = dbs.query(db.Recording).filter(db.Recording.rec_id == uuid).one_or_none()
+    if id_rec:
+        logger.debug(f"Found recording by raw id")
     #Still doesn't exist?  Create it then.
     if not uuid_rec and not id_rec:
+        logger.debug(f"{ uuid } is not in the database, adding it")
         existing_rec = z.create_recording_from_uuid(uuid)
     else:
         existing_rec = uuid_rec if uuid_rec else id_rec

@@ -168,8 +168,10 @@ class Opencast:
         j = json.loads(body)
         rec_id = j['uuid']
         ing_id = int(j['ingest_id'])
+        self.logger.debug(f"Recieved rabbit message to ingest { rec_id } with id { ing_id }")
         ingest = dbs.query(db.Ingest).filter(db.Ingest.ingest_id == ing_id).one_or_none()
         if ingest:
+            self.logger.debug(f"Ingest { ing_id } found")
             self._process(ingest)
         else:
             self.logger.warn(f"Recieved rabbit message for { rec_id } with an invalid ingest id of { ing_id }.")
@@ -184,6 +186,7 @@ class Opencast:
             if not rec:
                 self.logger.error(f"Unable to find recording { uuid }, this is a bug.")
                 return
+            self.logger.debug(f"{ uuid }: Recording found, processing")
 
             ingest.update_status(db.Status.IN_PROGRESS);
             dbs.merge(ingest)
@@ -243,7 +246,7 @@ class Opencast:
 
         #If we've somehow cycled through all the candidates and nothing matches, fail
         if not recording_file:
-            raise NoMp4Files(f"{ Recording_id }: No acceptable filetype found!")
+            raise NoMp4Files(f"{ recording_id }: No acceptable filetype found!")
 
         dl_url = recording_file["download_url"]
         expected_size = recording_file["file_size"]
