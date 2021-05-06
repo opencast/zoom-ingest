@@ -501,32 +501,35 @@ def _queue_recording(dbs, uuid, zingest, token=None):
         existing_rec = z.create_recording_from_uuid(uuid)
     else:
         existing_rec = uuid_rec if uuid_rec else id_rec
-        uuid = existing_rec.get_rec_id()
 
+    db_uuid = existing_rec.get_rec_id()
+    if db_uuid != uuid:
+        logger.error(f"Mismatch of database record UUID { db_uuid } and input UUID { uuid }!")
+        return render_template_string(f"Mismatch of database record UUID { db_uuid } and input UUID { uuid }!"), 500
 
     check_duration = zingest['dur_check'] if 'dur_check' in zingest else True
     is_webhook = zingest['is_webhook'] if 'is_webhook' in zingest else False
 
-    logger.debug(f"{ uuid }: Checking duration: { check_duration }")
-    logger.debug(f"{ uuid }: Is a webhook event: { is_webhook }")
+    logger.debug(f"{ db_uuid }: Checking duration: { check_duration }")
+    logger.debug(f"{ db_uuid }: Is a webhook event: { is_webhook }")
 
     if not WEBHOOK_ENABLE and is_webhook:
-        self.logger.debug(f"Incoming POST for { uuid } is a webhook event, and the webhook is disabled!")
+        logger.debug(f"Incoming POST for { db_uuid } is a webhook event, and the webhook is disabled!")
         return render_template_string("Webhook disabled!"), 405
 
     #Check the duration if the event is a webhook event, or we've told it to for manual events
     if existing_rec.get_duration() < MIN_DURATION and (is_webhook or check_duration):
-        logger.error(f"Recording { uuid } is too short")
-        return render_template_string(f"Recording { uuid } is too short"), 400
+        logger.error(f"Recording { db_uuid } is too short")
+        return render_template_string(f"Recording { db_uuid } is too short"), 400
     elif not recording_filter.matches(existing_rec.get_title()) and is_webhook: #Only filter on webhook events
-        logger.info(f"Recording { uuid } does not match the configured filter")
-        return render_template_string(f"Recording { uuid } did not match configured filter(s) and has been dropped"), 200
-    elif is_webhook and dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid, db.Ingest.webhook_ingest == True).one_or_none():
-        logger.info(f"Not creating a new ingest for { uuid } via webhook event because it has already created one")
-        return render_template_string(f"Not creating a new ingest for { uuid } via webhook event because it has already created one"), 200
+        logger.info(f"Recording { db_uuid } does not match the configured filter")
+        return render_template_string(f"Recording { db_uuid } did not match configured filter(s) and has been dropped"), 200
+    elif is_webhook and dbs.query(db.Ingest).filter(db.Ingest.uuid == db_uuid, db.Ingest.webhook_ingest == True).one_or_none():
+        logger.info(f"Not creating a new ingest for { db_uuid } via webhook event because it has already created one")
+        return render_template_string(f"Not creating a new ingest for { db_uuid } via webhook event because it has already created one"), 200
 
     #Ensure the required metadata is all present
-    renderable = z.get_renderable_recording(uuid)
+    renderable = z.get_renderable_recording(db_uuid)
     for el in ('title', 'date', 'time', 'duration'):
         if el not in zingest:
             zingest[el] = renderable[el]
@@ -543,14 +546,14 @@ def _queue_recording(dbs, uuid, zingest, token=None):
         zingest["creator"] = renderable["host"]
 
     #Create the ingest record
-    logger.debug(f"Creating ingest record for { uuid } with params { zingest }")
-    ingest_id = db.create_ingest(uuid, zingest)
+    logger.debug(f"Creating ingest record for { db_uuid } with params { zingest }")
+    ingest_id = db.create_ingest(db_uuid, zingest)
 
-    logger.debug(f"Sending rabbit message to ingest { uuid } with params { ingest_id }")
-    r.send_rabbit_msg(uuid, ingest_id)
+    logger.debug(f"Sending rabbit message to ingest { db_uuid } with params { ingest_id }")
+    r.send_rabbit_msg(db_uuid, ingest_id)
 
     logger.debug("POST processed successfully")
-    return f"Successfully sent { uuid } and { ingest_id } to rabbit"
+    return f"Successfully sent { db_uuid } and { ingest_id } to rabbit"
 
 
 if __name__ == "__main__":
