@@ -492,7 +492,7 @@ def _queue_recording(dbs, uuid, zingest, token=None):
     if uuid_rec:
         logger.debug(f"Found recording by uuid")
     #Check if the uuid is actually the raw db ID (used in bulk ingest)
-    id_rec = dbs.query(db.Recording).filter(db.Recording.rec_id == uuid).one_or_none()
+    id_rec = dbs.query(db.Recording).filter(str(db.Recording.rec_id) == uuid).one_or_none()
     if id_rec:
         logger.debug(f"Found recording by raw id")
     #Still doesn't exist?  Create it then.
