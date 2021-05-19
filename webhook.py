@@ -223,7 +223,8 @@ def single_recording(recording_id):
             params['query_string'] = build_query_string(params)
             return render_template("ingest-recording.html", **params)
         elif request.method == "POST":
-            origin_page, query_string = _ingest_single_recording(recording_id_decoded)
+            dur_check = str(request.form.get("dur_check", True)).lower() == 'true'
+            origin_page, query_string = _ingest_single_recording(recording_id_decoded, dur_check)
             return redirect(f'{ origin_page }?{ query_string }')
     except HTTPError as e:
         return render_template("error.html", message = f"Recording not found.  Zoom may still be processing this recording, try again in a few minutes")
