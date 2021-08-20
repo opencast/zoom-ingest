@@ -154,7 +154,7 @@ class TestZoom(unittest.TestCase):
     def test_parse_recording_files(self):
         zoom = Zoom(self.config)
         recordings = zoom._parse_recording_files(self.event['object'])
-        self.assertEqual(1, len(recordings))
+        self.assertEqual(2, len(recordings))
 
         recording = recordings[0]
         self.assertEqual(recording["recording_id"], self.event["object"]["recording_files"][0]["id"])
@@ -166,6 +166,7 @@ class TestZoom(unittest.TestCase):
 
     def test_parse_recordings_files_without_files(self):
         zoom = Zoom(self.config)
+        del self.event['object']['recording_files'][1]
         del self.event['object']['recording_files'][0]
         recordings = zoom._parse_recording_files(self.event['object'])
         self.assertEqual(0, len(recordings))
