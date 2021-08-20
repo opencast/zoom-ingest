@@ -201,6 +201,7 @@ class Status(Constants):
     NEW = 0
     IN_PROGRESS = 1
     FINISHED = 2
+    WARNING = 3
 
 
 # Database Schema Definition

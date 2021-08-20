@@ -170,16 +170,15 @@ class Zoom:
     def _parse_recording_files(self, payload):
         recording_files = []
         for file in payload["recording_files"]:
-            if file["file_type"].lower() == "mp4":
-                recording_files.append({
-                    "recording_id": file["id"],
-                    "recording_start": file["recording_start"],
-                    "recording_end": file["recording_end"],
-                    "download_url": file["download_url"],
-                    "file_type": file["file_type"],
-                    "file_size": file["file_size"],
-                    "recording_type": file["recording_type"]
-                })
+            recording_files.append({
+                "recording_id": file["id"],
+                "recording_start": file["recording_start"],
+                "recording_end": file["recording_end"],
+                "download_url": file["download_url"],
+                "file_type": file["file_type"],
+                "file_size": file["file_size"],
+                "recording_type": file["recording_type"]
+            })
         return recording_files
 
     def get_recording_files(self, rec_id):

@@ -37,6 +37,8 @@ class Opencast:
       - active_speaker
     """
     RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen' ,'active_speaker' ]
+    #If none of the above match, see if these do
+    FALLBACK_RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_gallery_view', 'gallery_view', 'speaker_view', 'audio_only' ]
 
     def __init__(self, config, rabbit, zoom):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
@@ -197,13 +199,24 @@ class Opencast:
 
             self.logger.info(f"{ uuid }: Fetching {uuid}")
             files = self.zoom.get_recording_files(uuid)
-            filename = self.fetch_file(uuid, files)
-            self.logger.info(f"{ uuid }: Uploading {uuid} as {filename} to {self.url}")
+            status = db.Status.FINISHED
+            try:
+                filename = self.fetch_file(uuid, files)
+            except NoMp4Files:
+                self.logger.warn(f"{ uuid }: Does not contain any of the normal recording files, falling back to backup")
+                #If this *still* throws a NoMp4Files then we want to pass this up the chain and retry later
+                filename = self.fetch_file(uuid, files, self.FALLBACK_RECORDING_TYPE_PREFERENCE)
+          #If we found a fallback file finish, but set the state to warning to mark that this is (potentially) broken
+                status = db.Status.WARNING
+
+            self.logger.info(f"{ uuid }: Uploading { uuid } as { filename } to { self.url }")
 
             mp_id, workflow_id = self.oc_upload(uuid, filename, **params)
+
+            #Clean up the files
             self._rm(filename)
 
-            ingest.update_status(db.Status.FINISHED)
+            ingest.update_status(status)
             ingest.set_workflow_id(workflow_id)
             ingest.set_mediapackage_id(mp_id)
             dbs.merge(ingest)
@@ -230,12 +243,13 @@ class Opencast:
             if os.path.isfile(path):
                 self.logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
 
-    def fetch_file(self, recording_id, files):
+    def fetch_file(self, recording_id, files, preferences=RECORDING_TYPE_PREFERENCE):
         dl_url = ''
         recording_file = None
-        for preference in self.RECORDING_TYPE_PREFERENCE:
+        for preference in preferences:
             self.logger.debug(f"{ recording_id  }: Checking if recording contains a file of type { preference }")
             for candidate in files:
+                self.logger.debug(f"{ recording_id }: { preference } == { candidate['recording_type'] }")
                 if preference == candidate['recording_type']:
                     recording_file = candidate
                     break
@@ -243,11 +257,13 @@ class Opencast:
                 self.logger.debug(f"{ recording_id  }: Recording contains a file of type { preference }!")
                 #We've found one, quit
                 break
+            self.logger.debug(f"{ recording_id }: { preference } not found")
 
         #If we've somehow cycled through all the candidates and nothing matches, fail
         if not recording_file:
             raise NoMp4Files(f"{ recording_id }: No acceptable filetype found!")
 
+        recording_type = candidate['recording_type']
         dl_url = recording_file["download_url"]
         expected_size = recording_file["file_size"]
         uuid = recording_file["recording_id"]
@@ -553,7 +569,7 @@ class Opencast:
             mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
             self._check_valid_mediapackage(mp)
             self.logger.info(f"{ rec_id  }: Ingesting zoom video { filename }")
-            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp}, files={ "BODY": (os.path.basename(filename), fobj, "video/mp4") }).text
+            mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp, 'fileName': os.path.basename(filename)}, files={ "BODY": (os.path.basename(filename), fobj, "video/mp4") }).text
             self._check_valid_mediapackage(mp)
             self.logger.info(f"{ rec_id  }: Triggering processing")
             workflow = self._do_post(f'{ self.url }/ingest/ingest/{ workflow_id }', data={'mediaPackage': mp}).text
