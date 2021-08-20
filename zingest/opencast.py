@@ -209,12 +209,21 @@ class Opencast:
           #If we found a fallback file finish, but set the state to warning to mark that this is (potentially) broken
                 status = db.Status.WARNING
 
+            chat = None
+            try:
+                self.logger.debug(f"{ uuid }: Checking if chat transcript exists")
+                chat = self.fetch_file(uuid, files, ['chat_file'], {'chat_file': 'TXT'})
+            except NoMp4Files:
+                #Ignore this.  If there's no file we don't care.
+                pass
             self.logger.info(f"{ uuid }: Uploading { uuid } as { filename } to { self.url }")
 
-            mp_id, workflow_id = self.oc_upload(uuid, filename, **params)
+            mp_id, workflow_id = self.oc_upload(uuid, filename, chat, **params)
 
             #Clean up the files
             self._rm(filename)
+            if None != chat:
+                self._rm(chat)
 
             ingest.update_status(status)
             ingest.set_workflow_id(workflow_id)
@@ -243,7 +252,7 @@ class Opencast:
             if os.path.isfile(path):
                 self.logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
 
-    def fetch_file(self, recording_id, files, preferences=RECORDING_TYPE_PREFERENCE):
+    def fetch_file(self, recording_id, files, preferences=RECORDING_TYPE_PREFERENCE, extension_overrides={}):
         dl_url = ''
         recording_file = None
         for preference in preferences:
@@ -267,10 +276,11 @@ class Opencast:
         dl_url = recording_file["download_url"]
         expected_size = recording_file["file_size"]
         uuid = recording_file["recording_id"]
+        extension = recording_file["file_extension"] if recording_type not in extension_overrides else extension_overrides[recording_type]
 
         #Output file lives in the in-progress directory
         #NB: recording_id likely contains characters which are invalid on some filesystems
-        filename = f"{self.IN_PROGRESS_ROOT}/{ uuid }.mp4"
+        filename = f"{self.IN_PROGRESS_ROOT}/{ uuid }.{  extension.lower() }"
 
         #Zoom token gets calculated at download time, regardless of inclusion in the rabbit message
         token = self.zoom.get_download_token()
@@ -539,7 +549,7 @@ class Opencast:
         #We throw out the results here, we're just looking for the exception if the mediapackage is invalid
         xmltodict.parse(mp)
 
-    def oc_upload(self, rec_id, filename, acl_id=None, workflow_id=None, **kwargs):
+    def oc_upload(self, rec_id, filename, chat_file=None, acl_id=None, workflow_id=None, **kwargs):
 
         if not workflow_id:
             self.logger.error(f"Attempting to ingest { rec_id } with no workflow id!")
@@ -568,6 +578,12 @@ class Opencast:
             self.logger.debug(f"{ rec_id  }: Ingesting episode security settings")
             mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
             self._check_valid_mediapackage(mp)
+            if chat_file:
+                with open(chat_file, 'rb') as cobj:
+                    self.logger.debug(f"{ rec_id  }: Ingesting chat transcript { chat_file }")
+                    mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'chat/transcript', 'mediaPackage': mp, 'fileName': os.path.basename(chat_file)}, files = {"BODY": (os.path.basename(chat_file), cobj, "text/plain") }).text
+                    self.logger.info(mp)
+                    self._check_valid_mediapackage(mp)
             self.logger.info(f"{ rec_id  }: Ingesting zoom video { filename }")
             mp = self._do_post(f'{ self.url }/ingest/addTrack', data={'flavor': 'presentation/source', 'mediaPackage': mp, 'fileName': os.path.basename(filename)}, files={ "BODY": (os.path.basename(filename), fobj, "video/mp4") }).text
             self._check_valid_mediapackage(mp)
