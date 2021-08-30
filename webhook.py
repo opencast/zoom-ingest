@@ -394,10 +394,11 @@ def do_POST(dbs):
 
     #Check UTF8 safeness of this
     body = request.get_json(force=True)
-    if WEBHOOK_SECRET and 'authorization' not in request.headers and WEBHOOK_SECRET != request.headers.get('authorization'):
-        logger.error("Request pre-shared secret is incorrect")
-        return render_template_string("Request pre-shared secret is incorrect"), 400
-    elif "payload" not in body:
+    if WEBHOOK_SECRET:
+        if 'authorization' not in request.headers or WEBHOOK_SECRET != request.headers.get('authorization'):
+            logger.error("Request pre-shared secret is not set or incorrect")
+            return render_template_string("Request pre-shared secret is not set or incorrect"), 400
+    if "payload" not in body:
         logger.error("Payload is missing")
         return render_template_string("Missing payload field in webhook body"), 400
     elif "event" not in body:
