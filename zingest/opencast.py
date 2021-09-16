@@ -112,7 +112,7 @@ class Opencast:
     def _process_backlog(dbs, self):
         self.logger.info("Checking backlog")
         hour_ago = datetime.utcnow() - timedelta(hours=1)
-        ing_list = dbs.query(db.Ingest).filter(db.Ingest.status != db.Status.FINISHED, db.Ingest.timestamp <= hour_ago).all()
+        ing_list = dbs.query(db.Ingest).filter(db.Ingest.status != db.Status.FINISHED, db.Ingest.status != db.Status.WARNING, db.Ingest.status != db.Status.IN_PROGRESS, db.Ingest.timestamp <= hour_ago).all()
         for ing in ing_list:
             self._process(ing)
         time.sleep(60)
