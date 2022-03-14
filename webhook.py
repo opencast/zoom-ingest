@@ -351,7 +351,7 @@ def do_search():
 @app.errorhandler(400)
 def do_bulk():
     try:
-        logger.debug("Bulk POST recieved")
+        logger.debug("Bulk POST received")
         form_params = request.form
         event_ids = [ name[len("bulk_"):] for name, value in form_params.items() if value == "on" and name.startswith("bulk_") ]
         logger.debug(f"Bulk ingest for events { event_ids }")
@@ -384,7 +384,7 @@ def do_bulk():
 @app.errorhandler(400)
 @db.with_session
 def do_POST(dbs):
-    logger.debug("POST recieved")
+    logger.debug("POST received")
 
     #If this header is missing this will throw a 400 automatically
     content_length = int(request.headers.get('Content-Length'))
@@ -428,12 +428,12 @@ def do_POST(dbs):
             existing_db_ingest = dbs.query(db.Ingest).filter(db.Ingest.uuid == uuid).all()
             if len(existing_db_ingest) > 1:
                 workflow_ids = [ existing.get_workflow_id() for existing in existing_db_ingest ]
-                logger.debug(f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as workflow(s) { ', '.join(workflow_ids) }.")
-                return f"Recieved a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as { ', '.join(workflow_ids) }."
+                logger.debug(f"Received a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as workflow(s) { ', '.join(workflow_ids) }.")
+                return f"Received a rename event for event { uuid }, renamed to { new_title }.  No further processing, already ingested as { ', '.join(workflow_ids) }."
 
-            #In this case, we've recieved a rename for something that's *not* in the database
+            #In this case, we've received a rename for something that's *not* in the database
             #So we treat it as if it's a normal recording complete webhook event
-            logger.debug(f"Recieved a rename event for event { uuid }, processing.")
+            logger.debug(f"Received a rename event for event { uuid }, processing.")
             #Swap out the contents of obj
             #before this line it's a small blob giving you the uuid and new name
             obj = z.get_recording(uuid)

@@ -170,13 +170,13 @@ class Opencast:
         j = json.loads(body)
         rec_id = j['uuid']
         ing_id = int(j['ingest_id'])
-        self.logger.debug(f"Recieved rabbit message to ingest { rec_id } with id { ing_id }")
+        self.logger.debug(f"Received rabbit message to ingest { rec_id } with id { ing_id }")
         ingest = dbs.query(db.Ingest).filter(db.Ingest.ingest_id == ing_id).one_or_none()
         if ingest:
             self.logger.debug(f"Ingest { ing_id } found")
             self._process(ingest)
         else:
-            self.logger.warn(f"Recieved rabbit message for { rec_id } with an invalid ingest id of { ing_id }.")
+            self.logger.warn(f"Received rabbit message for { rec_id } with an invalid ingest id of { ing_id }.")
 
     @db.with_session
     def _process(dbs, self, ingest):
