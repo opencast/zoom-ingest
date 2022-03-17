@@ -1,0 +1,24 @@
+version: '2'
+services:
+  mariadb:
+    container_name: zoom-mariadb
+    image: docker.io/library/mariadb:10
+    ports:
+      - 127.0.0.1:3307:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: opencast
+      MYSQL_DATABASE: zoom
+      MYSQL_USER: opencast
+      MYSQL_PASSWORD: opencast
+    command: mysqld --general-log=1 --general-log-file=/var/log/mysql/general-log.log
+  rabbit:
+    container_name: zoom-rabbit
+    image: rabbitmq:3-management
+    ports:
+      - 127.0.0.1:15672:15672
+      - 127.0.0.1:5671:5671
+      - 127.0.0.1:5672:5672
+      - 127.0.0.1:4369:4369
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: rabbit
