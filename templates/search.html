@@ -69,7 +69,7 @@
     </tr>
     {% for recording in recordings %}
     <tr class="{{ loop.cycle('plain', 'grey') }}{% if dur_check and recording.too_short %} short"{% endif %}">
-      <td><input type="checkbox" name="bulk_{{ recording.db_id }}"/{% if dur_check and recording.too_short %} disabled="true"{% endif %}></td>
+      <td><input type="checkbox" name="bulk_{{ recording.id }}"/{% if dur_check and recording.too_short %} disabled="true"{% endif %}></td>
       <td>{{ recording.date }}</td>
       <td>{{ recording.time }}</td>
       <td><a href="/recording/{{ recording.id | urlencode | replace('/', '%2F') | urlencode }}?{{ query_string }}">{{ recording.title }}</a></td>
