@@ -31,12 +31,22 @@ class Opencast:
     HEADERS = {'X-Requested-Auth': 'Digest'}
     """
     Available recording file types are:
+      - shared_screen_with_speaker_view(CC)
       - shared_screen_with_speaker_view
       - shared_screen_with_gallery_view
+      - speaker_view
+      - gallery_view
       - shared_screen
+      - audio_only
+      - audio_transcript (not a video file)
+      - chat_file (not a video file)
       - active_speaker
+      - poll (not a video file)
+      - timeline (not a video file)
+      - closed_caption (not a video file)
+    See api docs https://marketplace.zoom.us/docs/api-reference/zoom-api/methods/#operation/recordingGet
     """
-    RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen' ,'active_speaker' ]
+    RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_speaker_view', 'shared_screen_with_speaker_view(CC)', 'shared_screen' ,'active_speaker' ]
     #If none of the above match, see if these do
     FALLBACK_RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_gallery_view', 'gallery_view', 'speaker_view', 'audio_only' ]
 
