@@ -396,8 +396,8 @@ class Opencast:
 
     # Desired format is [title] [year] ([names])
     def _render_series_title(self, series):
-        title = series['title'][0]['value']
-        year = series['created'][0]['value'][:4]
+        title = series['title']
+        year = series['created'][:4]
         names = ""
         if 'creator' in series:
             names = [ element['value'] for element in series['creator'] ]
@@ -408,37 +408,35 @@ class Opencast:
         else:
             return f"{ title } ({ year })"
 
+    def _render_sid_title_map(self, series_list):
+        return { result['identifier']: self._render_series_title(result) for result in series_list if self.series_filter.match(result['title'])}
+
     def get_series(self):
-        DCTERMS = 'http://purl.org/dc/terms/'
         if not self.series or self.series_updated <= datetime.utcnow() - timedelta(hours = 1):
             attempts = 1
             successful = False
+            total = 0
             while attempts <= 5:
                 try:
                     self.logger.debug("Refreshing Opencast series list")
-                    #TODO: Handle paging.  I'm going to guess we don't need this for rev1
-                    #FIXME: This is probably too large at ETH for the defaults, we need to build a way to filter the results based on the presenter
-                    response = self._do_get(f'{ self.url }/series/series.json?count=100').json()
-                    if 'totalCount' in response and int(response['totalCount']) == 0:
+                    results = self._do_get(f'{ self.url }/api/series/series.json?count=100').json()
+                    if len(results) == 0:
+                        self.logger.debug("No series returned")
                         self.series_updated = datetime.utcnow()
                         self.series = {}
                         successful = True
                         break
-                    #We need the total, count, and result fields.  If the count doesn't match the length of results, or any of the fields are missing
-                    if 'totalCount' not in response or 'catalogs' not in response:
-                        raise Exception("Bad data from Opencast")
-                    results = response['catalogs']
-                    processed = len(results)
+                    total += len(results)
                     self.series_updated = datetime.utcnow()
-                    self.series = { result[DCTERMS]['identifier'][0]['value']: self._render_series_title(result[DCTERMS]) for result in results if self.series_filter.match(result[DCTERMS]['title'][0]['value'])}
-                    self.logger.debug(f"Processed { processed } series out of { response['totalCount'] }, { len(self.series) } match the filtering requirements")
+                    self.series = self._render_sid_title_map(results)
+                    self.logger.debug(f"Processed { total } series so far, { len(self.series) } match the filtering requirements")
                     counter = 1
-                    while processed < int(response['totalCount']):
-                        response = self._do_get(f'{ self.url }/series/series.json?count=100&startPage={ counter }').json()
-                        results = response['catalogs']
-                        processed += len(results)
-                        self.series.update({ result[DCTERMS]['identifier'][0]['value']: result[DCTERMS]['title'][0]['value'] for result in results })
-                        self.logger.debug(f"Processed { processed } series out of { response['totalCount'] }, { len(self.series) } match the filtering requirements")
+                    #Keep going until the data we've been passed is no longer a full page (ie, there's no more)
+                    while len(results) == 100:
+                        results = self._do_get(f'{ self.url }/api/series/series.json?count=100&offset={ counter * 100 }').json()
+                        total += len(results)
+                        self.series.update(self._render_sid_title_map(results))
+                        self.logger.debug(f"Processed { total } series so far, { len(self.series) } match the filtering requirements")
                         counter += 1
                     successful = True
                     break
