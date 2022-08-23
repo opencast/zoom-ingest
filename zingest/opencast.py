@@ -400,8 +400,11 @@ class Opencast:
         year = series['created'][:4]
         names = ""
         if 'creator' in series:
-            names = [ element['value'] for element in series['creator'] ]
-            names = ", ".join(names)
+            if isinstance(series['creator'], str):
+                names = series['creator']
+            else:
+                names = [ element for element in series['creator'] ]
+                names = ", ".join(names)
             #Arbirarily cap this at 50 characters for the names to prevent wonky rendering
             #This number is picked at random, and could probably be shorter depending on prod env
             return f"{ title } ({ year }) ({ names[:50] })"
