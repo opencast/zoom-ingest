@@ -577,7 +577,7 @@ class Opencast:
                 mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/episode', 'mediaPackage': mp, 'dublinCore': eth_dc}).text
                 self._check_valid_mediapackage(mp)
             self.logger.debug(f"{ rec_id  }: Ingesting episode security settings")
-            mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
+            mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("xacml.xml", ep_acl, "text/xml") }).text
             self._check_valid_mediapackage(mp)
             if chat_file:
                 with open(chat_file, 'rb') as cobj:
