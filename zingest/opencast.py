@@ -559,7 +559,10 @@ class Opencast:
         selected_acl = self.get_single_acl(acl_id) if self.get_single_acl(acl_id) is not None else []
         ep_dc = self._prep_dublincore(**kwargs)
         eth_dc = self._prep_eth_dublincore(**kwargs)
-        ep_acl = self._prep_episode_xacml(rec_id, selected_acl)
+        if selected_acl:
+            ep_acl = self._prep_episode_xacml(rec_id, selected_acl)
+        else:
+            ep_acl = None
 
         #TODO: Make this configurable, cf pyca's setup
         wf_config = {'publishToSearch': 'true', 'flagQuality720p':'true', 'publishToApi':'true', 'publishToEngage':'true','straightToPublishing':'true','publishToOaiPmh':'true'}
@@ -576,9 +579,12 @@ class Opencast:
                 self.logger.debug(f"{ rec_id  }: Ingesting episode ethterms")
                 mp = self._do_post(f'{ self.url }/ingest/addDCCatalog', data={'flavor': 'ethterms/episode', 'mediaPackage': mp, 'dublinCore': eth_dc}).text
                 self._check_valid_mediapackage(mp)
-            self.logger.debug(f"{ rec_id  }: Ingesting episode security settings")
-            mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("ep-security.xacml", ep_acl, "text/xml") }).text
-            self._check_valid_mediapackage(mp)
+            if ep_acl:
+                self.logger.debug(f"{ rec_id  }: Ingesting episode security settings")
+                mp = self._do_post(f'{ self.url }/ingest/addAttachment', data={'flavor': 'security/xacml+episode', 'mediaPackage': mp}, files = {"BODY": ("xacml.xml", ep_acl, "text/xml") }).text
+                self._check_valid_mediapackage(mp)
+            else:
+                self.logger.debug(f"{ rec_id  }: Blank episode security was selected, skip creating episode ACL")
             if chat_file:
                 with open(chat_file, 'rb') as cobj:
                     self.logger.debug(f"{ rec_id  }: Ingesting chat transcript { chat_file }")
