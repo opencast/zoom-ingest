@@ -7,7 +7,6 @@ from urllib.parse import quote
 import time
 from requests import HTTPError
 
-import jwt
 from zoomus import ZoomClient
 
 from zingest import db
@@ -16,20 +15,16 @@ from zingest.common import BadWebhookData, NoMp4Files, get_config
 
 class Zoom:
 
-    JWT_HEADERS = { "alg": "HS256", "typ": "JWT" }
-
     def __init__(self, config):
         self.logger = logging.getLogger(__name__)
-
-        self.api_key = get_config(config, 'Zoom', 'JWT_Key')
-        self.api_secret = get_config(config, 'Zoom', 'JWT_Secret')
-        self.logger.debug(f"Init with Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
+        self.oauth_account_id = get_config(config, 'Zoom', 'oauth_account_id')
+        self.oauth_client_id = get_config(config, 'Zoom', 'oauth_client_id')
+        self.oauth_client_secret = get_config(config, 'Zoom', 'oauth_client_secret')
+        self.logger.debug(f"Init with Zoom OAuth Client ID {self.oauth_client_id[0:3]}XXX{self.oauth_client_id[-3:]}")
         self.gdpr = get_config(config, 'Zoom', 'GDPR').lower() == 'true'
         self.logger.info(f"GDPR compliant endpoints in use: { self.gdpr }")
         self.zoom_client = None
         self.zoom_client_exp = None
-        self.jwt_token = None
-        self.jwt_token_exp = None
 
     def _validate_object_fields(self, required_object_fields, obj):
         try:
@@ -153,9 +148,9 @@ class Zoom:
             # zoom client library set this interval, so we
             self.zoom_client_exp = datetime.utcnow() + timedelta(hours=1)
             if self.gdpr:
-                self.zoom_client = ZoomClient(self.api_key, self.api_secret, base_uri=zoomus.client.API_BASE_URIS[zoomus.util.API_GDPR])
+                self.zoom_client = ZoomClient(self.oauth_client_id, self.oauth_client_secret, self.oauth_account_id, base_uri=zoomus.client.API_BASE_URIS[zoomus.util.API_GDPR])
             else:
-                self.zoom_client = ZoomClient(self.api_key, self.api_secret)
+                self.zoom_client = ZoomClient(self.oauth_client_id, self.oauth_client_secret, self.oauth_account_id)
         return self.zoom_client
 
     def _cleaner(self, thing):
