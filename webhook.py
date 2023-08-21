@@ -388,9 +388,8 @@ def do_bulk():
 @db.with_session
 def do_POST(dbs):
     logger.debug("POST received")
-    logger.info(request.headers)
-    logger.info(request.data)
-    #Check UTF8 safeness of this
+
+#Check UTF8 safeness of this
     body = request.get_json(force=True)
     zoom_req_hmac = request.headers['X-Zm-Signature']
     zoom_req_ts = request.headers['X-Zm-Request-Timestamp']

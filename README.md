@@ -32,23 +32,32 @@ The settings.ini file contains the configuration for this utility.  There are fi
 
 The `debug` key controls verbose logging.  For production use you probably want this to be false.
 
-2. JWT:
+2. Zoom:
 
-This is the [JSON Web Token](https://jwt.io/) configuration data you get from Zoom.  For now ETH will
-have to manually create their app at https://marketplace.zoom.us/develop/create from the main ETH account.
-Longer term the goal here would be to have this in the Zoom market, but that is still pending.
+This is where you configure your [Server-To-Server OAUTH](https://developers.zoom.us/docs/internal-apps/s2s-oauth/)
+application.  You *must* create such an application in your account - this tool is not something you can subscribe to
+directly.
 
 To create the app:
-- Sign in as the root account at marketplace.zoom.us
-- Go to https://marketplace.zoom.us/develop/create
-- Create JWT credentials, you will need the API Key and Secret in the config file
+- Create a Server-to-Server OAuth App within the Zoom App Marketplace.  Beware, there is an standard (non
+  server-to-server) OAuth application type which will not work for this application.
+  - Your `Account ID`, `Client ID`, and `Client Secret` should be copied into the `Zoom` section in settings.ini.
+- Grant the following scopes to your application:
+  - `/contact:read:admin`, which is required for user search to work
+  - `/user:read:admin`, which is required for user search to work, and user data to populate
+  - `/recording:read:admin`, which is required to read the recording data
 
 3. Webhook:
 
 This utilty supports event-driven ingestion.  When a meeting finishes it would be automatically ingested.
-This is *disabled* by default, so for now leave this section alone.  The URL and port are where the webhook
-should listen, and must match the settings in Zoom, were you to conigure webhooks.  As of this writing (2020-10-04)
-this has not been tested with the latest code, but is a high priority community requirement for long term release.
+This is *disabled* unless both a default workflow id, and one of series or acl id are set.  The webhook must also be
+configured on Zoom's end, which is done in the Zoom app under the `Feature` section of the Zoom app you created above.
+To accomplish this you must:
+- Enable `Event Subscriptions` for the following events:
+  - `All Recordings have completed`
+  - `Recording Renamed` events.
+For security purposes the `Secret Token` from the `Features` section in Zoom should be copied to the `secret` config
+key.  Without this secret the incoming webhook POSTs are not verified to be originating from Zoom's servers.
 
 4. Opencast:
 

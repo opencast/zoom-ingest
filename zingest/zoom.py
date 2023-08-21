@@ -26,6 +26,11 @@ class Zoom:
         self.zoom_client = None
         self.zoom_client_exp = None
 
+    def get_bearer_access_token(self):
+        #This is the internal token that Zoom uses for auth
+        #This is not otherwise exposed by the underlying zoomus library :(
+        return self._get_zoom_client().config.get("token")
+
     def _validate_object_fields(self, required_object_fields, obj):
         try:
             for field in required_object_fields:
@@ -129,17 +134,6 @@ class Zoom:
     def _create_recording_from_data(self, data):
         required_data = { x: data[x] for x in data if x in ('uuid', 'host_id', 'start_time', 'topic', 'duration') }
         return db.create_recording(required_data)
-
-    def get_download_token(self):
-        if not self.jwt_token or datetime.utcnow() + timedelta(seconds=1) > self.jwt_token_exp:
-            #Expires after 5 minutes
-            self.jwt_token_exp = datetime.utcnow() + timedelta(minutes=5)
-            payload = {"iss": self.api_key, "exp": self.jwt_token_exp}
-            self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS)
-            #PyJWT 2.0 and newer return a string, older versions need to be decoded
-            if type(self.jwt_token) is not str:
-                self.jwt_token = self.jwt_token.decode("utf-8")
-        return self.jwt_token
 
     def _get_zoom_client(self):
         #Note: There is a ZoomClient.refresh_tokens(), but this appears to be *broken* somehow.  Creating a new client works though...
