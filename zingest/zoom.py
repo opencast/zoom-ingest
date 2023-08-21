@@ -7,7 +7,14 @@ from urllib.parse import quote
 import time
 from requests import HTTPError
 
-from zoomus import ZoomClient
+from zoomus import ZoomClient, util
+def refresh_token(self):
+    self.config["token"] = util.generate_token(
+            self.config["oauth_uri"],
+            self.config["api_key"],
+            self.config["api_secret"],
+            self.config["api_account_id"])
+ZoomClient.refresh_token = refresh_token
 
 from zingest import db
 from zingest.common import BadWebhookData, NoMp4Files, get_config
