@@ -7,6 +7,7 @@ from urllib.parse import quote
 import time
 from requests import HTTPError
 
+import zoomus
 from zoomus import ZoomClient, util
 def refresh_token(self):
     self.config["token"] = util.generate_token(
