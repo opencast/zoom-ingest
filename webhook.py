@@ -6,6 +6,8 @@ import urllib.parse
 from datetime import datetime, date, timedelta
 from urllib.parse import urlencode, parse_qs
 from requests import HTTPError
+import hmac
+import hashlib
 
 from flask import Flask, request, render_template, render_template_string, redirect
 
@@ -60,6 +62,13 @@ try:
     WEBHOOK_SERIES = (config['Webhook']['default_series_id']).strip()
     WEBHOOK_ACL = (config['Webhook']['default_acl_id']).strip()
     WEBHOOK_WORKFLOW = (config['Webhook']['default_workflow_id']).strip()
+    WEBHOOK_SECRET = (config['Webhook']['secret']).strip()
+    if len(WEBHOOK_SECRET) != 0:
+        logger.debug(f"Webhook secret configured: { WEBHOOK_SECRET[0:3] }XXX{ WEBHOOK_SECRET[-3:] }")
+    else:
+        logger.warn(f"Webhook secret not configured, not validating incoming webhook calls!")
+        WEBHOOK_SECRET = None
+
     if len(WEBHOOK_WORKFLOW) == 0 and not (len(WEBHOOK_SERIES) > 0 or len(WEBHOOK_ACL) > 0):
         WEBHOOK_ENABLE = False
         logger.info("Webhook is not completely configured and is not functional!")
@@ -69,12 +78,6 @@ try:
         logger.debug(f"Webhook events will be ingested to series ID '{WEBHOOK_SERIES}'")
         logger.debug(f"Webhook events will be ingested with ACL ID '{WEBHOOK_ACL}'")
         logger.debug(f"Webhook events will be ingested with workflow ID '{WEBHOOK_WORKFLOW}'")
-        WEBHOOK_SECRET = (config['Webhook']['secret']).strip()
-        if len(WEBHOOK_SECRET) != 0:
-            logger.debug(f"Webhook pre-shared secret configured: { WEBHOOK_SECRET[0:3] }XXX{ WEBHOOK_SECRET[-3:] }")
-        else:
-            logger.debug(f"Webhook pre-shared secre not configured")
-            WEBHOOK_SECRET = None
 except KeyError as err:
     sys.exit("Key {0} was not found".format(err))
 except ValueError as err:
@@ -386,18 +389,42 @@ def do_bulk():
 def do_POST(dbs):
     logger.debug("POST received")
 
+#Check UTF8 safeness of this
+    body = request.get_json(force=True)
+    zoom_req_hmac = request.headers['X-Zm-Signature']
+    zoom_req_ts = request.headers['X-Zm-Request-Timestamp']
+
+    #First check that the request originated from Zoom using the webhook secret
+    if WEBHOOK_SECRET:
+        #NB: body (above) formats the incoming json.  This message must contain *exactly* what Zoom sends since it's being hashed, so we use the raw request.data way instead.
+        message = f"v0:{ zoom_req_ts }:{ request.data.decode('utf-8') }"
+        calc_hmac = "v0=" + hmac.new(key=WEBHOOK_SECRET.encode('utf-8'),
+                             msg=message.encode('utf-8'),
+                             digestmod=hashlib.sha256).hexdigest()
+        if zoom_req_hmac != calc_hmac:
+            logger.error("Request signature does not match")
+            return render_template_string("Request signature does not match"), 400
+
+    #Zoom requires validating the endpoint, and also re-verifies periodically
+    try:
+        event = body['event']
+        if 'endpoint.url_validation' == event:
+            zoom_plain_token = body['payload']['plainToken']
+            calc_hmac = hmac.new(key=WEBHOOK_SECRET.encode('utf-8'),
+                                 msg=zoom_plain_token.encode('utf-8'),
+                                 digestmod=hashlib.sha256).hexdigest()
+            logger.debug("Endpoint validation POST recieved successfully")
+            return render_template_string(f'{{ "plainToken": "{  zoom_plain_token }", "encryptedToken": "{ calc_hmac }" }}')
+    except Exception as e:
+        logger.exception("Endpoint validation logic triggered an exception")
+        return render_template_string("Endpoint Validation Failed")
+    
     #If this header is missing this will throw a 400 automatically
     content_length = int(request.headers.get('Content-Length'))
     if content_length < 5:
         logger.error("Content too short")
         return render_template_string("No data received"), 400
 
-    #Check UTF8 safeness of this
-    body = request.get_json(force=True)
-    if WEBHOOK_SECRET:
-        if 'authorization' not in request.headers or WEBHOOK_SECRET != request.headers.get('authorization'):
-            logger.error("Request pre-shared secret is not set or incorrect")
-            return render_template_string("Request pre-shared secret is not set or incorrect"), 400
     if "payload" not in body:
         logger.error("Payload is missing")
         return render_template_string("Missing payload field in webhook body"), 400

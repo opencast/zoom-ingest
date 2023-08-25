@@ -7,68 +7,15 @@ from urllib.parse import quote
 import time
 from requests import HTTPError
 
-import jwt
-
-import zoomus.util
-zoomus.util.API_GDPR = "gdpr"
-
-import zoomus.client
-zoomus.client.API_BASE_URIS = {
-    zoomus.util.API_VERSION_1: "https://api.zoom.us/v1",
-    zoomus.util.API_VERSION_2: "https://api.zoom.us/v2",
-    zoomus.util.API_GDPR: "https://eu01api-www4local.zoom.us/v2",
-}
-
-from zoomus import ZoomClient
-def patched_init(
-        self,
-        api_key,
-        api_secret,
-        data_type="json",
-        timeout=15,
-        version=zoomus.util.API_VERSION_2,
-        base_uri=None,
-    ):
-        """Create a new Zoom client
-
-        :param api_key: The Zooom.us API key
-        :param api_secret: The Zoom.us API secret
-        :param data_type: The expected return data type. Either 'json' or 'xml'
-        :param timeout: The time out to use for API requests
-        :param version: The API version to use (Default is V2). The available
-                        options are API_VERSION_1 (deprecated by Zoom),
-                        or API_VERSION_2 (default)
-        :param base_uri: Set the base URI to use. By default this is chosen
-                         based on the API version chosen, but it can be
-                         overriden so that the GDPR compliant base URI can
-                         be used in the EU.
-        """
-        try:
-            base_uri = base_uri or zoomus.client.API_BASE_URIS[version]
-            self.components = zoomus.client.COMPONENT_CLASSES[version].copy()
-        except KeyError:
-            raise RuntimeError("API version not supported: %s" % version)
-
-        super(ZoomClient, self).__init__(base_uri=base_uri, timeout=timeout)
-
-        # Setup the config details
-        self.config = {
-            "api_key": api_key,
-            "api_secret": api_secret,
-            "data_type": data_type,
-            "version": version,
-            "base_uri": base_uri,
-            "token": zoomus.util.generate_jwt(api_key, api_secret),
-        }
-
-        # Instantiate the components
-        for key in self.components.keys():
-            self.components[key] = self.components[key](
-                base_uri=base_uri, config=self.config
-            )
-ZoomClient.__init__ = patched_init
-
-
+import zoomus
+from zoomus import ZoomClient, util
+def refresh_token(self):
+    self.config["token"] = util.generate_token(
+            self.config["oauth_uri"],
+            self.config["api_key"],
+            self.config["api_secret"],
+            self.config["api_account_id"])
+ZoomClient.refresh_token = refresh_token
 
 from zingest import db
 from zingest.common import BadWebhookData, NoMp4Files, get_config
@@ -76,20 +23,21 @@ from zingest.common import BadWebhookData, NoMp4Files, get_config
 
 class Zoom:
 
-    JWT_HEADERS = { "alg": "HS256", "typ": "JWT" }
-
     def __init__(self, config):
         self.logger = logging.getLogger(__name__)
-
-        self.api_key = get_config(config, 'Zoom', 'JWT_Key')
-        self.api_secret = get_config(config, 'Zoom', 'JWT_Secret')
-        self.logger.debug(f"Init with Zoom API key {self.api_key[0:3]}XXX{self.api_key[-3:]}")
+        self.oauth_account_id = get_config(config, 'Zoom', 'oauth_account_id')
+        self.oauth_client_id = get_config(config, 'Zoom', 'oauth_client_id')
+        self.oauth_client_secret = get_config(config, 'Zoom', 'oauth_client_secret')
+        self.logger.debug(f"Init with Zoom OAuth Client ID {self.oauth_client_id[0:3]}XXX{self.oauth_client_id[-3:]}")
         self.gdpr = get_config(config, 'Zoom', 'GDPR').lower() == 'true'
         self.logger.info(f"GDPR compliant endpoints in use: { self.gdpr }")
         self.zoom_client = None
         self.zoom_client_exp = None
-        self.jwt_token = None
-        self.jwt_token_exp = None
+
+    def get_bearer_access_token(self):
+        #This is the internal token that Zoom uses for auth
+        #This is not otherwise exposed by the underlying zoomus library :(
+        return self._get_zoom_client().config.get("token")
 
     def _validate_object_fields(self, required_object_fields, obj):
         try:
@@ -195,17 +143,6 @@ class Zoom:
         required_data = { x: data[x] for x in data if x in ('uuid', 'host_id', 'start_time', 'topic', 'duration') }
         return db.create_recording(required_data)
 
-    def get_download_token(self):
-        if not self.jwt_token or datetime.utcnow() + timedelta(seconds=1) > self.jwt_token_exp:
-            #Expires after 5 minutes
-            self.jwt_token_exp = datetime.utcnow() + timedelta(minutes=5)
-            payload = {"iss": self.api_key, "exp": self.jwt_token_exp}
-            self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256', headers=Zoom.JWT_HEADERS)
-            #PyJWT 2.0 and newer return a string, older versions need to be decoded
-            if type(self.jwt_token) is not str:
-                self.jwt_token = self.jwt_token.decode("utf-8")
-        return self.jwt_token
-
     def _get_zoom_client(self):
         #Note: There is a ZoomClient.refresh_tokens(), but this appears to be *broken* somehow.  Creating a new client works though...
         if not self.zoom_client or datetime.utcnow() + timedelta(seconds=1) > self.zoom_client_exp:
@@ -213,9 +150,9 @@ class Zoom:
             # zoom client library set this interval, so we
             self.zoom_client_exp = datetime.utcnow() + timedelta(hours=1)
             if self.gdpr:
-                self.zoom_client = ZoomClient(self.api_key, self.api_secret, base_uri=zoomus.client.API_BASE_URIS[zoomus.util.API_GDPR])
+                self.zoom_client = ZoomClient(self.oauth_client_id, self.oauth_client_secret, self.oauth_account_id, base_uri=zoomus.client.API_BASE_URIS[zoomus.util.API_GDPR])
             else:
-                self.zoom_client = ZoomClient(self.api_key, self.api_secret)
+                self.zoom_client = ZoomClient(self.oauth_client_id, self.oauth_client_secret, self.oauth_account_id)
         return self.zoom_client
 
     def _cleaner(self, thing):

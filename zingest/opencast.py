@@ -133,8 +133,13 @@ class Opencast:
           self.logger.debug(f"{ output } already exists and is the right size")
           return
         with open(output, 'wb') as fd:
-            r = requests.get(url, stream=True)
+            r = requests.get(url, stream=True, headers={"Authorization": f"Bearer { self.zoom.get_bearer_access_token() }"})
             stream.stream_response_to_file(r, path=fd, chunksize=8192)
+        if not os.path.isfile(output) or expected_size != os.path.getsize(output):
+            if os.path.isfile(output):
+                raise Exception(f"{ output } is the wrong size!  { expected_size } != { os.path.getsize(output) }")
+            raise Exception(f"{ output } is missing!")
+
 
     def _do_get(self, url):
         self.logger.debug(f"GETting { url }")
@@ -292,11 +297,8 @@ class Opencast:
         #NB: recording_id likely contains characters which are invalid on some filesystems
         filename = f"{self.IN_PROGRESS_ROOT}/{ uuid }.{  extension.lower() }"
 
-        #Zoom token gets calculated at download time, regardless of inclusion in the rabbit message
-        token = self.zoom.get_download_token()
-        url = f"{dl_url}?access_token={ token }"
-        self.logger.debug(f"{ recording_id  }: Downloading file id { uuid } from { url } to { filename }")
-        self._do_download(f"{ url }", filename, expected_size)
+        self.logger.debug(f"{ recording_id  }: Downloading file id { uuid } from { dl_url } to { filename }")
+        self._do_download(f"{ dl_url }", filename, expected_size)
 
         return filename
 
