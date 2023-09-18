@@ -33,7 +33,7 @@ enable_email = config["Email"]["enabled"].lower() in ['true'] #I hate python som
 zingest.db.init(config)
 z = Zoom(config)
 r = Rabbit(config, z)
-o = Opencast(config, r, z)
+o = Opencast(config, r, z, enable_email)
 
 def run_and_notify_about(thing):
     while True:

@@ -50,7 +50,7 @@ class Opencast:
     #If none of the above match, see if these do
     FALLBACK_RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_gallery_view', 'gallery_view', 'speaker_view', 'audio_only' ]
 
-    def __init__(self, config, rabbit, zoom):
+    def __init__(self, config, rabbit, zoom, enable_email=False):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
             raise TypeError("Rabbit is missing or the wrong type!")
         if not zoom or type(zoom) != zingest.zoom.Zoom:
@@ -99,6 +99,7 @@ class Opencast:
         self.get_themes()
         self.get_workflows()
         self.get_series()
+        self.enable_email = enable_email
         self.logger.info("Setup complete")
 
     def run(self):
@@ -242,7 +243,11 @@ class Opencast:
             self.logger.exception(f"Unable to fetch file for { uuid }, will retry later")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
         except Exception as e:
-            self.logger.exception(f"General Exception processing { uuid }")
+            if self.enable_email:
+                email_logger = logging.getLogger("mail")
+                email_logger.exception(f"General Exception processing { uuid }")
+            else:
+                self.logger.exception(f"General Exception processing { uuid }")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
 
     def _rm(self, path):
@@ -252,7 +257,11 @@ class Opencast:
                 os.remove(path)
         except Exception as e:
             if os.path.isfile(path):
-                self.logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
+                if self.enable_email:
+                    email_logger = logging.getLogger("mail")
+                    email_logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
+                else:
+                    self.logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
 
     def fetch_file(self, recording_id, files, preferences=RECORDING_TYPE_PREFERENCE, extension_overrides={}):
         dl_url = ''
