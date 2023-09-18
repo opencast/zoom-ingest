@@ -3,6 +3,7 @@ import logging
 import os.path
 import sys
 import threading
+import time
 
 from flask import Flask
 
@@ -27,21 +28,33 @@ try:
 except FileNotFoundError:
     sys.exit("No settings found")
 
+enable_email = config["Email"]["enabled"].lower() in ['true'] #I hate python sometimes...
+
 zingest.db.init(config)
 z = Zoom(config)
 r = Rabbit(config, z)
 o = Opencast(config, r, z)
 
-def uploader():
-    o.run()
+def run_and_notify_about(thing):
+    while True:
+        try:
+            thing()
+        except Exception as e:
+            if enable_email:
+                email_logger = logging.getLogger("mail")
+                email_logger.exception("Zoom Uploader general error, will retry in 10 seconds after emailing...")
+            else:
+                logger.exception("Zoom Uploader general error, will retry in 10 seconds...")
+            time.sleep(10)
 
-def reingester():
-    o.process_backlog()
-
-thread = threading.Thread(target=uploader, daemon=True)
+thread = threading.Thread(
+        target=run_and_notify_about(o.run),
+        daemon=True)
 thread.start()
 
-thread = threading.Thread(target=reingester, daemon=True)
+thread = threading.Thread(
+        target=run_and_notify_about(o.process_backlog),
+        daemon=True)
 thread.start()
 
 

@@ -102,24 +102,11 @@ class Opencast:
         self.logger.info("Setup complete")
 
     def run(self):
-        while True:
-            try:
-                self.logger.info("Consuming rabbits")
-                self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
-            except Exception as e:
-                self.logger.exception("Error connecting to rabbit!  Retry in 10 seconds...")
-                time.sleep(10)
-
-    def process_backlog(self):
-        while True:
-            try:
-                self._process_backlog()
-            except Exception as e:
-                self.logger.exception("Catchall while processing the backlog. Please report this as a bug.")
-                time.sleep(10)
+        self.logger.info("Consuming rabbits")
+        self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
     @db.with_session
-    def _process_backlog(dbs, self):
+    def process_backlog(dbs, self):
         self.logger.info("Checking backlog")
         hour_ago = datetime.utcnow() - timedelta(hours=1)
         ing_list = dbs.query(db.Ingest).filter(db.Ingest.status != db.Status.FINISHED, db.Ingest.status != db.Status.WARNING, db.Ingest.status != db.Status.IN_PROGRESS, db.Ingest.timestamp <= hour_ago).all()
