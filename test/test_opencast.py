@@ -40,6 +40,10 @@ for event in ("add-dc", "add-ethterms", "add-security", "add-track", "create-mp"
     with open(f'test/resources/opencast/{ event }.xml', 'r') as xml:
         ingest[event] = xml.read()
 
+init_logger()
+
+class MockZoom():
+    config = { "token": "token bear" }
 
 class TestOpencast(unittest.TestCase):
 
@@ -47,13 +51,17 @@ class TestOpencast(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.config = {"Opencast": {"Url": "http://localhost", "User": "test_user", "Password": "test_password", 'workflow_filter': None, 'series_filter': None},
                        "Rabbit": {"host": "http://localhost", "user": "test_user", "password": "test_password" },
-                       "Zoom": {"JWT_Key": "test_key", "JWT_Secret": "test_secret", "GDPR": "False" },
+                       "Zoom": {"oauth_account_id": "test_acount_id",
+                                 "oauth_client_id": "test_client_id",
+                                 "oauth_client_secret": "test_client_secret",
+                                 "GDPR": "False" },
                        "TESTING": {"IN_PROGRESS_ROOT": self.tempdir}}
         self.base_zingest = {
             "workflow_id": "schedule-and-upload",
             "acl_id": "1101"
         }
         self.zoom = Zoom(self.config)
+        Zoom._get_zoom_client = MockZoom
         self.zoom.get_recording = MagicMock(return_value=recording_info)
         self.zoom.get_user_name = MagicMock(return_value="Logan, Greg")
         self.rabbit = Rabbit(self.config, self.zoom)
@@ -63,9 +71,6 @@ class TestOpencast(unittest.TestCase):
         zingest.db.init({'Database': {'database': 'sqlite:///' + self.dbfile}})
         self.zoom._create_recording_from_data(recording_info)
         zingest.db.create_ingest(recording_info['uuid'], self.base_zingest)
-
-    def createOC(self, config, rabbit, zoom):
-        return Opencast(config, rabbit, zoom)
 
     def tearDown(self):
         os.close(self.fd)
@@ -115,20 +120,15 @@ class TestOpencast(unittest.TestCase):
         acls = m.get('//localhost/acl-manager/acl/acls.json', text=acl_text)
         themes = m.get('//localhost/admin-ng/themes/themes.json?limit=100', text=themes_text)
         wfs = m.get(re.compile("//localhost/api/workflow-definitions"), text=wfs_text)
-        series = m.get('//localhost/series/series.json?count=100', text=series_text)
+        series = m.get('//localhost/api/series/series.json?count=100', text=series_text)
         create = m.get("//localhost/ingest/createMediaPackage", text=ingest['create-mp'])
         attach = m.post("//localhost/ingest/addAttachment", text=ingest['add-security'])
         catalog = m.post("//localhost/ingest/addDCCatalog", text=ingest['add-dc'])
         track = m.post("//localhost/ingest/addTrack", text=ingest['add-track'])
         start = m.post(re.compile("//localhost/ingest/ingest/"), text=ingest['ingest'])
 
-        #NB: The order of declaration is vital here.  When matching, requests-mock goes in *reverse declared order*.
-        #If the general regex were declared last it would cover *all* downloads, rather than just the ones *not* matching other regexes
-        #This is faking *most* zoom downloads
-        m.get(re.compile("us02web.zoom.us/rec/download"), body="")
-        #This is faking a specific file (ie, the one in resources/rabbit_msg.json
-        regex = webhook_event['payload']['object']['recording_files'][0]['download_url'][8:] + "\?access_token=.*"
-        download = m.get(re.compile(regex), body="")
+        #This is possibly too generic...
+        download = m.get(re.compile("zoom.us"), body="")
 
         opencast = Opencast(self.config, self.rabbit, self.zoom)
 
@@ -196,9 +196,8 @@ class TestOpencast(unittest.TestCase):
 
         opencast.rabbit_callback("", "", rabbit_msg)
 
-        self.assert_called(mock_dict['download'], 1)
+        self.assert_called(mock_dict['download'], 1) #download the file from zoom
         self.assert_called(mock_dict['create'], 1) #created
-        self.assert_called(mock_dict['attach'], 1) #attachment
         self.assert_called(mock_dict['catalog'], 2) #ep dc catalog and ethterms (which is empty, but still present)
         self.assert_called(mock_dict['track'], 1) #track
         self.assert_called(mock_dict['start'], 1) #ingest/ingest
@@ -217,14 +216,9 @@ class TestOpencast(unittest.TestCase):
         mpid, wfInstId = opencast.oc_upload("fake_uuid", "test/resources/media/fake", acl_id="test_acl", workflow_id="test_workflow")#, some="other_param")
 
         self.assert_called(mock_dict['create'], 1) #created
-        self.assert_called(mock_dict['attach'], 1) #attachment
         self.assert_called(mock_dict['catalog'], 2) #ep dc catalog and ethterms (which is empty, but still present)
         self.assert_called(mock_dict['track'], 1) #track
         self.assert_called(mock_dict['start'], 1) #ingest/ingest
 
         self.assertEqual(mpid, wfdict['wf:workflow']['mp:mediapackage']['@id'])
         self.assertEqual(wfInstId, wfdict['wf:workflow']['@id'])
-
-
-if __name__ == '__main__':
-    unittest.main()

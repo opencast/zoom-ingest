@@ -7,7 +7,11 @@ from zingest.zoom import Zoom
 class TestZoom(unittest.TestCase):
 
     def setUp(self):
-        self.config={"Zoom": {"JWT_Key": "test_key", "JWT_Secret": "test_secret", "GDPR": "False" }}
+        self.config={"Zoom":
+                     {"oauth_account_id": "test_acount_id",
+                      "oauth_client_id": "test_client_id",
+                      "oauth_client_secret": "test_client_secret",
+                      "GDPR": "False" }}
         with open('test/resources/zoom/webhook-recording-completed.json', 'r') as webhook:
             self.event = json.loads(webhook.read())['payload']
         with open('test/resources/zoom/webhook-recording-renamed.json', 'r') as webhook:
@@ -30,22 +34,22 @@ class TestZoom(unittest.TestCase):
           Zoom(self.config)
 
     def test_missingKeyConfig(self):
-        del self.config["Zoom"]["JWT_Key"]
+        del self.config["Zoom"]["oauth_client_id"]
         with self.assertRaises(KeyError):
           Zoom(self.config)
 
     def test_missingSecretConfig(self):
-        del self.config["Zoom"]["JWT_Secret"]
+        del self.config["Zoom"]["oauth_client_secret"]
         with self.assertRaises(KeyError):
           Zoom(self.config)
 
     def test_badKeyConfig(self):
-        self.config["Zoom"]["JWT_Key"] = None
+        self.config["Zoom"]["oauth_account_id"] = None
         with self.assertRaises(ValueError):
           Zoom(self.config)
 
     def test_badSecretConfig(self):
-        self.config["Zoom"]["JWT_Secret"] = None
+        self.config["Zoom"]["oauth_client_secret"] = None
         with self.assertRaises(ValueError):
           Zoom(self.config)
 
@@ -56,8 +60,9 @@ class TestZoom(unittest.TestCase):
 
     def test_goodConfig(self):
         zoom = Zoom(self.config)
-        self.assertEqual(self.config["Zoom"]["JWT_Key"], zoom.api_key)
-        self.assertEqual(self.config["Zoom"]["JWT_Secret"], zoom.api_secret)
+        self.assertEqual(self.config["Zoom"]["oauth_account_id"], zoom.oauth_account_id)
+        self.assertEqual(self.config["Zoom"]["oauth_client_id"], zoom.oauth_client_id)
+        self.assertEqual(self.config["Zoom"]["oauth_client_secret"], zoom.oauth_client_secret)
         self.assertEqual(self.config["Zoom"]["GDPR"].lower(), str(zoom.gdpr).lower())
 
     def validate_bad_data(self, payload):
@@ -195,7 +200,3 @@ class TestZoom(unittest.TestCase):
         zoom = Zoom(self.config)
         #creator = zoom.get_recording_creator(self.event)
         self.fail("This test is testing something that's hardcoded!")
-
-
-if __name__ == '__main__':
-    unittest.main()

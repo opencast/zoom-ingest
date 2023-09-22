@@ -12,7 +12,11 @@ class TestRabbit(unittest.TestCase):
 
     def setUp(self):
         self.config = {"Rabbit": {"host": "localhost", "user": "test_user", "password": "test_password" }}
-        zoom_config={"Zoom": {"JWT_Key": "test_key", "JWT_Secret": "test_secret", "GDPR": "False" }}
+        zoom_config = {"Zoom":
+                     {"oauth_account_id": "test_acount_id",
+                      "oauth_client_id": "test_client_id",
+                      "oauth_client_secret": "test_client_secret",
+                      "GDPR": "False" }}
         self.zoom = Zoom(zoom_config)
 
     def tearDown(self):
@@ -84,7 +88,3 @@ class TestRabbit(unittest.TestCase):
         #sent is now the UUID, rather than the whole message, so it's kinda pointless to test against
         sent = rabbit.send_rabbit_msg.call_args[0][0]
         self.assert_rabbitmsg(sent, 12345)
-
-
-if __name__ == '__main__':
-    unittest.main()
