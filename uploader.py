@@ -1,4 +1,4 @@
-import configparser
+from configparser import ConfigParser, NoSectionError, NoOptionError
 import logging
 import os.path
 import sys
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.info("Startup")
 
 try:
-    config = configparser.ConfigParser()
+    config = ConfigParser()
     if os.path.isfile("etc/zoom-ingest/settings.ini"):
         config.read("etc/zoom-ingest/settings.ini")
         logger.debug("Configuration read from etc/zoom-ingest/settings.ini")
@@ -28,7 +28,11 @@ try:
 except FileNotFoundError:
     sys.exit("No settings found")
 
-enable_email = config["Email"]["enabled"].lower() in ['true'] #I hate python sometimes...
+try:
+    enable_email = config.getboolean("Email", "enabled")
+except (NoSectionError, NoOptionError):
+    logger.warn("Email configuration section and/or key is missing!  Emails disabled by default")
+    enable_email = False
 
 zingest.db.init(config)
 z = Zoom(config)
