@@ -186,6 +186,10 @@ class Opencast:
         uuid = ingest.get_recording_id()
         params = json.loads(ingest.get_params().decode('utf-8'))
 
+        exception_logger = self.logger
+        if self.enable_email:
+            exception_logger = logging.getLogger("mail")
+
         try:
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if not rec:
@@ -234,20 +238,16 @@ class Opencast:
             dbs.merge(ingest)
             dbs.commit()
         except FileNotFoundError as e:
-            self.logger.error(f"Unable to ingest { uuid }, file not found, will retry later")
+            exception_logger.error(f"Unable to ingest { uuid }, file not found, will retry later")
         except ExpatError as e:
-            self.logger.error(f"Opencast did not return a valid mediapackage for { uuid }, will retry later")
+            exception_logger.error(f"Opencast did not return a valid mediapackage for { uuid }, will retry later")
         except StreamingError as e:
-            self.logger.exception(f"Error downloading media for { uuid }, will retry")
+            exception_logger.exception(f"Error downloading media for { uuid }, will retry")
         except HTTPError as er:
-            self.logger.exception(f"Unable to fetch file for { uuid }, will retry later")
+            exception_logger.exception(f"Unable to fetch file for { uuid }, will retry later")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
         except Exception as e:
-            if self.enable_email:
-                email_logger = logging.getLogger("mail")
-                email_logger.exception(f"General Exception processing { uuid }")
-            else:
-                self.logger.exception(f"General Exception processing { uuid }")
+            exception_logger.exception(f"General Exception processing { uuid }")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
 
     def _rm(self, path):
