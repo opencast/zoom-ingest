@@ -1,49 +1,54 @@
 {
-   "download_token" : "my_fake_token",
-   "event" : "recording.completed",
-   "payload" : {
-      "object" : {
-         "host_id" : "2rckNdRpQ-qyGSspp66ByQ",
-         "timezone" : "",
-         "duration" : 2,
-         "id" : 88133603998,
-         "uuid" : "Yaxg95jbQyiQbTYP57GqSg==",
-         "start_time" : "2020-10-29T20:07:38Z",
-         "recording_count" : 2,
-         "account_id" : "ceSnBBwNTmG-6bGoJ7e7Ug",
-         "topic" : "Greg Logan''s Zoom Meeting",
-         "recording_files" : [
-            {
-               "meeting_id" : "Yaxg95jbQyiQbTYP57GqSg==",
-               "recording_type" : "shared_screen_with_speaker_view",
-               "recording_start" : "2020-10-29T20:08:33Z",
-               "file_type" : "MP4",
-               "id" : "1344d9e4-781a-46e7-9589-b14c84b3dec9",
-               "file_size" : 6532378,
-               "status" : "completed",
-               "recording_end" : "2020-10-29T20:11:02Z",
-               "play_url" : "https://us02web.zoom.us/rec/play/sxXwkt8NOXQnTuEMrS4rB8PG-9jN6SZdq-SAjfL3EVStz8XTvULoXrONPdkLr9bVywOd7ZIod3D1Jk-A.AP3kGZPtE5HnAChr",
-               "download_url" : "https://us02web.zoom.us/rec/download/sxXwkt8NOXQnTuEMrS4rB8PG-9jN6SZdq-SAjfL3EVStz8XTvULoXrONPdkLr9bVywOd7ZIod3D1Jk-A.AP3kGZPtE5HnAChr",
-               "file_extension" : "MP4"
-            },
-            {
-               "meeting_id" : "Yaxg95jbQyiQbTYP57GqSg==",
-               "recording_type" : "audio_only",
-               "id" : "f55894e2-27d3-453f-bf13-f9d712fe93cd",
-               "file_size" : 2368261,
-               "recording_end" : "2020-10-29T20:11:02Z",
-               "status" : "completed",
-               "file_type" : "M4A",
-               "file_extension" : "M4A",
-               "play_url" : "https://us02web.zoom.us/rec/play/bZF0RMZbk17qKZ5XDn6DTXIYwalOThs3gveyJoihrs5h-oIeDzWbU2WHFDlzBIFu0jaNpFiKCUkUitab.svBl8lBVRdcJ3m2B",
-               "recording_start" : "2020-10-29T20:08:33Z",
-               "download_url" : "https://us02web.zoom.us/rec/download/bZF0RMZbk17qKZ5XDn6DTXIYwalOThs3gveyJoihrs5h-oIeDzWbU2WHFDlzBIFu0jaNpFiKCUkUitab.svBl8lBVRdcJ3m2B"
-            }
-         ],
-         "total_size" : 8900639,
-         "type" : 1,
-         "share_url" : "https://us02web.zoom.us/rec/share/aIzz9uM1wZC2LafxaNsPGW8dAFnQMu3i80dDFSmiTE4XcxVNThYu765sdLJg2c2d.3mBu05sX5kxVLpXQ"
-      },
-      "account_id" : "lAAAAAAAAAAAAA"
-   }
+  "payload": {
+    "account_id": "ceSnBBwNTmG-6bGoJ7e7Ug",
+    "object": {
+      "uuid": "p7l/jwpwQFW5Q62srAYxAA==",
+      "id": 87316379181,
+      "account_id": "ceSnBBwNTmG-6bGoJ7e7Ug",
+      "host_id": "2rckNdRpQ-qyGSspp66ByQ",
+      "topic": "Greg Logan's Zoom Meeting",
+      "type": 1,
+      "start_time": "2023-09-19T16:16:23Z",
+      "timezone": "",
+      "host_email": "gregorydlogan@gmail.com",
+      "duration": 0,
+      "total_size": 1260598,
+      "recording_count": 2,
+      "share_url": "https://us06web.zoom.us/rec/share/zG8GFVK6XI_Cyd6lLBZX6Zn65LNTWNP-9zfyWgkFyRc1CoQbgYWmq-FJgRWnQHYB.zYPa6AEqDwXvimkR",
+      "recording_files": [
+        {
+          "id": "6c9f49d2-ac20-4046-8c17-9b6ccd8c8fbe",
+          "meeting_id": "p7l/jwpwQFW5Q62srAYxAA==",
+          "recording_start": "2023-09-19T16:16:30Z",
+          "recording_end": "2023-09-19T16:16:46Z",
+          "file_type": "MP4",
+          "file_extension": "MP4",
+          "file_size": 1012336,
+          "play_url": "https://us06web.zoom.us/rec/play/HkuBUCns2caSrcTkZiaJeV-qXkT4LVpGpRa4yPFj5ZUQMN8JKb5tgcCRUWcPFK3nqiyhOCtzSXRuYlBo.2JBOqyBIULgqJ6M6",
+          "download_url": "https://us06web.zoom.us/rec/webhook_download/HkuBUCns2caSrcTkZiaJeV-qXkT4LVpGpRa4yPFj5ZUQMN8JKb5tgcCRUWcPFK3nqiyhOCtzSXRuYlBo.2JBOqyBIULgqJ6M6/jzBTk0N0PjrlugEnCYNlBxLAoF-LyLUn8RCfzsmEbN8Ul-_iBh7nPlxWhy0d86mAzw.mlMgptzMQ-I8Cmqt",
+          "status": "completed",
+          "recording_type": "shared_screen_with_speaker_view"
+        },
+        {
+          "id": "54c3328f-5390-4991-a833-0885d9d05de1",
+          "meeting_id": "p7l/jwpwQFW5Q62srAYxAA==",
+          "recording_start": "2023-09-19T16:16:30Z",
+          "recording_end": "2023-09-19T16:16:46Z",
+          "file_type": "M4A",
+          "file_extension": "M4A",
+          "file_size": 248262,
+          "play_url": "https://us06web.zoom.us/rec/play/x-pfcN8sYYrrOf_1ULIRizxic_hC_qcBxAOcaw14Zvdn_-4ryaVx7dop6TpqLCkPkM2ouupZzEgJfDMs.5lDgz9rSjjBvgGu_",
+          "download_url": "https://us06web.zoom.us/rec/webhook_download/x-pfcN8sYYrrOf_1ULIRizxic_hC_qcBxAOcaw14Zvdn_-4ryaVx7dop6TpqLCkPkM2ouupZzEgJfDMs.5lDgz9rSjjBvgGu_/iOcA03xKKmB1k5ufL6Y89dbGJtxxolxdq1f6HztTrw2BjmpmgQeTGELvui07bfxPhQ.m9XnPBy6diczi7HM",
+          "status": "completed",
+          "recording_type": "audio_only"
+        }
+      ],
+      "password": "b22&jFWA",
+      "recording_play_passcode": "VswE_XsrJ5h6MOB7jVCmevEwBJofqI-X",
+      "on_prem": false
+    }
+  },
+  "event_ts": 1695140410494,
+  "event": "recording.completed",
+  "download_token": "eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJodHRwczovL2V2ZW50Lnpvb20udXMiLCJhY2NvdW50SWQiOiJjZVNuQkJ3TlRtRy02YkdvSjdlN1VnIiwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwibWlkIjoicDdsL2p3cHdRRlc1UTYyc3JBWXhBQT09IiwiZXhwIjoxNjk1MjI2ODI1LCJ1c2VySWQiOiIycmNrTmRScFEtcXlHU3NwcDY2QnlRIn0.het6zf3jfLAdN5Ca2YUTggY3G_DCH83gvnn8wM73O6Rgg4th7HJ_U-IckGGIDi3fk8Ql6jyYLwfjyZlFnNSz7A"
 }

@@ -50,7 +50,7 @@ class Opencast:
     #If none of the above match, see if these do
     FALLBACK_RECORDING_TYPE_PREFERENCE = [ 'shared_screen_with_gallery_view', 'gallery_view', 'speaker_view', 'audio_only' ]
 
-    def __init__(self, config, rabbit, zoom):
+    def __init__(self, config, rabbit, zoom, enable_email=False):
         if not rabbit or type(rabbit) != zingest.rabbit.Rabbit:
             raise TypeError("Rabbit is missing or the wrong type!")
         if not zoom or type(zoom) != zingest.zoom.Zoom:
@@ -99,27 +99,15 @@ class Opencast:
         self.get_themes()
         self.get_workflows()
         self.get_series()
+        self.enable_email = enable_email
         self.logger.info("Setup complete")
 
     def run(self):
-        while True:
-            try:
-                self.logger.info("Consuming rabbits")
-                self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
-            except Exception as e:
-                self.logger.exception("Error connecting to rabbit!  Retry in 10 seconds...")
-                time.sleep(10)
-
-    def process_backlog(self):
-        while True:
-            try:
-                self._process_backlog()
-            except Exception as e:
-                self.logger.exception("Catchall while processing the backlog. Please report this as a bug.")
-                time.sleep(10)
+        self.logger.info("Consuming rabbits")
+        self.rabbit.start_consuming_rabbitmsg(self.rabbit_callback)
 
     @db.with_session
-    def _process_backlog(dbs, self):
+    def process_backlog(dbs, self):
         self.logger.info("Checking backlog")
         hour_ago = datetime.utcnow() - timedelta(hours=1)
         ing_list = dbs.query(db.Ingest).filter(db.Ingest.status != db.Status.FINISHED, db.Ingest.status != db.Status.WARNING, db.Ingest.status != db.Status.IN_PROGRESS, db.Ingest.timestamp <= hour_ago).all()
@@ -198,6 +186,10 @@ class Opencast:
         uuid = ingest.get_recording_id()
         params = json.loads(ingest.get_params().decode('utf-8'))
 
+        exception_logger = self.logger
+        if self.enable_email:
+            exception_logger = logging.getLogger("mail")
+
         try:
             rec = dbs.query(db.Recording).filter(db.Recording.uuid == uuid).one_or_none()
             if not rec:
@@ -246,16 +238,16 @@ class Opencast:
             dbs.merge(ingest)
             dbs.commit()
         except FileNotFoundError as e:
-            self.logger.error(f"Unable to ingest { uuid }, file not found, will retry later")
+            exception_logger.error(f"Unable to ingest { uuid }, file not found, will retry later")
         except ExpatError as e:
-            self.logger.error(f"Opencast did not return a valid mediapackage for { uuid }, will retry later")
+            exception_logger.error(f"Opencast did not return a valid mediapackage for { uuid }, will retry later")
         except StreamingError as e:
-            self.logger.exception(f"Error downloading media for { uuid }, will retry")
+            exception_logger.exception(f"Error downloading media for { uuid }, will retry")
         except HTTPError as er:
-            self.logger.exception(f"Unable to fetch file for { uuid }, will retry later")
+            exception_logger.exception(f"Unable to fetch file for { uuid }, will retry later")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
         except Exception as e:
-            self.logger.exception(f"General Exception processing { uuid }")
+            exception_logger.exception(f"General Exception processing { uuid }")
             #We're going to retry this since it's not in FINISHED, so we don't need to do anything here.
 
     def _rm(self, path):
@@ -265,7 +257,11 @@ class Opencast:
                 os.remove(path)
         except Exception as e:
             if os.path.isfile(path):
-                self.logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
+                if self.enable_email:
+                    email_logger = logging.getLogger("mail")
+                    email_logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
+                else:
+                    self.logger.exception(f"Exception removing { path }.  File will need to be manually removed.")
 
     def fetch_file(self, recording_id, files, preferences=RECORDING_TYPE_PREFERENCE, extension_overrides={}):
         dl_url = ''

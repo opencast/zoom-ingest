@@ -1,8 +1,9 @@
-import configparser
+from configparser import ConfigParser, NoSectionError, NoOptionError
 import logging
 import os.path
 import sys
 import threading
+import time
 
 from flask import Flask
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.info("Startup")
 
 try:
-    config = configparser.ConfigParser()
+    config = ConfigParser()
     if os.path.isfile("etc/zoom-ingest/settings.ini"):
         config.read("etc/zoom-ingest/settings.ini")
         logger.debug("Configuration read from etc/zoom-ingest/settings.ini")
@@ -27,21 +28,37 @@ try:
 except FileNotFoundError:
     sys.exit("No settings found")
 
+try:
+    enable_email = config.getboolean("Email", "enabled")
+except (NoSectionError, NoOptionError):
+    logger.warn("Email configuration section and/or key is missing!  Emails disabled by default")
+    enable_email = False
+
 zingest.db.init(config)
 z = Zoom(config)
 r = Rabbit(config, z)
-o = Opencast(config, r, z)
+o = Opencast(config, r, z, enable_email)
 
-def uploader():
-    o.run()
+def run_and_notify_about(thing):
+    while True:
+        try:
+            thing()
+        except Exception as e:
+            if enable_email:
+                email_logger = logging.getLogger("mail")
+                email_logger.exception("Zoom Uploader general error, will retry in 10 seconds after emailing...")
+            else:
+                logger.exception("Zoom Uploader general error, will retry in 10 seconds...")
+            time.sleep(10)
 
-def reingester():
-    o.process_backlog()
-
-thread = threading.Thread(target=uploader, daemon=True)
+thread = threading.Thread(
+        target=run_and_notify_about(o.run),
+        daemon=True)
 thread.start()
 
-thread = threading.Thread(target=reingester, daemon=True)
+thread = threading.Thread(
+        target=run_and_notify_about(o.process_backlog),
+        daemon=True)
 thread.start()
 
 

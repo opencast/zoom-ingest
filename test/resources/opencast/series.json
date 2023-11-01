@@ -1,57 +1,32 @@
-{
-   "totalCount" : "2",
-   "catalogs" : [
-      {
-         "http://purl.org/dc/terms/" : {
-            "created" : [
-               {
-                  "value" : "2020-12-28T01:04Z",
-                  "type" : "dcterms:W3CDTF"
-               }
-            ],
-            "title" : [
-               {
-                  "lang" : "en",
-                  "value" : "Blender Foundation Productions"
-               }
-            ],
-            "publisher" : [
-               {
-                  "value" : "Blender Foundation"
-               }
-            ],
-            "identifier" : [
-               {
-                  "value" : "ID-blender-foundation"
-               }
-            ]
-         }
-      },
-      {
-         "http://purl.org/dc/terms/" : {
-            "created" : [
-               {
-                  "value" : "2020-12-29T01:04Z",
-                  "type" : "dcterms:W3CDTF"
-               }
-            ],
-            "title" : [
-               {
-                  "lang" : "en",
-                  "value" : "Blender Foundation Productions2"
-               }
-            ],
-            "publisher" : [
-               {
-                  "value" : "Blender Foundation"
-               }
-            ],
-            "identifier" : [
-               {
-                  "value" : "ID-blender-foundation2"
-               }
-            ]
-         }
-      }
-   ]
-}
+[
+  {
+    "identifier": "ID-blender-foundation",
+    "license": "",
+    "creator": "Administrator",
+    "created": "2023-09-19T00:02:15Z",
+    "subjects": [],
+    "organizers": [],
+    "description": "",
+    "publishers": [],
+    "language": "",
+    "contributors": [],
+    "title": "Course_Series_3",
+    "rightsholder": ""
+  },
+  {
+    "identifier": "ID-blender-foundation2",
+    "license": "",
+    "creator": "Administrator",
+    "created": "2023-09-19T00:02:00Z",
+    "subjects": [],
+    "organizers": [],
+    "description": "Media snippets published as test media for Opencast.",
+    "publishers": [
+      "Lars Kiesow"
+    ],
+    "language": "",
+    "contributors": [],
+    "title": "Open Media for Opencast",
+    "rightsholder": ""
+  }
+]

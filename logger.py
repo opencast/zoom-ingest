@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
+import logging, logging.config
 import sys
 from os.path import isfile
 
@@ -10,8 +10,6 @@ def init_logger():
     """
     if isfile("etc/zoom-ingest/logger.ini"):
         logging.config.fileConfig('etc/zoom-ingest/logger.ini')
-    if isfile("/etc/zoom-ingest/logger.ini"):
-        logging.config.fileConfig('/etc/zoom-ingest/logger.ini')
     else:
         console_handler = logging.StreamHandler(sys.stdout)
         logging.basicConfig(level=logging.INFO,
